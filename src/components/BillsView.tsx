@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { RecurringBill } from '@/types';
 import {
@@ -44,8 +44,25 @@ export const BillsView: React.FC = () => {
   const [billToPay, setBillToPay] = useState<RecurringBill | null>(null);
   const [payWalletId, setPayWalletId] = useState(wallets[0]?.id || '');
 
-  // Current day in month
-  const today = 6; // Current date 06/09/2026
+  // Current date & day in month
+  const [currentDateInfo, setCurrentDateInfo] = useState(() => {
+    const now = new Date();
+    return {
+      day: now.getDate(),
+      formatted: `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`,
+    };
+  });
+
+  useEffect(() => {
+    const now = new Date();
+    setCurrentDateInfo({
+      day: now.getDate(),
+      formatted: `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`,
+    });
+  }, []);
+
+  const today = currentDateInfo.day;
+  const formattedToday = currentDateInfo.formatted;
 
   // KPI Calculations
   const totalBillsAmount = bills.reduce((sum, b) => sum + b.amount, 0);
@@ -174,7 +191,7 @@ export const BillsView: React.FC = () => {
             <CalendarCheck className="w-5 h-5 text-blue-500" />
             <span>Lịch nhắc thanh toán trong tháng</span>
           </h3>
-          <span className="text-xs text-slate-400">Hôm nay là ngày 06/09/2026</span>
+          <span className="text-xs text-slate-400">Hôm nay là ngày {formattedToday}</span>
         </div>
 
         <div className="divide-y divide-slate-100 dark:divide-slate-800">

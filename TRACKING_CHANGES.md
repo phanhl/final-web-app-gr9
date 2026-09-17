@@ -1127,6 +1127,46 @@ Qua quét toàn diện mã nguồn, phát hiện và đã xử lý các vị tr�
 * Khi bấm F5 tải lại trang hoặc mở trên điện thoại, các danh mục đã hủy vẫn giữ nguyên trạng thái chưa chọn, không bị tự động tích lại.
 * Nút bấm hiển thị icon đẹp mắt, không còn bị lặp ký tự `✓`.
 
+---
+
+## [LẦN CHỈNH SỬA 19] - Khắc Phục Lỗi Hiển Thị Ngày Cố Định (06/09) Trong Mục "Hóa Đơn Định Kỳ" Sang Ngày Thực Tế
+
+* **Thời gian thực hiện:** 18/09/2026
+* **Mức độ ảnh hưởng:** Module Hóa Đơn Định Kỳ (Bills View Dynamic Date Fix)
+* **Trạng thái:** ✅ Đã hoàn thành và xác minh
+
+---
+
+### 1. Nguyên Nhân Gây Ra Lỗi
+* **Hiện tượng:** Tại màn hình "Định kỳ" (Hóa đơn định kỳ), tiêu đề danh sách hiển thị: *"Hôm nay là ngày 06/09/2026"*, trong khi ngày thực tế là 18/09/2026.
+* **Nguyên nhân kỹ thuật:**
+  - Trong mã nguồn cũ của `BillsView.tsx`, biến `today` được gán cứng cố định là `const today = 6;` và dòng text hiển thị cũng bị hardcode tĩnh là `<span>Hôm nay là ngày 06/09/2026</span>`.
+  - Điều này không những làm sai lệch hiển thị ngày tháng hiện tại, mà còn khiến logic tính toán số ngày còn lại đến hạn (`bill.dueDay - today`), cảnh báo quá hạn hoặc sắp đến hạn bị tính sai so với thời gian thực.
+
+---
+
+### 2. Cách Xử Lý Triệt Để
+* Cập nhật `BillsView.tsx` sử dụng đối tượng `new Date()` theo thời gian thực của hệ thống:
+  - Lấy ngày trong tháng `now.getDate()` cho biến `today` để tính chính xác khoảng cách ngày đến hạn của từng hóa đơn.
+  - Định dạng chuỗi ngày tháng động dạng `DD/MM/YYYY` (ví dụ: `18/09/2026`).
+  - Sử dụng `useEffect` để đồng bộ an toàn với phía Client, chống lỗi sai lệch Hydration của Next.js.
+* Giao diện hiển thị chính xác theo ngày thực tế: *"Hôm nay là ngày 18/09/2026"* (hoặc bất kỳ ngày nào trong tương lai).
+
+---
+
+### 3. Danh Sách Các Tệp Đã Thay Đổi
+
+| STT | Tệp tin | Trạng thái | Mô tả tóm tắt |
+|---|---|---|---|
+| 1 | `src/components/BillsView.tsx` | **[CHỈNH SỬA]** | Thay thế ngày cố định `06/09/2026` bằng ngày động thực tế `new Date()`, đảm bảo tính đúng hạn/quá hạn của hóa đơn. |
+
+---
+
+### 4. Kết Quả Sau Khi Chỉnh Sửa
+* Tiêu đề hiển thị đúng chính xác ngày hôm nay (18/09/2026).
+* Các cảnh báo hóa đơn (đến hạn hôm nay, quá hạn, còn bao nhiêu ngày) tự động tính toán chuẩn xác 100% theo từng ngày trong tháng.
+
+
 
 
 
