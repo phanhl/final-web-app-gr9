@@ -38,24 +38,28 @@ import {
 import { IconHelper } from './IconHelper';
 
 export const ReportsView: React.FC = () => {
-  const { transactions, budgets, wallets, financialSummary } = useApp();
+  const { transactions, budgets, wallets, financialSummary, currentMonth } = useApp();
 
   const [period, setPeriod] = useState<'THIS_MONTH' | 'LAST_MONTH' | 'THIS_YEAR' | 'CUSTOM'>('THIS_MONTH');
-  const [customStart, setCustomStart] = useState('2026-09-01');
-  const [customEnd, setCustomEnd] = useState('2026-09-30');
+  const [customStart, setCustomStart] = useState(`${currentMonth}-01`);
+  const [customEnd, setCustomEnd] = useState(`${currentMonth}-31`);
 
   // Filter transactions according to selected period
   const filteredTxs = useMemo(() => {
     return transactions.filter((tx) => {
       const txDate = tx.date.split('T')[0];
       if (period === 'THIS_MONTH') {
-        return txDate.startsWith('2026-09');
+        return txDate.startsWith(currentMonth);
       }
       if (period === 'LAST_MONTH') {
-        return txDate.startsWith('2026-08');
+        const [y, m] = currentMonth.split('-').map(Number);
+        const lastMonthDate = new Date(y || 2026, (m || 9) - 2, 1);
+        const lastMonthStr = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
+        return txDate.startsWith(lastMonthStr);
       }
       if (period === 'THIS_YEAR') {
-        return txDate.startsWith('2026');
+        const yearStr = currentMonth.split('-')[0] || '2026';
+        return txDate.startsWith(yearStr);
       }
       if (period === 'CUSTOM') {
         if (customStart && txDate < customStart) return false;
@@ -64,7 +68,7 @@ export const ReportsView: React.FC = () => {
       }
       return true;
     });
-  }, [transactions, period, customStart, customEnd]);
+  }, [transactions, period, currentMonth, customStart, customEnd]);
 
   // Aggregate totals
   const totalIncome = useMemo(

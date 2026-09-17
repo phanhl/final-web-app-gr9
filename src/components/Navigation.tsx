@@ -18,6 +18,17 @@ import {
   CheckCircle2,
   ChevronRight,
   Shield,
+  Sparkles,
+  Sun,
+  Moon,
+  Edit2,
+  Check,
+  Download,
+  X,
+  Mail,
+  Phone,
+  Calendar,
+  Crown,
 } from 'lucide-react';
 import { formatCurrency, calculateBudgetStatuses } from '@/lib/utils';
 
@@ -25,6 +36,7 @@ const navItems = [
   { id: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard },
   { id: 'transactions', label: 'Sổ giao dịch', icon: ReceiptText },
   { id: 'budgets', label: 'Ngân sách', icon: PieChart },
+  { id: 'whatif', label: 'Mô phỏng What-If', icon: Sparkles },
   { id: 'bills', label: 'Định kỳ', icon: CalendarCheck },
   { id: 'reports', label: 'Báo cáo', icon: BarChart3 },
   { id: 'wallets', label: 'Ví', icon: WalletCards },
@@ -48,12 +60,29 @@ export const Navigation: React.FC = () => {
     transactions,
     bills,
     financialSummary,
+    currentMonth,
+    serverSyncStatus,
+    theme,
+    toggleTheme,
+    isDarkMode,
+    userProfile,
+    updateUserProfile,
+    wallets,
+    goals,
+    exportDatabaseJSON,
   } = useApp();
 
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
 
-  const budgetStatuses = calculateBudgetStatuses(budgets, transactions);
+  // Profile editing state
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editName, setEditName] = useState(userProfile.name);
+  const [editEmail, setEditEmail] = useState(userProfile.email);
+  const [editPhone, setEditPhone] = useState(userProfile.phone || '');
+  const [editAvatarColor, setEditAvatarColor] = useState(userProfile.avatarColor || '#10b981');
+
+  const budgetStatuses = calculateBudgetStatuses(budgets, transactions, currentMonth);
   const warningBudgets = budgetStatuses.filter((b) => b.status === 'WARNING');
   const exceededBudgets = budgetStatuses.filter((b) => b.status === 'EXCEEDED');
   const unpaidUpcomingBills = bills.filter((b) => b.status === 'UNPAID');
@@ -62,37 +91,68 @@ export const Navigation: React.FC = () => {
   return (
     <>
       {/* Mobile Top Header */}
-      <header className="lg:hidden sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-100">
+      <header className="lg:hidden sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-100 dark:border-slate-800">
         <div className="flex items-center justify-between h-14 px-4">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-emerald-600 flex items-center justify-center text-white shadow-sm">
               <Flame className="w-4 h-4 fill-current" />
             </div>
             <div>
-              <h1 className="text-sm font-bold text-slate-900 leading-tight">FinTrack Pro</h1>
-              <p className="text-[11px] text-slate-500 leading-tight">Quản lý chi tiêu</p>
+              <h1 className="text-sm font-bold text-slate-900 dark:text-white leading-tight">FinTrack Pro</h1>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">Quản lý chi tiêu</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            {/* Dark / Light Mode Toggle Button */}
+            <button
+              onClick={toggleTheme}
+              className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-slate-200 dark:active:bg-slate-700 transition-colors"
+              aria-label="Chuyển chế độ sáng/tối"
+              title={isDarkMode ? 'Chuyển sang chế độ Sáng' : 'Chuyển sang chế độ Tối'}
+            >
+              {isDarkMode ? (
+                <Sun className="w-5 h-5 text-amber-400" />
+              ) : (
+                <Moon className="w-5 h-5 text-slate-600 dark:text-slate-300" />
+              )}
+            </button>
+
             <button
               onClick={() => setShowNotificationModal(!showNotificationModal)}
-              className="relative w-10 h-10 flex items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 active:bg-slate-200 transition-colors"
+              className="relative w-9 h-9 flex items-center justify-center rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-slate-200 dark:active:bg-slate-700 transition-colors"
               aria-label="Thông báo"
             >
               <Bell className="w-5 h-5" />
               {alertCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                <span className="absolute top-1 right-1 w-4 h-4 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                   {alertCount}
                 </span>
               )}
+            </button>
+
+            {/* User Profile Avatar (Mobile) */}
+            <button
+              onClick={() => {
+                setEditName(userProfile.name);
+                setEditEmail(userProfile.email);
+                setEditPhone(userProfile.phone || '');
+                setEditAvatarColor(userProfile.avatarColor || '#10b981');
+                setIsEditingProfile(false);
+                setShowProfileModal(true);
+              }}
+              className="w-8 h-8 rounded-xl text-white flex items-center justify-center font-bold text-xs shadow-sm ml-0.5 cursor-pointer transition-transform active:scale-95"
+              style={{ backgroundColor: userProfile.avatarColor || '#10b981' }}
+              title="Thông tin cá nhân"
+            >
+              {userProfile.name ? userProfile.name.charAt(0).toUpperCase() : 'A'}
             </button>
           </div>
         </div>
       </header>
 
       {/* Desktop Top Header */}
-      <header className="hidden lg:block sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-100">
+      <header className="hidden lg:block sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-100 dark:border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-emerald-600 flex items-center justify-center text-white shadow-sm">
@@ -100,30 +160,30 @@ export const Navigation: React.FC = () => {
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <span className="font-extrabold text-lg tracking-tight text-slate-900">
+                <span className="font-extrabold text-lg tracking-tight text-slate-900 dark:text-white">
                   FinTrack Pro
                 </span>
-                <span className="hidden sm:inline-block px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase bg-emerald-100 text-emerald-700 rounded-full border border-emerald-200">
+                <span className="hidden sm:inline-block px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 rounded-full border border-emerald-200 dark:border-emerald-800">
                   Quản lý chi tiêu
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 hidden sm:block">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">
                 Hệ thống tài chính cá nhân & Ngân sách thông minh
               </p>
             </div>
           </div>
 
-          <div className="hidden md:flex items-center space-x-4 bg-slate-50 px-4 py-1.5 rounded-full border border-slate-100 text-xs">
+          <div className="hidden md:flex items-center space-x-4 bg-slate-50 dark:bg-slate-800/80 px-4 py-1.5 rounded-full border border-slate-100 dark:border-slate-700/80 text-xs">
             <div>
-              <span className="text-slate-500 mr-1.5">Số dư khả dụng:</span>
-              <span className="font-bold text-emerald-600">
+              <span className="text-slate-500 dark:text-slate-400 mr-1.5">Số dư khả dụng:</span>
+              <span className="font-bold text-emerald-600 dark:text-emerald-400">
                 {formatCurrency(financialSummary.availableBalance)}
               </span>
             </div>
-            <div className="w-px h-3.5 bg-slate-300" />
+            <div className="w-px h-3.5 bg-slate-300 dark:bg-slate-700" />
             <div>
-              <span className="text-slate-500 mr-1.5">Tổng tài sản:</span>
-              <span className="font-bold text-slate-800">
+              <span className="text-slate-500 dark:text-slate-400 mr-1.5">Tổng tài sản:</span>
+              <span className="font-bold text-slate-800 dark:text-slate-200">
                 {formatCurrency(financialSummary.totalAssets)}
               </span>
             </div>
@@ -138,10 +198,24 @@ export const Navigation: React.FC = () => {
               <span>Nhập nhanh</span>
             </button>
 
+            {/* Dark / Light Mode Toggle Button */}
+            <button
+              onClick={toggleTheme}
+              className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+              aria-label="Chuyển chế độ sáng/tối"
+              title={isDarkMode ? 'Chuyển sang chế độ Sáng' : 'Chuyển sang chế độ Tối'}
+            >
+              {isDarkMode ? (
+                <Sun className="w-5 h-5 text-amber-400 animate-in spin-in-180 duration-300" />
+              ) : (
+                <Moon className="w-5 h-5 text-slate-600 dark:text-slate-300 animate-in spin-in-180 duration-300" />
+              )}
+            </button>
+
             <div className="relative">
               <button
                 onClick={() => setShowNotificationModal(!showNotificationModal)}
-                className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl relative transition-colors"
+                className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl relative transition-colors cursor-pointer"
                 aria-label="Thông báo cảnh báo"
               >
                 <Bell className="w-5 h-5" />
@@ -155,14 +229,24 @@ export const Navigation: React.FC = () => {
 
             <div className="relative">
               <button
-                onClick={() => setShowProfileModal(!showProfileModal)}
-                className="flex items-center space-x-2 p-1.5 rounded-xl hover:bg-slate-100 transition-colors"
+                onClick={() => {
+                  setEditName(userProfile.name);
+                  setEditEmail(userProfile.email);
+                  setEditPhone(userProfile.phone || '');
+                  setEditAvatarColor(userProfile.avatarColor || '#10b981');
+                  setIsEditingProfile(false);
+                  setShowProfileModal(true);
+                }}
+                className="flex items-center space-x-2 p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               >
-                <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs">
-                  A
+                <div
+                  className="w-8 h-8 rounded-full text-white flex items-center justify-center font-bold text-xs shadow-sm shrink-0"
+                  style={{ backgroundColor: userProfile.avatarColor || '#10b981' }}
+                >
+                  {userProfile.name ? userProfile.name.charAt(0).toUpperCase() : 'A'}
                 </div>
-                <span className="text-xs font-semibold text-slate-700 hidden lg:inline">
-                  Admin
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 hidden lg:inline">
+                  {userProfile.name}
                 </span>
               </button>
             </div>
@@ -171,7 +255,7 @@ export const Navigation: React.FC = () => {
       </header>
 
       {/* Desktop Tab Navigation */}
-      <nav className="hidden lg:block bg-white border-b border-slate-100 px-4 sm:px-6 lg:px-8">
+      <nav className="hidden lg:block bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto flex space-x-1 overflow-x-auto no-scrollbar py-2">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -183,7 +267,7 @@ export const Navigation: React.FC = () => {
                 className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
                   isActive
                     ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <Icon className="w-4 h-4" />
@@ -195,7 +279,7 @@ export const Navigation: React.FC = () => {
       </nav>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-100 px-2 pb-safe shadow-[0_-4px_20px_rgba(15,23,42,0.06)]">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 px-2 pb-safe shadow-[0_-4px_20px_rgba(15,23,42,0.06)]">
         <div className="flex items-center justify-around h-[64px]">
           {bottomNavItems.slice(0, 2).map((item) => {
             const Icon = item.icon;
@@ -206,10 +290,10 @@ export const Navigation: React.FC = () => {
                 onClick={() => setActiveTab(item.id)}
                 className="flex flex-col items-center justify-center flex-1 h-full min-w-0"
               >
-                <div className={`p-1.5 rounded-xl transition-colors ${isActive ? 'bg-emerald-100 text-emerald-700' : 'text-slate-400'}`}>
+                <div className={`p-1.5 rounded-xl transition-colors ${isActive ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300' : 'text-slate-400 dark:text-slate-500'}`}>
                   <Icon className="w-5 h-5" />
                 </div>
-                <span className={`text-[10px] font-medium mt-0.5 ${isActive ? 'text-emerald-700 font-semibold' : 'text-slate-400'}`}>
+                <span className={`text-[10px] font-medium mt-0.5 ${isActive ? 'text-emerald-700 dark:text-emerald-300 font-semibold' : 'text-slate-400 dark:text-slate-500'}`}>
                   {item.label}
                 </span>
               </button>
@@ -234,10 +318,10 @@ export const Navigation: React.FC = () => {
                 onClick={() => setActiveTab(item.id)}
                 className="flex flex-col items-center justify-center flex-1 h-full min-w-0"
               >
-                <div className={`p-1.5 rounded-xl transition-colors ${isActive ? 'bg-emerald-100 text-emerald-700' : 'text-slate-400'}`}>
+                <div className={`p-1.5 rounded-xl transition-colors ${isActive ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300' : 'text-slate-400 dark:text-slate-500'}`}>
                   <Icon className="w-5 h-5" />
                 </div>
-                <span className={`text-[10px] font-medium mt-0.5 ${isActive ? 'text-emerald-700 font-semibold' : 'text-slate-400'}`}>
+                <span className={`text-[10px] font-medium mt-0.5 ${isActive ? 'text-emerald-700 dark:text-emerald-300 font-semibold' : 'text-slate-400 dark:text-slate-500'}`}>
                   {item.label}
                 </span>
               </button>
@@ -248,13 +332,13 @@ export const Navigation: React.FC = () => {
 
       {/* Notification Dropdown (shared) */}
       {showNotificationModal && (
-        <div className="fixed lg:absolute lg:right-8 lg:top-16 lg:w-80 inset-x-0 top-14 lg:top-auto lg:inset-x-auto bg-white border-b lg:border border-slate-100 lg:rounded-2xl shadow-lg p-4 z-40 max-h-[80vh] overflow-y-auto">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <h4 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-              <Bell className="w-4 h-4 text-emerald-600" />
+        <div className="fixed lg:absolute lg:right-8 lg:top-16 lg:w-80 inset-x-0 top-14 lg:top-auto lg:inset-x-auto bg-white dark:bg-slate-900 border-b lg:border border-slate-100 dark:border-slate-800 lg:rounded-2xl shadow-lg p-4 z-40 max-h-[80vh] overflow-y-auto">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+              <Bell className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               <span>Trung tâm Cảnh báo</span>
             </h4>
-            <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">
               {alertCount} việc
             </span>
           </div>
@@ -263,14 +347,14 @@ export const Navigation: React.FC = () => {
             {exceededBudgets.map((b) => (
               <div
                 key={b.budget.id}
-                className="p-2.5 rounded-xl bg-rose-50 border border-rose-100 flex items-start gap-2.5"
+                className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-100 dark:border-rose-900/50 flex items-start gap-2.5"
               >
-                <AlertTriangle className="w-4 h-4 text-rose-600 mt-0.5 shrink-0" />
+                <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 mt-0.5 shrink-0" />
                 <div className="text-xs">
-                  <p className="font-bold text-rose-700">
+                  <p className="font-bold text-rose-700 dark:text-rose-300">
                     Vượt ngân sách {b.budget.categoryName}
                   </p>
-                  <p className="text-rose-600/80 mt-0.5">
+                  <p className="text-rose-600/80 dark:text-rose-400/80 mt-0.5">
                     Đã chi {formatCurrency(b.spent)} / {formatCurrency(b.budget.amount)} ({b.percentage}%)
                   </p>
                 </div>
@@ -280,14 +364,14 @@ export const Navigation: React.FC = () => {
             {warningBudgets.map((b) => (
               <div
                 key={b.budget.id}
-                className="p-2.5 rounded-xl bg-amber-50 border border-amber-100 flex items-start gap-2.5"
+                className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900/50 flex items-start gap-2.5"
               >
-                <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
                 <div className="text-xs">
-                  <p className="font-bold text-amber-700">
+                  <p className="font-bold text-amber-700 dark:text-amber-300">
                     Cảnh báo 80%: {b.budget.categoryName}
                   </p>
-                  <p className="text-amber-600/80 mt-0.5">
+                  <p className="text-amber-600/80 dark:text-amber-400/80 mt-0.5">
                     Đã sử dụng {b.percentage}%. Còn {formatCurrency(b.remaining)}.
                   </p>
                 </div>
@@ -297,12 +381,12 @@ export const Navigation: React.FC = () => {
             {unpaidUpcomingBills.map((bill) => (
               <div
                 key={bill.id}
-                className="p-2.5 rounded-xl bg-blue-50 border border-blue-100 flex items-start gap-2.5"
+                className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50 flex items-start gap-2.5"
               >
-                <CalendarCheck className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+                <CalendarCheck className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
                 <div className="text-xs">
-                  <p className="font-bold text-blue-700">Hóa đơn chưa thanh toán: {bill.name}</p>
-                  <p className="text-blue-600/80 mt-0.5">
+                  <p className="font-bold text-blue-700 dark:text-blue-300">Hóa đơn chưa thanh toán: {bill.name}</p>
+                  <p className="text-blue-600/80 dark:text-blue-400/80 mt-0.5">
                     Hạn ngày {bill.dueDay} • {formatCurrency(bill.amount)}
                   </p>
                 </div>
@@ -310,11 +394,274 @@ export const Navigation: React.FC = () => {
             ))}
 
             {alertCount === 0 && (
-              <div className="text-center py-6 text-slate-500">
-                <CheckCircle2 className="w-8 h-8 mx-auto text-emerald-500 mb-1" />
+              <div className="text-center py-6 text-slate-500 dark:text-slate-400">
+                <CheckCircle2 className="w-8 h-8 mx-auto text-emerald-500 dark:text-emerald-400 mb-1" />
                 <p className="text-xs font-semibold">Mọi chỉ số đều an toàn!</p>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Profile Modal */}
+      {showProfileModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div
+            className="fixed inset-0"
+            onClick={() => {
+              setShowProfileModal(false);
+              setIsEditingProfile(false);
+            }}
+          />
+          <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full shadow-2xl overflow-hidden z-10 animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
+              <div className="flex items-center space-x-2">
+                <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
+                  <User className="w-4 h-4" />
+                </div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  {isEditingProfile ? 'Chỉnh sửa thông tin cá nhân' : 'Thông tin tài khoản'}
+                </h3>
+              </div>
+              <button
+                onClick={() => {
+                  setShowProfileModal(false);
+                  setIsEditingProfile(false);
+                }}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-5">
+              {!isEditingProfile ? (
+                /* VIEW MODE */
+                <div className="space-y-4">
+                  {/* Hero card */}
+                  <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent border border-emerald-500/20 p-4 text-center">
+                    <div className="relative inline-block mx-auto mb-2">
+                      <div
+                        className="w-16 h-16 rounded-2xl text-white flex items-center justify-center font-black text-2xl shadow-lg shadow-emerald-500/20 mx-auto"
+                        style={{ backgroundColor: userProfile.avatarColor || '#10b981' }}
+                      >
+                        {userProfile.name ? userProfile.name.charAt(0).toUpperCase() : 'A'}
+                      </div>
+                      <div className="absolute -bottom-1 -right-1 bg-amber-400 text-slate-950 p-1 rounded-full shadow-sm" title="VIP Member">
+                        <Crown className="w-3.5 h-3.5" />
+                      </div>
+                    </div>
+                    <h4 className="text-base font-bold text-slate-900 dark:text-white">
+                      {userProfile.name}
+                    </h4>
+                    <div className="flex items-center justify-center gap-2 mt-1 flex-wrap">
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                        <Shield className="w-3 h-3" />
+                        {userProfile.role}
+                      </span>
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                        <Crown className="w-3 h-3" />
+                        {userProfile.membership}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Profile info list */}
+                  <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3.5 space-y-2.5 border border-slate-100 dark:border-slate-800 text-xs">
+                    <div className="flex items-center justify-between py-1 border-b border-slate-200/60 dark:border-slate-700/60">
+                      <span className="text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                        <Mail className="w-3.5 h-3.5 text-slate-400" />
+                        Email
+                      </span>
+                      <span className="font-semibold text-slate-800 dark:text-slate-200">
+                        {userProfile.email}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between py-1 border-b border-slate-200/60 dark:border-slate-700/60">
+                      <span className="text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                        <Phone className="w-3.5 h-3.5 text-slate-400" />
+                        Số điện thoại
+                      </span>
+                      <span className="font-semibold text-slate-800 dark:text-slate-200">
+                        {userProfile.phone || 'Chưa thiết lập'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between py-1">
+                      <span className="text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                        Ngày tham gia
+                      </span>
+                      <span className="font-semibold text-slate-800 dark:text-slate-200">
+                        {userProfile.joinedDate}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Mini Stats */}
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400">Ví hoạt động</div>
+                      <div className="text-base font-bold text-slate-900 dark:text-white mt-0.5">
+                        {wallets.length}
+                      </div>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400">Giao dịch</div>
+                      <div className="text-base font-bold text-slate-900 dark:text-white mt-0.5">
+                        {transactions.length}
+                      </div>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400">Mục tiêu</div>
+                      <div className="text-base font-bold text-slate-900 dark:text-white mt-0.5">
+                        {goals.length}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="pt-2 space-y-2">
+                    <button
+                      onClick={() => setIsEditingProfile(true)}
+                      className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 px-4 rounded-xl text-xs font-semibold shadow-sm shadow-emerald-600/20 transition-all cursor-pointer active:scale-95"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                      <span>Chỉnh sửa thông tin cá nhân</span>
+                    </button>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => {
+                          exportDatabaseJSON();
+                        }}
+                        className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium transition-colors cursor-pointer"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Sao lưu dữ liệu</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowProfileModal(false);
+                          setActiveTab('settings');
+                        }}
+                        className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium transition-colors cursor-pointer"
+                      >
+                        <Settings className="w-3.5 h-3.5" />
+                        <span>Cài đặt chung</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* EDIT MODE */
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    updateUserProfile({
+                      name: editName.trim() || 'Admin',
+                      email: editEmail.trim() || 'admin@fintrack.vn',
+                      phone: editPhone.trim(),
+                      avatarColor: editAvatarColor,
+                    });
+                    setIsEditingProfile(false);
+                  }}
+                  className="space-y-4"
+                >
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                      Họ và tên / Tên hiển thị
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                      placeholder="Ví dụ: Nguyễn Văn A"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                      Địa chỉ Email
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={editEmail}
+                      onChange={(e) => setEditEmail(e.target.value)}
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                      placeholder="email@vidu.com"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                      Số điện thoại
+                    </label>
+                    <input
+                      type="tel"
+                      value={editPhone}
+                      onChange={(e) => setEditPhone(e.target.value)}
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                      placeholder="Ví dụ: 0912 345 678"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                      Màu đại diện
+                    </label>
+                    <div className="flex items-center gap-2.5">
+                      {[
+                        { color: '#10b981', label: 'Emerald' },
+                        { color: '#3b82f6', label: 'Blue' },
+                        { color: '#6366f1', label: 'Indigo' },
+                        { color: '#8b5cf6', label: 'Purple' },
+                        { color: '#f43f5e', label: 'Rose' },
+                        { color: '#f59e0b', label: 'Amber' },
+                      ].map((item) => (
+                        <button
+                          key={item.color}
+                          type="button"
+                          onClick={() => setEditAvatarColor(item.color)}
+                          className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ${
+                            editAvatarColor === item.color
+                              ? 'ring-2 ring-offset-2 ring-slate-900 dark:ring-white scale-110'
+                              : 'opacity-80 hover:opacity-100 hover:scale-105'
+                          }`}
+                          style={{ backgroundColor: item.color }}
+                          title={item.label}
+                        >
+                          {editAvatarColor === item.color && (
+                            <Check className="w-3.5 h-3.5 text-white stroke-[3]" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingProfile(false)}
+                      className="px-3.5 py-2 text-xs font-medium rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-600/20 transition-all cursor-pointer"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Lưu thông tin</span>
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
           </div>
         </div>
       )}

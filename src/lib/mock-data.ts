@@ -1,4 +1,44 @@
-import { Wallet, Transaction, Budget, RecurringBill, SavingsGoal, IncomeBudgetPlanner } from '@/types';
+import { Wallet, Transaction, Budget, RecurringBill, SavingsGoal, IncomeBudgetPlanner, Category, PersonalSpendingItem, ExternalLoanItem, SimulatorConfig } from '@/types';
+
+export const DEFAULT_CATEGORIES: Category[] = [
+  // Khoản chi
+  { id: 'cat-food', name: 'Ăn uống', type: 'EXPENSE', icon: 'Utensils', color: '#f97316' },
+  { id: 'cat-transport', name: 'Di chuyển & Xe', type: 'EXPENSE', icon: 'Car', color: '#0ea5e9' },
+  { id: 'cat-shopping', name: 'Mua sắm', type: 'EXPENSE', icon: 'ShoppingBag', color: '#ec4899' },
+  { id: 'cat-bills', name: 'Hóa đơn & Tiện ích', type: 'EXPENSE', icon: 'Receipt', color: '#eab308' },
+  { id: 'cat-housing', name: 'Nhà cửa & Thuê nhà', type: 'EXPENSE', icon: 'Home', color: '#8b5cf6' },
+  { id: 'cat-entertainment', name: 'Giải trí & Du lịch', type: 'EXPENSE', icon: 'Gamepad2', color: '#10b981' },
+  { id: 'cat-health', name: 'Sức khỏe & Y tế', type: 'EXPENSE', icon: 'HeartPulse', color: '#ef4444' },
+  { id: 'cat-education', name: 'Giáo dục & Khóa học', type: 'EXPENSE', icon: 'GraduationCap', color: '#06b6d4' },
+  { id: 'cat-invest-exp', name: 'Đầu tư & Tích lũy', type: 'EXPENSE', icon: 'TrendingUp', color: '#6366f1' },
+  { id: 'cat-other-exp', name: 'Chi phí khác', type: 'EXPENSE', icon: 'MoreHorizontal', color: '#64748b' },
+
+  // Khoản thu
+  { id: 'cat-salary', name: 'Lương chính', type: 'INCOME', icon: 'Briefcase', color: '#10b981' },
+  { id: 'cat-bonus', name: 'Thưởng & Làm thêm', type: 'INCOME', icon: 'Gift', color: '#f59e0b' },
+  { id: 'cat-invest-inc', name: 'Lợi nhuận đầu tư', type: 'INCOME', icon: 'Coins', color: '#3b82f6' },
+  { id: 'cat-business', name: 'Kinh doanh & Bán hàng', type: 'INCOME', icon: 'Store', color: '#8b5cf6' },
+  { id: 'cat-other-inc', name: 'Thu nhập khác', type: 'INCOME', icon: 'PlusCircle', color: '#14b8a6' },
+];
+
+export const POPULAR_TAGS = [
+  'Ăn trưa', 'Cafe', 'Tiệc tùng', 'Gia đình', 'Công tác', 
+  'Grab/Be', 'Xăng xe', 'Siêu thị', 'Online', 'Du lịch', 
+  'Sức khỏe', 'Khẩn cấp', 'Đầu tư'
+];
+
+export const VIETNAMESE_BANKS = [
+  { code: 'VCB', name: 'Vietcombank', color: '#007A33' },
+  { code: 'TCB', name: 'Techcombank', color: '#ED1C24' },
+  { code: 'MBB', name: 'MB Bank', color: '#0047BA' },
+  { code: 'ACB', name: 'ACB Bank', color: '#005CA9' },
+  { code: 'VPB', name: 'VPBank', color: '#00A651' },
+  { code: 'BIDV', name: 'BIDV', color: '#006738' },
+  { code: 'VIB', name: 'VIB', color: '#00539B' },
+  { code: 'TPB', name: 'TPBank', color: '#802682' },
+  { code: 'MOMO', name: 'Ví MoMo', color: '#A50064' },
+  { code: 'ZALOPAY', name: 'ZaloPay', color: '#0068FF' },
+];
 
 export const INITIAL_WALLETS: Wallet[] = [
   {
@@ -507,3 +547,125 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     createdAt: '2026-08-20T10:30:00',
   },
 ];
+
+export const DEFAULT_SPENDING_ITEMS: PersonalSpendingItem[] = [
+  {
+    id: 'spend-food',
+    categoryId: 'cat-food',
+    categoryName: 'Ăn uống & Cà phê',
+    icon: 'Utensils',
+    color: '#f97316',
+    monthlyExpense: 5500000,
+    isSelected: true,
+    cutPercent: 20,
+  },
+  {
+    id: 'spend-shopping',
+    categoryId: 'cat-shopping',
+    categoryName: 'Mua sắm & Quần áo',
+    icon: 'ShoppingBag',
+    color: '#ec4899',
+    monthlyExpense: 3000000,
+    isSelected: true,
+    cutPercent: 30,
+  },
+  {
+    id: 'spend-entertainment',
+    categoryId: 'cat-entertainment',
+    categoryName: 'Giải trí & Du lịch',
+    icon: 'Gamepad2',
+    color: '#10b981',
+    monthlyExpense: 2000000,
+    isSelected: true,
+    cutPercent: 25,
+  },
+  {
+    id: 'spend-housing',
+    categoryId: 'cat-housing',
+    categoryName: 'Nhà cửa & Tiền thuê',
+    icon: 'Home',
+    color: '#8b5cf6',
+    monthlyExpense: 6000000,
+    isSelected: false,
+    cutPercent: 10,
+  },
+  {
+    id: 'spend-bills',
+    categoryId: 'cat-bills',
+    categoryName: 'Hóa đơn & Tiện ích',
+    icon: 'Receipt',
+    color: '#eab308',
+    monthlyExpense: 2500000,
+    isSelected: false,
+    cutPercent: 15,
+  },
+  {
+    id: 'spend-transport',
+    categoryId: 'cat-transport',
+    categoryName: 'Di chuyển & Xăng xe',
+    icon: 'Car',
+    color: '#0ea5e9',
+    monthlyExpense: 1800000,
+    isSelected: false,
+    cutPercent: 20,
+  },
+  {
+    id: 'spend-health',
+    categoryId: 'cat-health',
+    categoryName: 'Sức khỏe & Y tế',
+    icon: 'HeartPulse',
+    color: '#ef4444',
+    monthlyExpense: 1200000,
+    isSelected: false,
+    cutPercent: 10,
+  },
+  {
+    id: 'spend-education',
+    categoryId: 'cat-education',
+    categoryName: 'Giáo dục & Khóa học',
+    icon: 'GraduationCap',
+    color: '#06b6d4',
+    monthlyExpense: 1500000,
+    isSelected: false,
+    cutPercent: 15,
+  },
+  {
+    id: 'spend-other',
+    categoryId: 'cat-other-exp',
+    categoryName: 'Chi phí phát sinh khác',
+    icon: 'MoreHorizontal',
+    color: '#64748b',
+    monthlyExpense: 800000,
+    isSelected: false,
+    cutPercent: 20,
+  },
+];
+
+export const DEFAULT_EXTERNAL_LOANS: ExternalLoanItem[] = [
+  {
+    id: 'loan-bike',
+    name: 'Trả góp xe máy / Vay ngân hàng',
+    originalDebt: 24000000,
+    monthlyPayment: 2200000,
+    annualInterestRate: 9.5,
+  },
+  {
+    id: 'loan-relatives',
+    name: 'Vay người thân / bạn bè (không lãi)',
+    originalDebt: 10000000,
+    monthlyPayment: 1000000,
+    annualInterestRate: 0,
+  },
+];
+
+export const INITIAL_SIMULATOR_CONFIG: SimulatorConfig = {
+  spendingCategories: DEFAULT_SPENDING_ITEMS,
+  projectionMonths: 12,
+  savingsAmount: 1500000,
+  savingsInterestRate: 5.5,
+  investmentAmount: 1500000,
+  investmentRateScenario: 8.5,
+  customInvestRate: '8.5',
+  hasExternalLoan: true,
+  externalLoans: DEFAULT_EXTERNAL_LOANS,
+};

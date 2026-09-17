@@ -16,6 +16,11 @@ import {
   FileCode,
   ShieldCheck,
   User,
+  Sun,
+  Moon,
+  Monitor,
+  Check,
+  Palette,
 } from 'lucide-react';
 
 export const SettingsView: React.FC = () => {
@@ -25,6 +30,9 @@ export const SettingsView: React.FC = () => {
     budgets,
     bills,
     goals,
+    serverSyncStatus,
+    theme,
+    setTheme,
     resetToDefaultData,
     clearAllData,
     exportDatabaseJSON,
@@ -73,14 +81,132 @@ export const SettingsView: React.FC = () => {
         </div>
       )}
 
+      {/* 2. THEME & APPEARANCE */}
+      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center space-x-2">
+            <Palette className="w-5 h-5 text-indigo-500" />
+            <h3 className="text-base font-bold text-slate-800 dark:text-white">
+              Tùy Chỉnh Giao Diện & Chủ Đề (Appearance & Theme)
+            </h3>
+          </div>
+          <span className="text-xs px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium self-start sm:self-auto">
+            Đang dùng: {theme === 'light' ? 'Chế độ Sáng' : theme === 'dark' ? 'Chế độ Tối' : 'Tự động (Hệ thống)'}
+          </span>
+        </div>
+
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Chọn chủ đề hiển thị theo sở thích của bạn hoặc chuyển đổi nhanh bằng nút Mặt trời/Mặt trăng trên thanh menu trên cùng. Thiết lập được tự động ghi nhớ.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+          {/* Light theme card */}
+          <button
+            type="button"
+            onClick={() => setTheme('light')}
+            className={`p-4 rounded-xl border-2 text-left transition-all flex flex-col justify-between relative cursor-pointer ${
+              theme === 'light'
+                ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-sm'
+                : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40'
+            }`}
+          >
+            <div className="flex items-center justify-between w-full mb-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                <Sun className="w-5 h-5" />
+              </div>
+              {theme === 'light' && (
+                <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center">
+                  <Check className="w-3.5 h-3.5" />
+                </span>
+              )}
+            </div>
+            <div>
+              <p className="font-bold text-sm text-slate-900 dark:text-white">Giao diện Sáng (Light)</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Tươi sáng, thanh lịch, độ tương phản cao cho ban ngày.
+              </p>
+            </div>
+          </button>
+
+          {/* Dark theme card */}
+          <button
+            type="button"
+            onClick={() => setTheme('dark')}
+            className={`p-4 rounded-xl border-2 text-left transition-all flex flex-col justify-between relative cursor-pointer ${
+              theme === 'dark'
+                ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-sm'
+                : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40'
+            }`}
+          >
+            <div className="flex items-center justify-between w-full mb-3">
+              <div className="w-10 h-10 rounded-xl bg-slate-800 text-indigo-400 flex items-center justify-center">
+                <Moon className="w-5 h-5" />
+              </div>
+              {theme === 'dark' && (
+                <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center">
+                  <Check className="w-3.5 h-3.5" />
+                </span>
+              )}
+            </div>
+            <div>
+              <p className="font-bold text-sm text-slate-900 dark:text-white">Giao diện Tối (Dark)</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Tông xám than dịu mắt, chống mỏi mắt khi sử dụng ban đêm.
+              </p>
+            </div>
+          </button>
+
+          {/* System theme card */}
+          <button
+            type="button"
+            onClick={() => setTheme('system')}
+            className={`p-4 rounded-xl border-2 text-left transition-all flex flex-col justify-between relative cursor-pointer ${
+              theme === 'system'
+                ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-sm'
+                : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40'
+            }`}
+          >
+            <div className="flex items-center justify-between w-full mb-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                <Monitor className="w-5 h-5" />
+              </div>
+              {theme === 'system' && (
+                <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center">
+                  <Check className="w-3.5 h-3.5" />
+                </span>
+              )}
+            </div>
+            <div>
+              <p className="font-bold text-sm text-slate-900 dark:text-white">Theo Thiết Bị (Auto)</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Tự động đồng bộ theo chế độ hiển thị hệ thống của máy.
+              </p>
+            </div>
+          </button>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 2. BACKUP & RESTORE */}
+        {/* 3. BACKUP & RESTORE */}
         <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
           <div className="flex items-center space-x-2 pb-3 border-b border-slate-100 dark:border-slate-800">
             <Database className="w-5 h-5 text-blue-500" />
             <h3 className="text-base font-bold text-slate-800 dark:text-white">
               Sao Lưu & Khôi Phục Dữ Liệu
             </h3>
+          </div>
+
+          {/* Server Disk Persistence Status */}
+          <div className="p-3.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/50 flex items-start space-x-3 text-xs">
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 mt-1 shrink-0 animate-pulse" />
+            <div>
+              <p className="font-bold text-emerald-900 dark:text-emerald-200">
+                Lưu trữ máy chủ: {serverSyncStatus === 'synced' ? 'Đã đồng bộ' : serverSyncStatus === 'syncing' ? 'Đang lưu...' : 'Ngoại tuyến (Offline)'}
+              </p>
+              <p className="text-emerald-700/80 dark:text-emerald-300/80 mt-0.5">
+                Dữ liệu được lưu trực tiếp vào tệp <code className="px-1 py-0.5 bg-white dark:bg-slate-800 rounded font-mono text-[11px]">data/database.json</code> trên ổ cứng. Tắt/bật lại server hoặc đổi trình duyệt dữ liệu vẫn bảo toàn nguyên vẹn.
+              </p>
+            </div>
           </div>
 
           <div className="space-y-3">

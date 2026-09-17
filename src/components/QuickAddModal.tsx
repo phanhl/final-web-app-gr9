@@ -3,17 +3,21 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { TransactionType } from '@/types';
-import { X, Upload, Plus, Calendar, Tag, FileText, ArrowRightLeft, DollarSign, Image as ImageIcon } from 'lucide-react';
-import { POPULAR_TAGS } from '@/lib/constants';
+import { X, Upload, Plus, Calendar, Tag, FileText, ArrowRightLeft, DollarSign, Image as ImageIcon, AlertTriangle } from 'lucide-react';
+import { POPULAR_TAGS } from '@/lib/mock-data';
 import { IconHelper } from './IconHelper';
+import { formatCurrency, checkWalletSufficientFunds, getWalletAvailableBalance, numberToVietnameseWords, formatNumberWithDots } from '@/lib/utils';
 
 export const QuickAddModal: React.FC = () => {
   const {
     quickAddOpen,
     setQuickAddOpen,
     quickAddDefaultType,
+    quickAddDefaultWalletId,
     wallets,
     categories,
+    currentMonth,
+    setCurrentMonth,
     addTransaction,
   } = useApp();
 
@@ -34,8 +38,11 @@ export const QuickAddModal: React.FC = () => {
       setAmount('');
       const defaultCat = categories.find((c) => c.type === (quickAddDefaultType === 'INCOME' ? 'INCOME' : 'EXPENSE'));
       setCategoryId(defaultCat?.id || '');
-      setWalletId(wallets[0]?.id || '');
-      const otherWallet = wallets.find((w) => w.id !== wallets[0]?.id);
+      const targetWalletId = (quickAddDefaultWalletId && wallets.some((w) => w.id === quickAddDefaultWalletId))
+        ? quickAddDefaultWalletId
+        : (wallets[0]?.id || '');
+      setWalletId(targetWalletId);
+      const otherWallet = wallets.find((w) => w.id !== targetWalletId);
       setToWalletId(otherWallet?.id || '');
       setFee('0');
       setDate(new Date().toISOString().slice(0, 16));
@@ -71,9 +78,19 @@ export const QuickAddModal: React.FC = () => {
     }
   };
 
+  const selectedWallet = wallets.find((w) => w.id === walletId);
+  const selectedToWallet = wallets.find((w) => w.id === toWalletId);
+  const selectedCategory = categories.find((c) => c.id === categoryId);
+
+  const numAmount = Number(amount) || 0;
+  const numFee = type === 'TRANSFER' ? (Number(fee) || 0) : 0;
+  const totalRequired = numAmount + numFee;
+  const fundValidation = checkWalletSufficientFunds(selectedWallet, numAmount, numFee);
+  const availableBalance = getWalletAvailableBalance(selectedWallet);
+  const isOverdraft = (type === 'EXPENSE' || type === 'TRANSFER') && numAmount > 0 && !fundValidation.isValid;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const numAmount = Number(amount);
     if (!numAmount || numAmount <= 0) {
       alert('Vui lòng nhập số tiền hợp lệ (> 0)');
       return;
@@ -89,11 +106,18 @@ export const QuickAddModal: React.FC = () => {
       return;
     }
 
-    const selectedWallet = wallets.find((w) => w.id === walletId);
-    const selectedToWallet = wallets.find((w) => w.id === toWalletId);
-    const selectedCategory = categories.find((c) => c.id === categoryId);
+    if ((type === 'EXPENSE' || type === 'TRANSFER') && !fundValidation.isValid) {
+      alert(fundValidation.errorMessage || 'Số dư ví không đủ để thực hiện giao dịch!');
+      return;
+    }
 
-    addTransaction({
+    const txDate = new Date(date || Date.now()).toISOString();
+    const txMonth = txDate.slice(0, 7);
+    if (txMonth && txMonth !== currentMonth) {
+      setCurrentMonth(txMonth);
+    }
+
+    const success = addTransaction({
       type,
       amount: numAmount,
       categoryId: type === 'TRANSFER' ? undefined : categoryId,
@@ -103,31 +127,33 @@ export const QuickAddModal: React.FC = () => {
       toWalletId: type === 'TRANSFER' ? toWalletId : undefined,
       toWalletName: type === 'TRANSFER' ? selectedToWallet?.name : undefined,
       fee: type === 'TRANSFER' ? Number(fee) : 0,
-      date: new Date(date || Date.now()).toISOString(),
+      date: txDate,
       note: note || (type === 'TRANSFER' ? `Chuyển sang ${selectedToWallet?.name}` : selectedCategory?.name || 'Giao dịch'),
       tags,
       receiptImage,
     });
 
-    setQuickAddOpen(false);
+    if (success) {
+      setQuickAddOpen(false);
+    }
   };
 
   const filteredCategories = categories.filter((c) => c.type === (type === 'INCOME' ? 'INCOME' : 'EXPENSE'));
 
   return (
     <div className="fixed inset-0 z-50 flex items-end lg:items-center justify-center bg-black/60 backdrop-blur-sm overflow-hidden">
-      <div className="relative w-full max-w-xl lg:max-w-2xl bg-white lg:rounded-2xl lg:my-6 rounded-t-3xl shadow-2xl overflow-hidden max-h-[92vh] lg:max-h-[85vh] flex flex-col">
+      <div className="relative w-full max-w-xl lg:max-w-2xl bg-white dark:bg-slate-900 lg:rounded-2xl lg:my-6 rounded-t-3xl shadow-2xl overflow-hidden max-h-[92vh] lg:max-h-[85vh] flex flex-col border border-transparent dark:border-slate-800">
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold">
+            <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
               +
             </div>
-            <h2 className="text-lg font-bold text-slate-800">Ghi nhận giao dịch nhanh</h2>
+            <h2 className="text-lg font-bold text-slate-800 dark:text-white">Ghi nhận giao dịch nhanh</h2>
           </div>
           <button
             onClick={() => setQuickAddOpen(false)}
-            className="p-2.5 -mr-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors"
+            className="p-2.5 -mr-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             aria-label="Đóng"
           >
             <X className="w-5 h-5" />
@@ -187,16 +213,37 @@ export const QuickAddModal: React.FC = () => {
             </label>
             <div className="relative">
               <input
-                type="number"
+                type="text"
+                inputMode="numeric"
                 required
                 autoFocus
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                value={formatNumberWithDots(amount)}
+                onChange={(e) => {
+                  const cleaned = e.target.value.replace(/\D/g, '');
+                  if (cleaned.length <= 18) {
+                    setAmount(cleaned);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (['e', 'E', '+', '-', '.', ','].includes(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
                 placeholder="0"
-                className="w-full text-3xl font-extrabold px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none dark:text-white"
+                className="w-full text-3xl font-extrabold pl-4 pr-12 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none dark:text-white"
               />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-lg">₫</span>
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-lg pointer-events-none">₫</span>
             </div>
+
+            {/* Real-time Vietnamese Amount in Words */}
+            {amount && Number(amount) > 0 && (
+              <div className="mt-2 px-3 py-2 rounded-xl bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200/70 dark:border-blue-900/60 text-xs flex items-start gap-2 animate-in fade-in slide-in-from-top-1">
+                <span className="text-blue-600 dark:text-blue-400 font-bold shrink-0 mt-0.5">Bằng chữ:</span>
+                <span className="font-semibold text-blue-900 dark:text-blue-200 italic break-words break-all [overflow-wrap:anywhere] leading-relaxed">
+                  {numberToVietnameseWords(amount)}
+                </span>
+              </div>
+            )}
 
             {/* Quick amount presets */}
             <div className="flex flex-wrap gap-1.5 mt-2">
@@ -225,17 +272,24 @@ export const QuickAddModal: React.FC = () => {
           {/* Wallets */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                {type === 'TRANSFER' ? 'Từ ví nguồn' : 'Ví thanh toán'} <span className="text-rose-500">*</span>
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  {type === 'TRANSFER' ? 'Từ ví nguồn' : 'Ví thanh toán'} <span className="text-rose-500">*</span>
+                </label>
+                {selectedWallet && (
+                  <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                    Khả dụng: {formatCurrency(availableBalance)}
+                  </span>
+                )}
+              </div>
               <select
                 value={walletId}
                 onChange={(e) => setWalletId(e.target.value)}
-                className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
+                className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm font-semibold"
               >
                 {wallets.map((w) => (
                   <option key={w.id} value={w.id}>
-                    {w.name} ({new Intl.NumberFormat('vi-VN').format(w.balance)} ₫)
+                    {w.name} ({formatCurrency(w.balance)})
                   </option>
                 ))}
               </select>
@@ -287,12 +341,34 @@ export const QuickAddModal: React.FC = () => {
                 Phí chuyển tiền (nếu có)
               </label>
               <input
-                type="number"
-                value={fee}
-                onChange={(e) => setFee(e.target.value)}
+                type="text"
+                inputMode="numeric"
+                value={fee ? formatNumberWithDots(fee) : ''}
+                onChange={(e) => {
+                  const cleaned = e.target.value.replace(/\D/g, '');
+                  if (cleaned.length <= 18) {
+                    setFee(cleaned);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (['e', 'E', '+', '-', '.', ','].includes(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
                 placeholder="0"
                 className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
               />
+            </div>
+          )}
+
+          {/* Real-time Overdraft Warning Alert */}
+          {isOverdraft && (
+            <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-xs text-rose-700 dark:text-rose-300 flex items-start gap-2.5 animate-in fade-in min-w-0 max-w-full overflow-hidden">
+              <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
+              <div className="min-w-0 flex-1">
+                <p className="font-bold">Số tiền vượt quá quỹ khả dụng!</p>
+                <p className="mt-1 leading-relaxed break-words break-all [overflow-wrap:anywhere]">{fundValidation.errorMessage}</p>
+              </div>
             </div>
           )}
 
@@ -422,10 +498,15 @@ export const QuickAddModal: React.FC = () => {
             </button>
             <button
               type="submit"
-              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm transition-colors shadow-md flex items-center space-x-2"
+              disabled={isOverdraft || numAmount <= 0}
+              className={`px-6 py-2.5 font-semibold rounded-xl text-sm transition-all shadow-md flex items-center space-x-2 ${
+                isOverdraft || numAmount <= 0
+                  ? 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-60'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer active:scale-95'
+              }`}
             >
               <Plus className="w-4 h-4" />
-              <span>Thêm giao dịch</span>
+              <span>{isOverdraft ? 'Số dư không đủ' : 'Thêm giao dịch'}</span>
             </button>
           </div>
         </form>

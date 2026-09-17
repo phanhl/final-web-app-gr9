@@ -8,57 +8,31 @@ import {
   ArrowDownLeft,
   ArrowRightLeft,
   ChevronRight,
-  Sparkles,
   AlertTriangle,
   PiggyBank,
   Eye,
+  Sparkles,
 } from 'lucide-react';
 import { formatCurrency, formatDate, calculateBudgetStatuses } from '@/lib/utils';
 import { ReceiptModal } from './ReceiptModal';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from 'recharts';
-
-const pieChartColors = ['#f97316', '#ec4899', '#8b5cf6', '#0ea5e9', '#eab308', '#10b981', '#64748b'];
 
 export const DashboardView: React.FC = () => {
-  const { financialSummary, transactions, budgets, bills, openQuickAdd, setActiveTab } = useApp();
+  const {
+    financialSummary,
+    transactions,
+    budgets,
+    bills,
+    currentMonth,
+    openQuickAdd,
+    setActiveTab,
+  } = useApp();
   const [selectedReceipt, setSelectedReceipt] = useState<string | null>(null);
   const [showBalance, setShowBalance] = useState(true);
 
-  const budgetStatuses = calculateBudgetStatuses(budgets, transactions);
+  const budgetStatuses = calculateBudgetStatuses(budgets, transactions, currentMonth);
   const exceededBudgets = budgetStatuses.filter((b) => b.status === 'EXCEEDED');
   const warningBudgets = budgetStatuses.filter((b) => b.status === 'WARNING');
   const unpaidBills = bills.filter((b) => b.status === 'UNPAID');
-
-  const barChartData = [
-    { month: 'T7', Thu: 32000000, Chi: 14500000 },
-    { month: 'T8', Thu: 34000000, Chi: 14450000 },
-    { month: 'T9', Thu: financialSummary.monthlyIncome, Chi: financialSummary.monthlyExpense },
-  ];
-
-  const currentMonthExpenses = transactions.filter(
-    (t) => t.type === 'EXPENSE' && t.date.startsWith('2026-09')
-  );
-  const categoryExpensesMap: { [catName: string]: number } = {};
-  currentMonthExpenses.forEach((t) => {
-    const cat = t.categoryName || 'Khác';
-    categoryExpensesMap[cat] = (categoryExpensesMap[cat] || 0) + t.amount;
-  });
-
-  const pieChartData = Object.keys(categoryExpensesMap).map((catName, index) => ({
-    name: catName,
-    value: categoryExpensesMap[catName],
-    color: pieChartColors[index % pieChartColors.length],
-  }));
 
   const recentTransactions = transactions.slice(0, 6);
 
@@ -73,16 +47,22 @@ export const DashboardView: React.FC = () => {
 
   return (
     <div className="space-y-5 pb-4">
-      {/* Greeting */}
-      <div className="flex items-start justify-between">
+      {/* Header: Khối tiêu đề với nền màu xanh dương nhạt tinh tế, rõ ràng */}
+      <div className="flex items-center justify-between p-4 sm:p-5 rounded-2xl bg-sky-50/90 dark:bg-sky-950/40 border border-sky-200/80 dark:border-sky-900/60 shadow-sm">
         <div>
-          <p className="text-sm text-slate-500">Chào buổi sáng,</p>
-          <h1 className="text-xl font-extrabold text-slate-900">Admin</h1>
+          <h1 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+            Tổng quan tài chính
+          </h1>
+          <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mt-0.5">
+            Theo dõi dòng tiền & ngân sách thông minh
+          </p>
         </div>
+
         <button
           onClick={() => setShowBalance((s) => !s)}
-          className="p-2 rounded-full bg-white border border-slate-100 text-slate-400 hover:text-slate-600 shadow-sm"
+          className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-sky-200/80 dark:border-sky-800 text-slate-500 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white shadow-sm transition-colors"
           aria-label={showBalance ? 'Ẩn số dư' : 'Hiện số dư'}
+          title={showBalance ? 'Ẩn số dư' : 'Hiện số dư'}
         >
           <Eye className="w-4 h-4" />
         </button>
@@ -119,25 +99,25 @@ export const DashboardView: React.FC = () => {
 
       {/* Income / Expense */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
               <ArrowUpRight className="w-4 h-4" />
             </div>
-            <span className="text-xs font-medium text-slate-500">Thu nhập</span>
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Thu nhập</span>
           </div>
-          <p className="text-lg font-bold text-slate-900 truncate">
+          <p className="text-lg font-bold text-slate-900 dark:text-white truncate">
             {formatCurrency(financialSummary.monthlyIncome)}
           </p>
         </div>
-        <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-rose-100 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center">
               <ArrowDownLeft className="w-4 h-4" />
             </div>
-            <span className="text-xs font-medium text-slate-500">Chi tiêu</span>
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Chi tiêu</span>
           </div>
-          <p className="text-lg font-bold text-slate-900 truncate">
+          <p className="text-lg font-bold text-slate-900 dark:text-white truncate">
             {formatCurrency(financialSummary.monthlyExpense)}
           </p>
         </div>
@@ -145,7 +125,7 @@ export const DashboardView: React.FC = () => {
 
       {/* Quick Actions */}
       <div>
-        <h2 className="text-sm font-bold text-slate-900 mb-3">Thao tác nhanh</h2>
+        <h2 className="text-sm font-bold text-slate-900 dark:text-white mb-3">Thao tác nhanh</h2>
         <div className="grid grid-cols-4 gap-3">
           {quickActions.map((action) => {
             const Icon = action.icon;
@@ -156,7 +136,7 @@ export const DashboardView: React.FC = () => {
                 >
                   <Icon className="w-5 h-5" />
                 </div>
-                <span className="text-[11px] font-semibold text-slate-600">{action.label}</span>
+                <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">{action.label}</span>
               </button>
             );
           })}
@@ -170,18 +150,18 @@ export const DashboardView: React.FC = () => {
             <button
               key={item.budget.id}
               onClick={() => setActiveTab('budgets')}
-              className="w-full flex items-center gap-3 p-3 bg-rose-50 border border-rose-100 rounded-2xl text-left"
+              className="w-full flex items-center gap-3 p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/40 rounded-2xl text-left transition-colors"
             >
               <div className="w-10 h-10 rounded-full bg-rose-500 text-white flex items-center justify-center shrink-0">
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-rose-800">Vượt ngân sách {item.budget.categoryName}</p>
-                <p className="text-xs text-rose-600/80 truncate">
+                <p className="text-sm font-bold text-rose-800 dark:text-rose-200">Vượt ngân sách {item.budget.categoryName}</p>
+                <p className="text-xs text-rose-600/80 dark:text-rose-400 truncate">
                   Đã chi {formatCurrency(item.spent)} / {formatCurrency(item.budget.amount)}
                 </p>
               </div>
-              <ChevronRight className="w-4 h-4 text-rose-300 shrink-0" />
+              <ChevronRight className="w-4 h-4 text-rose-300 dark:text-rose-500 shrink-0" />
             </button>
           ))}
 
@@ -189,160 +169,89 @@ export const DashboardView: React.FC = () => {
             <button
               key={item.budget.id}
               onClick={() => setActiveTab('budgets')}
-              className="w-full flex items-center gap-3 p-3 bg-amber-50 border border-amber-100 rounded-2xl text-left"
+              className="w-full flex items-center gap-3 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40 rounded-2xl text-left transition-colors"
             >
               <div className="w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center shrink-0">
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-amber-800">Sắp vượt ngân sách {item.budget.categoryName}</p>
-                <p className="text-xs text-amber-600/80 truncate">Đã sử dụng {item.percentage}%</p>
+                <p className="text-sm font-bold text-amber-800 dark:text-amber-200">Sắp vượt ngân sách {item.budget.categoryName}</p>
+                <p className="text-xs text-amber-600/80 dark:text-amber-400 truncate">Đã sử dụng {item.percentage}%</p>
               </div>
-              <ChevronRight className="w-4 h-4 text-amber-300 shrink-0" />
+              <ChevronRight className="w-4 h-4 text-amber-300 dark:text-amber-500 shrink-0" />
             </button>
           ))}
 
           {unpaidBills.length > 0 && (
             <button
               onClick={() => setActiveTab('bills')}
-              className="w-full flex items-center gap-3 p-3 bg-blue-50 border border-blue-100 rounded-2xl text-left"
+              className="w-full flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 rounded-2xl text-left transition-colors"
             >
               <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0">
                 <Wallet className="w-5 h-5" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-blue-800">{unpaidBills.length} hóa đơn sắp đến hạn</p>
-                <p className="text-xs text-blue-600/80 truncate">
+                <p className="text-sm font-bold text-blue-800 dark:text-blue-200">{unpaidBills.length} hóa đơn sắp đến hạn</p>
+                <p className="text-xs text-blue-600/80 dark:text-blue-400 truncate">
                   Tổng {formatCurrency(unpaidBills.reduce((s, b) => s + b.amount, 0))}
                 </p>
               </div>
-              <ChevronRight className="w-4 h-4 text-blue-300 shrink-0" />
+              <ChevronRight className="w-4 h-4 text-blue-300 dark:text-blue-500 shrink-0" />
             </button>
           )}
         </div>
       )}
 
-      {/* What-If Promo */}
+      {/* What-If Simulator Quick Entry */}
       <button
         onClick={() => setActiveTab('whatif')}
-        className="w-full relative overflow-hidden rounded-2xl bg-slate-900 text-white p-4 text-left shadow-md"
+        className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-transparent border border-indigo-200/80 dark:border-indigo-800/50 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all group text-left shadow-sm"
       >
-        <div className="relative z-10 flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-500/30 text-indigo-300 flex items-center justify-center shrink-0">
-            <Sparkles className="w-5 h-5" />
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
+            <Sparkles className="w-4 h-4" />
           </div>
-          <div className="flex-1">
-            <h3 className="text-sm font-bold">Mô phỏng What-If</h3>
-            <p className="text-xs text-slate-300 mt-0.5 line-clamp-2">
-              Kéo thanh trượt để xem tài sản thay đổi nếu cắt giảm chi tiêu hoặc đầu tư thêm.
+          <div>
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+              Mô phỏng tài chính What-If
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">Công cụ dự báo</span>
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Kéo thanh trượt để dự báo tăng trưởng tài sản khi cắt giảm chi tiêu hoặc đầu tư thêm
             </p>
           </div>
-          <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 mt-2" />
         </div>
+        <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all" />
       </button>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-sm font-bold text-slate-900">Thu - Chi</h3>
-              <p className="text-xs text-slate-500">3 tháng gần nhất</p>
-            </div>
-            <button onClick={() => setActiveTab('reports')} className="text-xs font-semibold text-emerald-600 flex items-center gap-0.5">
-              Xem báo cáo <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-          <div className="h-56 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={barChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} dy={8} />
-                <YAxis
-                  tickFormatter={(val) => `${val / 1000000}Tr`}
-                  tick={{ fontSize: 12 }}
-                  axisLine={false}
-                  tickLine={false}
-                  width={40}
-                />
-                <Tooltip
-                  formatter={(val: any) => formatCurrency(Number(val))}
-                  contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                />
-                <Bar dataKey="Thu" fill="#10b981" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="Chi" fill="#f43f5e" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-          <h3 className="text-sm font-bold text-slate-900 mb-1">Chi tiêu theo danh mục</h3>
-          <p className="text-xs text-slate-500 mb-4">Tháng 9</p>
-          <div className="h-40 w-full">
-            {pieChartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pieChartData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={45}
-                    outerRadius={65}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {pieChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(val: any) => formatCurrency(Number(val))}
-                    contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-full text-xs text-slate-400">Chưa có dữ liệu</div>
-            )}
-          </div>
-          <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1 mt-2">
-            {pieChartData.map((entry) => (
-              <div key={entry.name} className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2 truncate">
-                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
-                  <span className="text-slate-600 truncate">{entry.name}</span>
-                </div>
-                <span className="font-semibold text-slate-800 shrink-0">{formatCurrency(entry.value)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
       {/* Recent Transactions */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between p-4 border-b border-slate-100">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800">
           <div>
-            <h3 className="text-sm font-bold text-slate-900">Giao dịch gần đây</h3>
-            <p className="text-xs text-slate-500">Các phát sinh mới nhất</p>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Giao dịch gần đây</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Các phát sinh mới nhất</p>
           </div>
-          <button onClick={() => setActiveTab('transactions')} className="text-xs font-semibold text-emerald-600 hover:text-emerald-700">
-            Xem tất cả
+          <button
+            onClick={() => setActiveTab('transactions')}
+            className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 flex items-center gap-1 transition-colors"
+          >
+            <span>Xem tất cả sổ GD</span>
+            <ChevronRight className="w-3.5 h-3.5" />
           </button>
         </div>
-        <div className="divide-y divide-slate-50">
+        <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
           {recentTransactions.map((tx) => (
             <div
               key={tx.id}
-              className="flex items-center gap-3 p-4 hover:bg-slate-50 active:bg-slate-100 transition-colors"
+              className="flex items-center gap-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
             >
               <div
                 className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
                   tx.type === 'EXPENSE'
-                    ? 'bg-rose-100 text-rose-600'
+                    ? 'bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400'
                     : tx.type === 'INCOME'
-                    ? 'bg-emerald-100 text-emerald-600'
-                    : 'bg-sky-100 text-sky-600'
+                    ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400'
+                    : 'bg-sky-100 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400'
                 }`}
               >
                 {tx.type === 'EXPENSE' ? (
@@ -355,21 +264,21 @@ export const DashboardView: React.FC = () => {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-bold text-slate-900 truncate">
+                  <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
                     {tx.type === 'TRANSFER' ? `Chuyển sang ${tx.toWalletName || 'Ví'}` : tx.categoryName || 'Khác'}
                   </p>
                   {tx.receiptImage && (
-                    <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">Hóa đơn</span>
+                    <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-1.5 py-0.5 rounded-full">Hóa đơn</span>
                   )}
                 </div>
-                <p className="text-xs text-slate-500 truncate">
+                <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
                   {formatDate(tx.date, 'full')} • {tx.walletName}
                 </p>
               </div>
               <div className="text-right shrink-0">
                 <span
                   className={`text-sm font-bold ${
-                    tx.type === 'EXPENSE' ? 'text-rose-600' : tx.type === 'INCOME' ? 'text-emerald-600' : 'text-sky-600'
+                    tx.type === 'EXPENSE' ? 'text-rose-600 dark:text-rose-400' : tx.type === 'INCOME' ? 'text-emerald-600 dark:text-emerald-400' : 'text-sky-600 dark:text-sky-400'
                   }`}
                 >
                   {tx.type === 'EXPENSE' ? '-' : tx.type === 'INCOME' ? '+' : ''}

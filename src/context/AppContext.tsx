@@ -11,6 +11,8 @@ import {
   IncomeBudgetPlanner,
   FinancialSummary,
   FilterPeriod,
+  UserProfile,
+  SimulatorConfig,
 } from '@/types';
 import {
   INITIAL_WALLETS,
@@ -19,9 +21,10 @@ import {
   INITIAL_BILLS,
   INITIAL_GOALS,
   INITIAL_PLANNER,
+  DEFAULT_CATEGORIES,
+  INITIAL_SIMULATOR_CONFIG,
 } from '@/lib/mock-data';
-import { DEFAULT_CATEGORIES } from '@/lib/constants';
-import { calculateFinancialSummary } from '@/lib/utils';
+import { calculateFinancialSummary, checkWalletSufficientFunds, formatCurrency } from '@/lib/utils';
 
 interface AppContextType {
   wallets: Wallet[];
@@ -32,24 +35,34 @@ interface AppContextType {
   goals: SavingsGoal[];
   planner: IncomeBudgetPlanner;
   currentMonth: string;
+  setCurrentMonth: (month: string) => void;
+  serverSyncStatus: 'synced' | 'syncing' | 'offline';
   activeTab: string;
   setActiveTab: (tab: string) => void;
   quickAddOpen: boolean;
   setQuickAddOpen: (open: boolean) => void;
   quickAddDefaultType: 'EXPENSE' | 'INCOME' | 'TRANSFER';
-  openQuickAdd: (type?: 'EXPENSE' | 'INCOME' | 'TRANSFER') => void;
+  quickAddDefaultWalletId?: string;
+  openQuickAdd: (type?: 'EXPENSE' | 'INCOME' | 'TRANSFER', defaultWalletId?: string) => void;
   financialSummary: FinancialSummary;
+  theme: 'light' | 'dark' | 'system';
+  setTheme: (theme: 'light' | 'dark' | 'system') => void;
+  toggleTheme: () => void;
+  isDarkMode: boolean;
+  userProfile: UserProfile;
+  updateUserProfile: (profile: Partial<UserProfile>) => void;
 
   // Transactions
-  addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) => void;
-  editTransaction: (id: string, tx: Partial<Transaction>) => void;
+  addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) => boolean;
+  editTransaction: (id: string, tx: Partial<Transaction>) => boolean;
   deleteTransaction: (id: string) => void;
 
   // Wallets
   addWallet: (wallet: Omit<Wallet, 'id' | 'createdAt'>) => void;
   editWallet: (id: string, wallet: Partial<Wallet>) => void;
   deleteWallet: (id: string) => void;
-  transferFunds: (fromWalletId: string, toWalletId: string, amount: number, fee: number, note?: string) => void;
+  transferFunds: (fromWalletId: string, toWalletId: string, amount: number, fee: number, note?: string) => boolean;
+  recalculateWalletBalances: () => void;
 
   // Budgets
   addBudget: (budget: Omit<Budget, 'id'>) => void;
@@ -69,6 +82,10 @@ interface AppContextType {
   deleteGoal: (id: string) => void;
   depositToGoal: (goalId: string, amount: number, walletId: string, note?: string) => void;
   withdrawFromGoal: (goalId: string, amount: number, walletId: string, note?: string) => void;
+
+  // What-If Simulator Persistence
+  simulatorConfig: SimulatorConfig;
+  updateSimulatorConfig: (config: Partial<SimulatorConfig>) => void;
 
   // Backup & Reset
   resetToDefaultData: () => void;
@@ -95,48 +112,204 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [quickAddOpen, setQuickAddOpen] = useState<boolean>(false);
   const [quickAddDefaultType, setQuickAddDefaultType] = useState<'EXPENSE' | 'INCOME' | 'TRANSFER'>('EXPENSE');
+  const [quickAddDefaultWalletId, setQuickAddDefaultWalletId] = useState<string | undefined>(undefined);
 
-  // Load from local storage
+  const [serverSyncStatus, setServerSyncStatus] = useState<'synced' | 'syncing' | 'offline'>('synced');
+
+  // User Profile
+  const [userProfile, setUserProfile] = useState<UserProfile>({
+    name: 'Admin',
+    email: 'admin@fintrack.vn',
+    phone: '0912 345 678',
+    role: 'Chủ tài khoản (Owner)',
+    membership: 'VIP Lifetime Member',
+    joinedDate: '16/09/2026',
+    avatarColor: '#10b981',
+  });
+
+  const updateUserProfile = (profile: Partial<UserProfile>) => {
+    setUserProfile((prev) => {
+      const updated = { ...prev, ...profile };
+      try {
+        localStorage.setItem('fintrack_user_profile', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+  };
+
+  // What-If Simulator Configuration State
+  const [simulatorConfig, setSimulatorConfig] = useState<SimulatorConfig>(INITIAL_SIMULATOR_CONFIG);
+
+  const updateSimulatorConfig = (config: Partial<SimulatorConfig>) => {
+    setSimulatorConfig((prev) => ({ ...prev, ...config }));
+  };
+
+  // Theme Management (Light, Dark, System)
+  const [theme, setThemeState] = useState<'light' | 'dark' | 'system'>('system');
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
+
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.wallets) setWallets(parsed.wallets);
-        if (parsed.transactions) setTransactions(parsed.transactions);
-        if (parsed.categories) setCategories(parsed.categories);
-        if (parsed.budgets) setBudgets(parsed.budgets);
-        if (parsed.bills) setBills(parsed.bills);
-        if (parsed.goals) setGoals(parsed.goals);
-        if (parsed.planner) setPlanner(parsed.planner);
-      }
+      const savedTheme = (localStorage.getItem('fintrack_theme') as 'light' | 'dark' | 'system') || 'system';
+      setThemeState(savedTheme);
     } catch (e) {
-      console.error('Failed to load storage data:', e);
+      console.warn('Failed to read theme from localStorage', e);
     }
-    setMounted(true);
   }, []);
 
-  // Save to local storage
+  useEffect(() => {
+    const updateTheme = () => {
+      const isDark =
+        theme === 'dark' ||
+        (theme === 'system' && typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+      setIsDarkMode(isDark);
+      if (typeof document !== 'undefined') {
+        if (isDark) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      }
+    };
+
+    updateTheme();
+    try {
+      localStorage.setItem('fintrack_theme', theme);
+    } catch (e) {
+      // ignore
+    }
+
+    if (theme === 'system' && typeof window !== 'undefined') {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const listener = () => updateTheme();
+      mediaQuery.addEventListener('change', listener);
+      return () => mediaQuery.removeEventListener('change', listener);
+    }
+  }, [theme]);
+
+  const setTheme = (newTheme: 'light' | 'dark' | 'system') => {
+    setThemeState(newTheme);
+  };
+
+  const toggleTheme = () => {
+    setThemeState(isDarkMode ? 'light' : 'dark');
+  };
+
+  // Load from server disk first, fallback to local storage
+  useEffect(() => {
+    let isSubscribed = true;
+
+    async function loadData() {
+      let loadedFromServer = false;
+      try {
+        const res = await fetch('/api/storage');
+        if (res.ok) {
+          const result = await res.json();
+          if (result.success && result.data && isSubscribed) {
+            const d = result.data;
+            if (d.wallets) setWallets(d.wallets);
+            if (d.transactions) setTransactions(d.transactions);
+            if (d.categories) setCategories(d.categories);
+            if (d.budgets) setBudgets(d.budgets);
+            if (d.bills) setBills(d.bills);
+            if (d.goals) setGoals(d.goals);
+            if (d.planner) setPlanner(d.planner);
+            if (d.currentMonth) setCurrentMonth(d.currentMonth);
+            if (d.userProfile) setUserProfile(d.userProfile);
+            if (d.simulatorConfig) setSimulatorConfig(d.simulatorConfig);
+            loadedFromServer = true;
+            setServerSyncStatus('synced');
+          }
+        }
+      } catch (e) {
+        console.warn('Could not connect to server storage API, falling back to localStorage:', e);
+        if (isSubscribed) setServerSyncStatus('offline');
+      }
+
+      if (!loadedFromServer && isSubscribed) {
+        try {
+          const saved = localStorage.getItem(STORAGE_KEY);
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (parsed.wallets) setWallets(parsed.wallets);
+            if (parsed.transactions) setTransactions(parsed.transactions);
+            if (parsed.categories) setCategories(parsed.categories);
+            if (parsed.budgets) setBudgets(parsed.budgets);
+            if (parsed.bills) setBills(parsed.bills);
+            if (parsed.goals) setGoals(parsed.goals);
+            if (parsed.planner) setPlanner(parsed.planner);
+            if (parsed.currentMonth) setCurrentMonth(parsed.currentMonth);
+            if (parsed.userProfile) setUserProfile(parsed.userProfile);
+            if (parsed.simulatorConfig) setSimulatorConfig(parsed.simulatorConfig);
+          }
+        } catch (e) {
+          console.error('Failed to load localStorage data:', e);
+        }
+      }
+
+      if (isSubscribed) {
+        setMounted(true);
+      }
+    }
+
+    loadData();
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, []);
+
+  // Save to local storage & persist to server disk
   useEffect(() => {
     if (!mounted) return;
+
+    const payload = {
+      wallets,
+      transactions,
+      categories,
+      budgets,
+      bills,
+      goals,
+      planner,
+      currentMonth,
+      userProfile,
+      simulatorConfig,
+    };
+
+    // 1. Fast local cache save
     try {
-      const payload = {
-        wallets,
-        transactions,
-        categories,
-        budgets,
-        bills,
-        goals,
-        planner,
-      };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     } catch (e) {
       console.error('Failed to save to localStorage:', e);
     }
-  }, [mounted, wallets, transactions, categories, budgets, bills, goals, planner]);
 
-  const openQuickAdd = (type: 'EXPENSE' | 'INCOME' | 'TRANSFER' = 'EXPENSE') => {
+    // 2. Persist to server disk via API
+    setServerSyncStatus('syncing');
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch('/api/storage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) {
+          setServerSyncStatus('synced');
+        } else {
+          setServerSyncStatus('offline');
+        }
+      } catch (err) {
+        console.warn('Failed to sync to server storage API:', err);
+        setServerSyncStatus('offline');
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [mounted, wallets, transactions, categories, budgets, bills, goals, planner, currentMonth, userProfile, simulatorConfig]);
+
+  const openQuickAdd = (type: 'EXPENSE' | 'INCOME' | 'TRANSFER' = 'EXPENSE', defaultWalletId?: string) => {
     setQuickAddDefaultType(type);
+    setQuickAddDefaultWalletId(defaultWalletId);
     setQuickAddOpen(true);
   };
 
@@ -144,7 +317,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const financialSummary = calculateFinancialSummary(wallets, transactions, currentMonth);
 
   // Add Transaction
-  const addTransaction = (tx: Omit<Transaction, 'id' | 'createdAt'>) => {
+  const addTransaction = (tx: Omit<Transaction, 'id' | 'createdAt'>): boolean => {
+    // 1. Validate funds for EXPENSE and TRANSFER to prevent negative balance
+    if (tx.type === 'EXPENSE' || tx.type === 'TRANSFER') {
+      const sourceWallet = wallets.find((w) => w.id === tx.walletId);
+      const fee = tx.type === 'TRANSFER' ? (tx.fee || 0) : 0;
+      const validation = checkWalletSufficientFunds(sourceWallet, tx.amount, fee);
+      if (!validation.isValid) {
+        alert(validation.errorMessage || 'Số dư ví không đủ để thực hiện giao dịch này!');
+        return false;
+      }
+    }
+
     const id = `tx-${Date.now()}`;
     const createdAt = new Date().toISOString();
     const newTx: Transaction = {
@@ -153,20 +337,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt,
     };
 
-    // Update wallet balances
+    // Update wallet balances with credit card logic & non-negative floor
     setWallets((prevWallets) =>
       prevWallets.map((w) => {
         if (tx.type === 'EXPENSE' && w.id === tx.walletId) {
-          return { ...w, balance: w.balance - tx.amount };
+          if (w.type === 'CREDIT') {
+            return { ...w, balance: w.balance + tx.amount };
+          }
+          return { ...w, balance: Math.max(0, w.balance - tx.amount) };
         }
         if (tx.type === 'INCOME' && w.id === tx.walletId) {
+          if (w.type === 'CREDIT') {
+            return { ...w, balance: Math.max(0, w.balance - tx.amount) };
+          }
           return { ...w, balance: w.balance + tx.amount };
         }
         if (tx.type === 'TRANSFER') {
           if (w.id === tx.walletId) {
-            return { ...w, balance: w.balance - (tx.amount + (tx.fee || 0)) };
+            if (w.type === 'CREDIT') {
+              return { ...w, balance: w.balance + (tx.amount + (tx.fee || 0)) };
+            }
+            return { ...w, balance: Math.max(0, w.balance - (tx.amount + (tx.fee || 0))) };
           }
           if (w.id === tx.toWalletId) {
+            if (w.type === 'CREDIT') {
+              return { ...w, balance: Math.max(0, w.balance - tx.amount) };
+            }
             return { ...w, balance: w.balance + tx.amount };
           }
         }
@@ -175,28 +371,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
 
     setTransactions((prev) => [newTx, ...prev]);
+    return true;
   };
 
   // Edit Transaction
-  const editTransaction = (id: string, updated: Partial<Transaction>) => {
+  const editTransaction = (id: string, updated: Partial<Transaction>): boolean => {
     const oldTx = transactions.find((t) => t.id === id);
-    if (!oldTx) return;
+    if (!oldTx) return false;
 
     // Rollback old transaction on wallets
     let adjustedWallets = [...wallets];
     adjustedWallets = adjustedWallets.map((w) => {
       if (oldTx.type === 'EXPENSE' && w.id === oldTx.walletId) {
+        if (w.type === 'CREDIT') return { ...w, balance: Math.max(0, w.balance - oldTx.amount) };
         return { ...w, balance: w.balance + oldTx.amount };
       }
       if (oldTx.type === 'INCOME' && w.id === oldTx.walletId) {
-        return { ...w, balance: w.balance - oldTx.amount };
+        if (w.type === 'CREDIT') return { ...w, balance: w.balance + oldTx.amount };
+        return { ...w, balance: Math.max(0, w.balance - oldTx.amount) };
       }
       if (oldTx.type === 'TRANSFER') {
         if (w.id === oldTx.walletId) {
+          if (w.type === 'CREDIT') return { ...w, balance: Math.max(0, w.balance - (oldTx.amount + (oldTx.fee || 0))) };
           return { ...w, balance: w.balance + (oldTx.amount + (oldTx.fee || 0)) };
         }
         if (w.id === oldTx.toWalletId) {
-          return { ...w, balance: w.balance - oldTx.amount };
+          if (w.type === 'CREDIT') return { ...w, balance: w.balance + oldTx.amount };
+          return { ...w, balance: Math.max(0, w.balance - oldTx.amount) };
         }
       }
       return w;
@@ -204,19 +405,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const newTx: Transaction = { ...oldTx, ...updated };
 
+    // Validate new transaction funds against rolled-back wallets
+    if (newTx.type === 'EXPENSE' || newTx.type === 'TRANSFER') {
+      const sourceW = adjustedWallets.find((w) => w.id === newTx.walletId);
+      const fee = newTx.type === 'TRANSFER' ? (newTx.fee || 0) : 0;
+      const validation = checkWalletSufficientFunds(sourceW, newTx.amount, fee);
+      if (!validation.isValid) {
+        alert(validation.errorMessage || 'Số dư ví không đủ sau khi điều chỉnh!');
+        return false;
+      }
+    }
+
     // Apply new transaction to wallets
     adjustedWallets = adjustedWallets.map((w) => {
       if (newTx.type === 'EXPENSE' && w.id === newTx.walletId) {
-        return { ...w, balance: w.balance - newTx.amount };
+        if (w.type === 'CREDIT') return { ...w, balance: w.balance + newTx.amount };
+        return { ...w, balance: Math.max(0, w.balance - newTx.amount) };
       }
       if (newTx.type === 'INCOME' && w.id === newTx.walletId) {
+        if (w.type === 'CREDIT') return { ...w, balance: Math.max(0, w.balance - newTx.amount) };
         return { ...w, balance: w.balance + newTx.amount };
       }
       if (newTx.type === 'TRANSFER') {
         if (w.id === newTx.walletId) {
-          return { ...w, balance: w.balance - (newTx.amount + (newTx.fee || 0)) };
+          if (w.type === 'CREDIT') return { ...w, balance: w.balance + (newTx.amount + (newTx.fee || 0)) };
+          return { ...w, balance: Math.max(0, w.balance - (newTx.amount + (newTx.fee || 0))) };
         }
         if (w.id === newTx.toWalletId) {
+          if (w.type === 'CREDIT') return { ...w, balance: Math.max(0, w.balance - newTx.amount) };
           return { ...w, balance: w.balance + newTx.amount };
         }
       }
@@ -225,6 +441,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setWallets(adjustedWallets);
     setTransactions((prev) => prev.map((t) => (t.id === id ? newTx : t)));
+    return true;
   };
 
   // Delete Transaction
@@ -232,21 +449,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const oldTx = transactions.find((t) => t.id === id);
     if (!oldTx) return;
 
-    // Rollback wallet balance
+    // Rollback wallet balance safely
     setWallets((prevWallets) =>
       prevWallets.map((w) => {
         if (oldTx.type === 'EXPENSE' && w.id === oldTx.walletId) {
+          if (w.type === 'CREDIT') return { ...w, balance: Math.max(0, w.balance - oldTx.amount) };
           return { ...w, balance: w.balance + oldTx.amount };
         }
         if (oldTx.type === 'INCOME' && w.id === oldTx.walletId) {
-          return { ...w, balance: w.balance - oldTx.amount };
+          if (w.type === 'CREDIT') return { ...w, balance: w.balance + oldTx.amount };
+          return { ...w, balance: Math.max(0, w.balance - oldTx.amount) };
         }
         if (oldTx.type === 'TRANSFER') {
           if (w.id === oldTx.walletId) {
+            if (w.type === 'CREDIT') return { ...w, balance: Math.max(0, w.balance - (oldTx.amount + (oldTx.fee || 0))) };
             return { ...w, balance: w.balance + (oldTx.amount + (oldTx.fee || 0)) };
           }
           if (w.id === oldTx.toWalletId) {
-            return { ...w, balance: w.balance - oldTx.amount };
+            if (w.type === 'CREDIT') return { ...w, balance: w.balance + oldTx.amount };
+            return { ...w, balance: Math.max(0, w.balance - oldTx.amount) };
           }
         }
         return w;
@@ -280,11 +501,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     amount: number,
     fee: number,
     note?: string
-  ) => {
+  ): boolean => {
+    if (fromWalletId === toWalletId) {
+      alert('Ví nhận phải khác ví chuyển!');
+      return false;
+    }
+
     const fromW = wallets.find((w) => w.id === fromWalletId);
     const toW = wallets.find((w) => w.id === toWalletId);
 
-    addTransaction({
+    const validation = checkWalletSufficientFunds(fromW, amount, fee);
+    if (!validation.isValid) {
+      alert(validation.errorMessage || 'Số dư ví chuyển không đủ!');
+      return false;
+    }
+
+    return addTransaction({
       type: 'TRANSFER',
       amount,
       fee,
@@ -295,6 +527,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       date: new Date().toISOString(),
       note: note || `Chuyển khoản từ ${fromW?.name || 'Ví'} sang ${toW?.name || 'Ví'}`,
       tags: ['Chuyển khoản nội bộ'],
+    });
+  };
+
+  // Recalculate wallet balances safely from history
+  const recalculateWalletBalances = () => {
+    setWallets((prevWallets) => {
+      return prevWallets.map((w) => {
+        let currentBal = w.initialBalance;
+        const sortedTxs = [...transactions].sort(
+          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+        );
+
+        for (const tx of sortedTxs) {
+          if (tx.type === 'EXPENSE' && tx.walletId === w.id) {
+            if (w.type === 'CREDIT') {
+              currentBal += tx.amount;
+            } else {
+              currentBal = Math.max(0, currentBal - tx.amount);
+            }
+          } else if (tx.type === 'INCOME' && tx.walletId === w.id) {
+            if (w.type === 'CREDIT') {
+              currentBal = Math.max(0, currentBal - tx.amount);
+            } else {
+              currentBal += tx.amount;
+            }
+          } else if (tx.type === 'TRANSFER') {
+            if (tx.walletId === w.id) {
+              if (w.type === 'CREDIT') {
+                currentBal += tx.amount + (tx.fee || 0);
+              } else {
+                currentBal = Math.max(0, currentBal - (tx.amount + (tx.fee || 0)));
+              }
+            } else if (tx.toWalletId === w.id) {
+              if (w.type === 'CREDIT') {
+                currentBal = Math.max(0, currentBal - tx.amount);
+              } else {
+                currentBal += tx.amount;
+              }
+            }
+          }
+        }
+        return { ...w, balance: currentBal };
+      });
     });
   };
 
@@ -341,6 +616,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!bill) return;
 
     const targetWallet = wallets.find((w) => w.id === walletId) || wallets[0];
+    const validation = checkWalletSufficientFunds(targetWallet, bill.amount);
+    if (!validation.isValid) {
+      alert(validation.errorMessage || `Số dư ví ${targetWallet?.name} không đủ để thanh toán hóa đơn này!`);
+      return;
+    }
+
     const billCategory = categories.find((c) => c.id === bill.categoryId);
 
     // 1. Mark bill as PAID
@@ -357,7 +638,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       )
     );
 
-    // 2. Automatically record transaction
+    // 2. Automatically record transaction (addTransaction will deduct wallet balance safely)
     addTransaction({
       type: 'EXPENSE',
       amount: bill.amount,
@@ -395,10 +676,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const wallet = wallets.find((w) => w.id === walletId);
     if (!goal || !wallet) return;
 
-    // Deduct from wallet
-    setWallets((prev) =>
-      prev.map((w) => (w.id === walletId ? { ...w, balance: w.balance - amount } : w))
-    );
+    // Check if wallet has sufficient funds
+    const validation = checkWalletSufficientFunds(wallet, amount);
+    if (!validation.isValid) {
+      alert(validation.errorMessage || `Số dư ví ${wallet.name} không đủ để tích lũy vào mục tiêu!`);
+      return;
+    }
 
     // Add to goal
     const newHistoryItem = {
@@ -422,7 +705,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       )
     );
 
-    // Log transaction
+    // Log transaction - addTransaction already safely deducts from wallet without double-counting
     addTransaction({
       type: 'EXPENSE',
       amount,
@@ -441,10 +724,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const wallet = wallets.find((w) => w.id === walletId);
     if (!goal || !wallet) return;
 
-    // Add back to wallet
-    setWallets((prev) =>
-      prev.map((w) => (w.id === walletId ? { ...w, balance: w.balance + amount } : w))
-    );
+    if (amount > goal.currentAmount) {
+      alert(`Số tiền rút (${formatCurrency(amount)}) vượt quá số dư hiện có trong mục tiêu (${formatCurrency(goal.currentAmount)})!`);
+      return;
+    }
 
     // Deduct from goal
     const newHistoryItem = {
@@ -468,7 +751,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       )
     );
 
-    // Log income transaction
+    // Log income transaction - addTransaction already safely adds to wallet without double-counting
     addTransaction({
       type: 'INCOME',
       amount,
@@ -483,15 +766,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Backup & Reset
-  const resetToDefaultData = () => {
-    setWallets(INITIAL_WALLETS);
-    setTransactions(INITIAL_TRANSACTIONS);
-    setCategories(DEFAULT_CATEGORIES);
-    setBudgets(INITIAL_BUDGETS);
-    setBills(INITIAL_BILLS);
-    setGoals(INITIAL_GOALS);
-    setPlanner(INITIAL_PLANNER);
+  const resetToDefaultData = async () => {
+    const defaultData = {
+      wallets: INITIAL_WALLETS,
+      transactions: INITIAL_TRANSACTIONS,
+      categories: DEFAULT_CATEGORIES,
+      budgets: INITIAL_BUDGETS,
+      bills: INITIAL_BILLS,
+      goals: INITIAL_GOALS,
+      planner: INITIAL_PLANNER,
+      currentMonth: '2026-09',
+      simulatorConfig: INITIAL_SIMULATOR_CONFIG,
+    };
+    setWallets(defaultData.wallets);
+    setTransactions(defaultData.transactions);
+    setCategories(defaultData.categories);
+    setBudgets(defaultData.budgets);
+    setBills(defaultData.bills);
+    setGoals(defaultData.goals);
+    setPlanner(defaultData.planner);
+    setCurrentMonth('2026-09');
+    setSimulatorConfig(INITIAL_SIMULATOR_CONFIG);
     localStorage.removeItem(STORAGE_KEY);
+    try {
+      await fetch('/api/storage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(defaultData),
+      });
+      setServerSyncStatus('synced');
+    } catch (e) {
+      console.error('Failed to reset on server:', e);
+    }
   };
 
   const clearAllData = () => {
@@ -529,6 +835,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       bills,
       goals,
       planner,
+      simulatorConfig,
       exportedAt: new Date().toISOString(),
       version: '2.0',
     };
@@ -552,6 +859,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (data.bills && Array.isArray(data.bills)) setBills(data.bills);
       if (data.goals && Array.isArray(data.goals)) setGoals(data.goals);
       if (data.planner) setPlanner(data.planner);
+      if (data.simulatorConfig) setSimulatorConfig(data.simulatorConfig);
       return true;
     } catch (e) {
       console.error('Import failed:', e);
@@ -570,13 +878,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         goals,
         planner,
         currentMonth,
+        setCurrentMonth,
+        serverSyncStatus,
         activeTab,
         setActiveTab,
         quickAddOpen,
         setQuickAddOpen,
         quickAddDefaultType,
+        quickAddDefaultWalletId,
         openQuickAdd,
         financialSummary,
+        theme,
+        setTheme,
+        toggleTheme,
+        isDarkMode,
+        userProfile,
+        updateUserProfile,
         addTransaction,
         editTransaction,
         deleteTransaction,
@@ -584,6 +901,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         editWallet,
         deleteWallet,
         transferFunds,
+        recalculateWalletBalances,
         addBudget,
         editBudget,
         deleteBudget,
@@ -597,6 +915,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteGoal,
         depositToGoal,
         withdrawFromGoal,
+        simulatorConfig,
+        updateSimulatorConfig,
         resetToDefaultData,
         clearAllData,
         exportDatabaseJSON,

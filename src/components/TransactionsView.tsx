@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
-import { Transaction } from '@/types';
+import { Transaction, TransactionType } from '@/types';
 import {
   Search,
   Filter,
@@ -20,11 +20,26 @@ import {
   Eye,
   FileCheck,
   X,
+  Upload,
+  BarChart3,
 } from 'lucide-react';
-import { formatCurrency, formatDate, exportToCSV, exportToExcel } from '@/lib/utils';
+import { formatCurrency, formatDate, exportToCSV, exportToExcel, formatNumberWithDots } from '@/lib/utils';
+import { POPULAR_TAGS } from '@/lib/mock-data';
 import { IconHelper } from './IconHelper';
 import { ReceiptModal } from './ReceiptModal';
-import { EditTransactionModal } from './EditTransactionModal';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts';
+
+const pieChartColors = ['#f97316', '#ec4899', '#8b5cf6', '#0ea5e9', '#eab308', '#10b981', '#64748b', '#ef4444'];
 
 export const TransactionsView: React.FC = () => {
   const {
@@ -33,9 +48,12 @@ export const TransactionsView: React.FC = () => {
     categories,
     budgets,
     financialSummary,
+    currentMonth,
     openQuickAdd,
     deleteTransaction,
   } = useApp();
+
+  const [showCharts, setShowCharts] = useState(true);
 
   // Search & Filters State
   const [searchTerm, setSearchTerm] = useState('');
@@ -49,6 +67,7 @@ export const TransactionsView: React.FC = () => {
   // Modals state
   const [receiptToView, setReceiptToView] = useState<string | null>(null);
   const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
+  const [hoveredPieIndex, setHoveredPieIndex] = useState<number | null>(null);
 
   // Filter logic
   const filteredTransactions = useMemo(() => {
@@ -106,6 +125,56 @@ export const TransactionsView: React.FC = () => {
       net: income - expense,
     };
   }, [filteredTransactions]);
+
+  // Bar chart & Pie chart data for TransactionsView
+  const barChartData = useMemo(() => {
+    const [y, m] = (currentMonth || '2026-09').split('-').map(Number);
+    const monthList: string[] = [];
+    for (let i = 2; i >= 0; i--) {
+      const d = new Date(y || 2026, (m || 9) - 1 - i, 1);
+      monthList.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    }
+    return monthList.map((mo) => {
+      const moTxs = transactions.filter((t) => t.date.startsWith(mo));
+      const thu = moTxs.filter((t) => t.type === 'INCOME').reduce((s, t) => s + t.amount, 0);
+      const chi = moTxs.filter((t) => t.type === 'EXPENSE').reduce((s, t) => s + t.amount, 0);
+      return {
+        month: `T${mo.slice(5)}`,
+        Thu: thu,
+        Chi: chi,
+      };
+    });
+  }, [transactions, currentMonth]);
+
+  const pieChartData = useMemo(() => {
+    const expenseTxs = filteredTransactions.filter((t) => t.type === 'EXPENSE');
+    const catMap: { [catName: string]: number } = {};
+    expenseTxs.forEach((t) => {
+      const cat = t.categoryName || 'Khác';
+      catMap[cat] = (catMap[cat] || 0) + t.amount;
+    });
+
+    const list = Object.keys(catMap).map((catName) => {
+      const matchedCat = categories.find((c) => c.name === catName);
+      return {
+        name: catName,
+        value: catMap[catName],
+        color: matchedCat?.color || '',
+      };
+    });
+
+    // Sort descending by value (highest spending category first)
+    list.sort((a, b) => b.value - a.value);
+
+    return list.map((item, idx) => ({
+      ...item,
+      color: item.color || pieChartColors[idx % pieChartColors.length],
+    }));
+  }, [filteredTransactions, categories]);
+
+  const totalPieExpense = useMemo(() => {
+    return pieChartData.reduce((sum, item) => sum + item.value, 0);
+  }, [pieChartData]);
 
   // Group by Date for Timeline View
   const groupedTransactions = useMemo(() => {
@@ -174,6 +243,15 @@ export const TransactionsView: React.FC = () => {
 
         <div className="flex items-center space-x-2.5">
           <button
+            onClick={() => setShowCharts((s) => !s)}
+            className="flex items-center space-x-1.5 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold shadow-sm transition-colors"
+            title="Ẩn hoặc hiện biểu đồ phân tích dòng tiền"
+          >
+            <BarChart3 className="w-4 h-4 text-indigo-500" />
+            <span>{showCharts ? 'Ẩn biểu đồ' : 'Xem biểu đồ'}</span>
+          </button>
+
+          <button
             onClick={() => exportToCSV(filteredTransactions)}
             className="flex items-center space-x-1.5 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold shadow-sm transition-colors"
             title="Xuất danh sách sang file CSV UTF-8"
@@ -196,7 +274,7 @@ export const TransactionsView: React.FC = () => {
             className="flex items-center space-x-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors"
           >
             <Plus className="w-4 h-4" />
-            <span>+ Giao dịch mới</span>
+            <span>Giao dịch mới</span>
           </button>
         </div>
       </div>
@@ -231,6 +309,209 @@ export const TransactionsView: React.FC = () => {
           </p>
         </div>
       </div>
+
+      {/* 2.5. CHARTS: THU - CHI & PHÂN BỔ CHI TIÊU TRONG SỔ GIAO DỊCH */}
+      {showCharts && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Bar Chart: Thu - Chi */}
+          <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Dòng tiền Thu - Chi</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">So sánh thu nhập và chi tiêu 3 tháng gần nhất</p>
+              </div>
+            </div>
+            <div className="h-56 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={barChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <XAxis dataKey="month" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} dy={8} />
+                  <YAxis
+                    tickFormatter={(val) => `${val / 1000000}Tr`}
+                    tick={{ fontSize: 12 }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={40}
+                  />
+                  <Tooltip
+                    formatter={(val: any) => formatCurrency(Number(val))}
+                    contentStyle={{
+                      borderRadius: 12,
+                      border: 'none',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                      backgroundColor: '#1e293b',
+                      color: '#fff',
+                    }}
+                  />
+                  <Bar dataKey="Thu" fill="#10b981" radius={[6, 6, 0, 0]} name="Thu nhập" />
+                  <Bar dataKey="Chi" fill="#f43f5e" radius={[6, 6, 0, 0]} name="Chi tiêu" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Pie Chart: Chi tiêu theo danh mục */}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-1">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Chi tiêu theo danh mục</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Phân bổ tỷ trọng chi tiêu</p>
+              </div>
+              {totalPieExpense > 0 && (
+                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40">
+                  {formatCurrency(totalPieExpense)}
+                </span>
+              )}
+            </div>
+
+            {pieChartData.length > 0 ? (
+              <>
+                {/* Donut Chart with Center Interactive Metrics */}
+                <div className="relative h-44 w-full flex items-center justify-center my-1">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={pieChartData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={50}
+                        outerRadius={70}
+                        paddingAngle={2.5}
+                        dataKey="value"
+                        onMouseEnter={(_, index) => setHoveredPieIndex(index)}
+                        onMouseLeave={() => setHoveredPieIndex(null)}
+                      >
+                        {pieChartData.map((entry, index) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={entry.color}
+                            stroke={hoveredPieIndex === index ? '#ffffff' : 'transparent'}
+                            strokeWidth={hoveredPieIndex === index ? 2 : 0}
+                            style={{
+                              transform: hoveredPieIndex === index ? 'scale(1.04)' : 'scale(1)',
+                              transformOrigin: 'center center',
+                              transition: 'all 0.2s ease',
+                              cursor: 'pointer',
+                            }}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const data = payload[0].payload;
+                            const percent = totalPieExpense > 0 ? ((data.value / totalPieExpense) * 100).toFixed(1) : '0';
+                            return (
+                              <div className="bg-slate-900/95 dark:bg-slate-800/95 backdrop-blur-md text-white text-xs px-3 py-2 rounded-xl shadow-xl border border-slate-700/60 pointer-events-none z-50">
+                                <div className="flex items-center gap-1.5 mb-1">
+                                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: data.color }} />
+                                  <span className="font-bold text-white">{data.name}</span>
+                                </div>
+                                <div className="flex items-center justify-between gap-3 text-slate-300">
+                                  <span className="font-semibold text-white">{formatCurrency(data.value)}</span>
+                                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/10 text-emerald-300">
+                                    {percent}%
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+
+                  {/* Center of the Donut */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-2">
+                    {hoveredPieIndex !== null && pieChartData[hoveredPieIndex] ? (
+                      <div className="animate-in fade-in zoom-in-90 duration-150">
+                        <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 truncate max-w-[85px] mx-auto">
+                          {pieChartData[hoveredPieIndex].name}
+                        </p>
+                        <p className="text-base font-black text-slate-900 dark:text-white leading-tight">
+                          {totalPieExpense > 0
+                            ? ((pieChartData[hoveredPieIndex].value / totalPieExpense) * 100).toFixed(1)
+                            : 0}%
+                        </p>
+                        <p className="text-[10px] font-bold text-slate-600 dark:text-slate-300">
+                          {formatCurrency(pieChartData[hoveredPieIndex].value)}
+                        </p>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider">
+                          Tổng chi
+                        </p>
+                        <p className="text-sm font-black text-slate-900 dark:text-white leading-tight mt-0.5">
+                          {formatCurrency(totalPieExpense)}
+                        </p>
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+                          {pieChartData.length} danh mục
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Category Breakdown List with Percentage & Sleek Progress Bars */}
+                <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1 mt-1 scrollbar-thin [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300 dark:[&::-webkit-scrollbar-thumb]:bg-slate-700">
+                  {pieChartData.map((entry, idx) => {
+                    const percent = totalPieExpense > 0 ? ((entry.value / totalPieExpense) * 100).toFixed(1) : '0';
+                    const isHovered = hoveredPieIndex === idx;
+                    return (
+                      <div
+                        key={entry.name}
+                        onMouseEnter={() => setHoveredPieIndex(idx)}
+                        onMouseLeave={() => setHoveredPieIndex(null)}
+                        className={`p-1.5 rounded-xl transition-all cursor-pointer ${
+                          isHovered
+                            ? 'bg-slate-100 dark:bg-slate-800 scale-[1.01]'
+                            : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span
+                              className="w-2.5 h-2.5 rounded-full shrink-0 ring-2 ring-white dark:ring-slate-900"
+                              style={{ backgroundColor: entry.color }}
+                            />
+                            <span className="text-slate-700 dark:text-slate-300 font-medium truncate">
+                              {entry.name}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                              {percent}%
+                            </span>
+                            <span className="font-bold text-slate-900 dark:text-white">
+                              {formatCurrency(entry.value)}
+                            </span>
+                          </div>
+                        </div>
+                        {/* Mini progress bar */}
+                        <div className="w-full h-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-300"
+                            style={{
+                              width: `${percent}%`,
+                              backgroundColor: entry.color,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-10 text-xs text-slate-400">
+                <BarChart3 className="w-8 h-8 text-slate-300 dark:text-slate-700 mb-2 stroke-[1.5]" />
+                <p>Không có dữ liệu chi tiêu phù hợp</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* 3. ADVANCED FILTER BAR */}
       <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
@@ -554,6 +835,356 @@ export const TransactionsView: React.FC = () => {
         onClose={() => setTransactionToEdit(null)}
         transaction={transactionToEdit}
       />
+    </div>
+  );
+};
+
+interface EditTransactionModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  transaction: Transaction | null;
+}
+
+const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
+  isOpen,
+  onClose,
+  transaction,
+}) => {
+  const { wallets, categories, editTransaction, deleteTransaction } = useApp();
+
+  const [type, setType] = useState<TransactionType>('EXPENSE');
+  const [amount, setAmount] = useState<number>(0);
+  const [categoryId, setCategoryId] = useState<string>('');
+  const [walletId, setWalletId] = useState<string>('');
+  const [toWalletId, setToWalletId] = useState<string>('');
+  const [fee, setFee] = useState<number>(0);
+  const [date, setDate] = useState<string>('');
+  const [note, setNote] = useState<string>('');
+  const [tags, setTags] = useState<string[]>([]);
+  const [receiptImage, setReceiptImage] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (transaction) {
+      setType(transaction.type);
+      setAmount(transaction.amount);
+      setCategoryId(transaction.categoryId || '');
+      setWalletId(transaction.walletId || (wallets[0]?.id ?? ''));
+      setToWalletId(transaction.toWalletId || '');
+      setFee(transaction.fee || 0);
+      setDate(transaction.date ? transaction.date.slice(0, 16) : new Date().toISOString().slice(0, 16));
+      setNote(transaction.note || '');
+      setTags(transaction.tags || []);
+      setReceiptImage(transaction.receiptImage);
+    }
+  }, [transaction, wallets]);
+
+  if (!isOpen || !transaction) return null;
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setReceiptImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleTagToggle = (tag: string) => {
+    if (tags.includes(tag)) {
+      setTags(tags.filter((t) => t !== tag));
+    } else {
+      setTags([...tags, tag]);
+    }
+  };
+
+  const handleSave = () => {
+    if (!amount || amount <= 0) {
+      alert('Vui lòng nhập số tiền hợp lệ');
+      return;
+    }
+
+    const selectedWallet = wallets.find((w) => w.id === walletId);
+    const selectedToWallet = wallets.find((w) => w.id === toWalletId);
+    const selectedCategory = categories.find((c) => c.id === categoryId);
+
+    const success = editTransaction(transaction.id, {
+      type,
+      amount: Number(amount),
+      categoryId: type === 'TRANSFER' ? undefined : categoryId,
+      categoryName: type === 'TRANSFER' ? undefined : (selectedCategory?.name || 'Khác'),
+      walletId,
+      walletName: selectedWallet?.name,
+      toWalletId: type === 'TRANSFER' ? toWalletId : undefined,
+      toWalletName: type === 'TRANSFER' ? selectedToWallet?.name : undefined,
+      fee: type === 'TRANSFER' ? Number(fee) : 0,
+      date: new Date(date).toISOString(),
+      note,
+      tags,
+      receiptImage,
+    });
+
+    if (success) {
+      onClose();
+    }
+  };
+
+  const handleDelete = () => {
+    if (confirm('Bạn có chắc chắn muốn xóa giao dịch này? Số dư ví sẽ được tự động hoàn tác.')) {
+      deleteTransaction(transaction.id);
+      onClose();
+    }
+  };
+
+  const filteredCategories = categories.filter((c) => c.type === (type === 'INCOME' ? 'INCOME' : 'EXPENSE'));
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+      <div className="relative max-w-xl w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden my-8">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
+          <h2 className="text-xl font-bold text-slate-800 dark:text-white">Chỉnh sửa Giao dịch</h2>
+          <button
+            onClick={onClose}
+            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+          {/* Type Selector */}
+          <div className="grid grid-cols-3 gap-2 bg-slate-100 dark:bg-slate-800/60 p-1.5 rounded-xl">
+            <button
+              type="button"
+              onClick={() => setType('EXPENSE')}
+              className={`py-2 text-sm font-semibold rounded-lg transition-all ${
+                type === 'EXPENSE'
+                  ? 'bg-rose-500 text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              Khoản chi
+            </button>
+            <button
+              type="button"
+              onClick={() => setType('INCOME')}
+              className={`py-2 text-sm font-semibold rounded-lg transition-all ${
+                type === 'INCOME'
+                  ? 'bg-emerald-500 text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              Khoản thu
+            </button>
+            <button
+              type="button"
+              onClick={() => setType('TRANSFER')}
+              className={`py-2 text-sm font-semibold rounded-lg transition-all ${
+                type === 'TRANSFER'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              Chuyển khoản
+            </button>
+          </div>
+
+          {/* Amount */}
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+              Số tiền (VNĐ)
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                inputMode="numeric"
+                value={amount ? formatNumberWithDots(amount) : ''}
+                onChange={(e) => {
+                  const cleaned = e.target.value.replace(/\D/g, '');
+                  if (cleaned.length <= 18) {
+                    setAmount(cleaned ? Number(cleaned) : 0);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (['e', 'E', '+', '-', '.', ','].includes(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
+                placeholder="0"
+                className="w-full text-2xl font-bold pl-4 pr-10 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none dark:text-white"
+              />
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-semibold pointer-events-none">₫</span>
+            </div>
+          </div>
+
+          {/* Wallet */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                {type === 'TRANSFER' ? 'Từ ví / tài khoản' : 'Ví thanh toán'}
+              </label>
+              <select
+                value={walletId}
+                onChange={(e) => setWalletId(e.target.value)}
+                className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
+              >
+                {wallets.map((w) => (
+                  <option key={w.id} value={w.id}>
+                    {w.name} ({new Intl.NumberFormat('vi-VN').format(w.balance)} ₫)
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {type === 'TRANSFER' ? (
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                  Đến ví / tài khoản
+                </label>
+                <select
+                  value={toWalletId}
+                  onChange={(e) => setToWalletId(e.target.value)}
+                  className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
+                >
+                  <option value="">-- Chọn ví đích --</option>
+                  {wallets
+                    .filter((w) => w.id !== walletId)
+                    .map((w) => (
+                      <option key={w.id} value={w.id}>
+                        {w.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            ) : (
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                  Danh mục
+                </label>
+                <select
+                  value={categoryId}
+                  onChange={(e) => setCategoryId(e.target.value)}
+                  className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
+                >
+                  <option value="">-- Chọn danh mục --</option>
+                  {filteredCategories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
+          {/* Date & Time */}
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+              Thời gian giao dịch
+            </label>
+            <input
+              type="datetime-local"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
+            />
+          </div>
+
+          {/* Note */}
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+              Ghi chú
+            </label>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              rows={2}
+              placeholder="Nhập ghi chú chi tiết..."
+              className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
+            />
+          </div>
+
+          {/* Tags */}
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+              Nhãn (Tags)
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {POPULAR_TAGS.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => handleTagToggle(tag)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                    tags.includes(tag)
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
+                  }`}
+                >
+                  #{tag}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Receipt Image */}
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+              Ảnh hóa đơn / chứng từ
+            </label>
+            {receiptImage ? (
+              <div className="relative inline-block border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={receiptImage} alt="Hóa đơn" className="h-32 object-contain bg-slate-100 dark:bg-slate-800" />
+                <button
+                  type="button"
+                  onClick={() => setReceiptImage(undefined)}
+                  className="absolute top-2 right-2 p-1.5 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors shadow"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl cursor-pointer hover:border-blue-500 transition-colors">
+                <Upload className="w-6 h-6 text-slate-400 mb-1" />
+                <span className="text-xs text-slate-500 dark:text-slate-400">Tải ảnh hóa đơn lên</span>
+                <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+              </label>
+            )}
+          </div>
+        </div>
+
+        {/* Footer Actions */}
+        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+          <button
+            type="button"
+            onClick={handleDelete}
+            className="flex items-center space-x-1.5 px-4 py-2.5 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl font-medium text-sm transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span>Xóa giao dịch</span>
+          </button>
+
+          <div className="flex items-center space-x-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2.5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl font-medium text-sm transition-colors"
+            >
+              Hủy
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl text-sm transition-colors shadow-sm"
+            >
+              Lưu thay đổi
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

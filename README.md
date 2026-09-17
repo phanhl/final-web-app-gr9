@@ -58,8 +58,7 @@ Dự án Web App Quản lý Chi tiêu toàn diện kèm tính năng đột phá 
 - **Reactive State & Debounce**: Tối ưu 60 FPS khi kéo thanh trượt mô phỏng
 - **Iconography**: **Lucide React**
 - **Spreadsheet Engine**: **SheetJS (xlsx)**
-- **Animations**: **canvas-confetti**
-- **Backend REST API**: `/api/wallets`, `/api/transactions`, `/api/budgets`, `/api/bills`, `/api/goals`, `/api/simulation/what-if`, `/api/summary`
+- **Architecture & Persistence**: **100% Client-Side Reactive State (React Context)** + LocalStorage Sync & JSON Backup/Restore Engine
 
 ---
 

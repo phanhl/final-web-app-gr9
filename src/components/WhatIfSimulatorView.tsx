@@ -31,7 +31,7 @@ import {
   Scale,
   Wallet,
 } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatNumberWithDots } from '@/lib/utils';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -43,125 +43,33 @@ import {
 } from 'recharts';
 import * as XLSX from 'xlsx';
 import { IconHelper } from './IconHelper';
-
-interface PersonalSpendingItem {
-  id: string;
-  categoryId: string;
-  categoryName: string;
-  icon: string;
-  color: string;
-  monthlyExpense: number; // Mức tiêu dùng cá nhân hiện tại
-  isSelected: boolean; // Được chọn để cắt giảm hay chưa
-  cutPercent: number; // 0 - 50%
-}
-
-interface ExternalLoanItem {
-  id: string;
-  name: string;
-  originalDebt: number; // Dư nợ gốc
-  monthlyPayment: number; // Số tiền trả hàng tháng (Gốc + Lãi)
-  annualInterestRate: number; // Lãi suất vay %/năm
-}
+import { PersonalSpendingItem, ExternalLoanItem } from '@/types';
 
 export const WhatIfSimulatorView: React.FC = () => {
-  const { transactions, financialSummary, categories, planner } = useApp();
+  const {
+    transactions,
+    financialSummary,
+    categories,
+    planner,
+    simulatorConfig,
+    updateSimulatorConfig,
+  } = useApp();
 
   // Khung thời gian mô phỏng
-  const [projectionMonths, setProjectionMonths] = useState<number>(12); // 6, 12, 24, 36
+  const projectionMonths = simulatorConfig.projectionMonths;
+  const setProjectionMonths = (val: number) => updateSimulatorConfig({ projectionMonths: val });
 
   // 1. CÁC KHOẢN TIÊU DÙNG CHI TIÊU CÁ NHÂN & LỰA CHỌN CẮT GIẢM
-  const [spendingCategories, setSpendingCategories] = useState<PersonalSpendingItem[]>([
-    {
-      id: 'spend-food',
-      categoryId: 'cat-food',
-      categoryName: 'Ăn uống & Cà phê',
-      icon: 'Utensils',
-      color: '#f97316',
-      monthlyExpense: 5500000,
-      isSelected: true,
-      cutPercent: 20, // Giảm 20% = 1.100.000 ₫
-    },
-    {
-      id: 'spend-shopping',
-      categoryId: 'cat-shopping',
-      categoryName: 'Mua sắm & Quần áo',
-      icon: 'ShoppingBag',
-      color: '#ec4899',
-      monthlyExpense: 3000000,
-      isSelected: true,
-      cutPercent: 30, // Giảm 30% = 900.000 ₫
-    },
-    {
-      id: 'spend-entertainment',
-      categoryId: 'cat-entertainment',
-      categoryName: 'Giải trí & Du lịch',
-      icon: 'Gamepad2',
-      color: '#10b981',
-      monthlyExpense: 2000000,
-      isSelected: true,
-      cutPercent: 25, // Giảm 25% = 500.000 ₫
-    },
-    {
-      id: 'spend-housing',
-      categoryId: 'cat-housing',
-      categoryName: 'Nhà cửa & Tiền thuê',
-      icon: 'Home',
-      color: '#8b5cf6',
-      monthlyExpense: 6000000,
-      isSelected: false,
-      cutPercent: 10,
-    },
-    {
-      id: 'spend-bills',
-      categoryId: 'cat-bills',
-      categoryName: 'Hóa đơn & Tiện ích',
-      icon: 'Receipt',
-      color: '#eab308',
-      monthlyExpense: 2500000,
-      isSelected: false,
-      cutPercent: 15,
-    },
-    {
-      id: 'spend-transport',
-      categoryId: 'cat-transport',
-      categoryName: 'Di chuyển & Xăng xe',
-      icon: 'Car',
-      color: '#0ea5e9',
-      monthlyExpense: 1800000,
-      isSelected: false,
-      cutPercent: 20,
-    },
-    {
-      id: 'spend-health',
-      categoryId: 'cat-health',
-      categoryName: 'Sức khỏe & Y tế',
-      icon: 'HeartPulse',
-      color: '#ef4444',
-      monthlyExpense: 1200000,
-      isSelected: false,
-      cutPercent: 10,
-    },
-    {
-      id: 'spend-education',
-      categoryId: 'cat-education',
-      categoryName: 'Giáo dục & Khóa học',
-      icon: 'GraduationCap',
-      color: '#06b6d4',
-      monthlyExpense: 1500000,
-      isSelected: false,
-      cutPercent: 15,
-    },
-    {
-      id: 'spend-other',
-      categoryId: 'cat-other-exp',
-      categoryName: 'Chi phí phát sinh khác',
-      icon: 'MoreHorizontal',
-      color: '#64748b',
-      monthlyExpense: 800000,
-      isSelected: false,
-      cutPercent: 20,
-    },
-  ]);
+  const spendingCategories = simulatorConfig.spendingCategories;
+  const setSpendingCategories = (
+    updater: PersonalSpendingItem[] | ((prev: PersonalSpendingItem[]) => PersonalSpendingItem[])
+  ) => {
+    if (typeof updater === 'function') {
+      updateSimulatorConfig({ spendingCategories: updater(spendingCategories) });
+    } else {
+      updateSimulatorConfig({ spendingCategories: updater });
+    }
+  };
 
   // Modal thêm danh mục tiêu dùng mới
   const [addCutModalOpen, setAddCutModalOpen] = useState(false);
@@ -170,33 +78,36 @@ export const WhatIfSimulatorView: React.FC = () => {
   const [newCutPercent, setNewCutPercent] = useState('20');
 
   // 2. KÊNH ĐẦU TƯ / GỬI TIẾT KIỆM
-  const [savingsAmount, setSavingsAmount] = useState<number>(1500000); // Gửi tiết kiệm an toàn
-  const [savingsInterestRate, setSavingsInterestRate] = useState<number>(5.5); // % / năm
+  const savingsAmount = simulatorConfig.savingsAmount;
+  const setSavingsAmount = (val: number) => updateSimulatorConfig({ savingsAmount: val });
 
-  const [investmentAmount, setInvestmentAmount] = useState<number>(1500000); // Đầu tư tài chính
-  // Tùy chọn Kịch bản Lợi nhuận / THUA LỖ ĐẦU TƯ:
-  // Dương: +12% (Tốt), +6.5% (Trung tính). Âm: -10%, -20%, -30% (Thua lỗ thị trường)
-  const [investmentRateScenario, setInvestmentRateScenario] = useState<number>(8.5); // % / năm (có thể âm)
-  const [customInvestRate, setCustomInvestRate] = useState<string>('8.5');
+  const savingsInterestRate = simulatorConfig.savingsInterestRate;
+  const setSavingsInterestRate = (val: number) => updateSimulatorConfig({ savingsInterestRate: val });
+
+  const investmentAmount = simulatorConfig.investmentAmount;
+  const setInvestmentAmount = (val: number) => updateSimulatorConfig({ investmentAmount: val });
+
+  const investmentRateScenario = simulatorConfig.investmentRateScenario;
+  const setInvestmentRateScenario = (val: number) => updateSimulatorConfig({ investmentRateScenario: val });
+
+  const [customInvestRate, setCustomInvestRate] = useState<string>(
+    simulatorConfig.customInvestRate || '8.5'
+  );
 
   // 3. KHOẢN VAY NGOÀI & NGHĨA VỤ TRẢ NỢ (External Loans & Debts)
-  const [hasExternalLoan, setHasExternalLoan] = useState<boolean>(true);
-  const [externalLoans, setExternalLoans] = useState<ExternalLoanItem[]>([
-    {
-      id: 'loan-bike',
-      name: 'Trả góp xe máy / Vay ngân hàng',
-      originalDebt: 24000000,
-      monthlyPayment: 2200000,
-      annualInterestRate: 9.5,
-    },
-    {
-      id: 'loan-relatives',
-      name: 'Vay người thân / bạn bè (không lãi)',
-      originalDebt: 10000000,
-      monthlyPayment: 1000000,
-      annualInterestRate: 0,
-    },
-  ]);
+  const hasExternalLoan = simulatorConfig.hasExternalLoan;
+  const setHasExternalLoan = (val: boolean) => updateSimulatorConfig({ hasExternalLoan: val });
+
+  const externalLoans = simulatorConfig.externalLoans;
+  const setExternalLoans = (
+    updater: ExternalLoanItem[] | ((prev: ExternalLoanItem[]) => ExternalLoanItem[])
+  ) => {
+    if (typeof updater === 'function') {
+      updateSimulatorConfig({ externalLoans: updater(externalLoans) });
+    } else {
+      updateSimulatorConfig({ externalLoans: updater });
+    }
+  };
 
   const [addLoanModalOpen, setAddLoanModalOpen] = useState(false);
   const [newLoanName, setNewLoanName] = useState('');
@@ -640,16 +551,22 @@ export const WhatIfSimulatorView: React.FC = () => {
                     <span className="text-[11px] text-slate-500 font-medium">Mức tiêu dùng:</span>
                     <div className="flex items-center space-x-1">
                       <input
-                        type="number"
-                        step="100000"
-                        value={item.monthlyExpense}
+                        type="text"
+                        inputMode="numeric"
+                        value={formatNumberWithDots(item.monthlyExpense)}
                         onChange={(e) => {
-                          const val = Math.max(0, Number(e.target.value) || 0);
+                          const cleaned = e.target.value.replace(/\D/g, '');
+                          const val = cleaned ? Math.max(0, Number(cleaned)) : 0;
                           setSpendingCategories(
                             spendingCategories.map((c) =>
                               c.id === item.id ? { ...c, monthlyExpense: val } : c
                             )
                           );
+                        }}
+                        onKeyDown={(e) => {
+                          if (['e', 'E', '+', '-', '.', ','].includes(e.key)) {
+                            e.preventDefault();
+                          }
                         }}
                         className="w-28 px-2 py-0.5 text-right font-extrabold text-slate-800 dark:text-white bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs focus:ring-1 focus:ring-blue-500"
                       />
@@ -676,12 +593,12 @@ export const WhatIfSimulatorView: React.FC = () => {
                     {item.isSelected ? (
                       <>
                         <CheckCircle2 className="w-3.5 h-3.5 text-white" />
-                        <span>✓ Đang chọn cắt giảm (Bấm để hủy)</span>
+                        <span>Đang chọn cắt giảm (Bấm để hủy)</span>
                       </>
                     ) : (
                       <>
                         <Plus className="w-3.5 h-3.5 text-rose-500" />
-                        <span>+ Chọn để cắt giảm</span>
+                        <span>Chọn để cắt giảm</span>
                       </>
                     )}
                   </button>
@@ -1034,7 +951,7 @@ export const WhatIfSimulatorView: React.FC = () => {
                   className="flex items-center space-x-1 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 font-bold text-xs rounded-xl transition-colors shrink-0"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>+ Thêm khoản nợ vay</span>
+                  <span>Thêm khoản nợ vay</span>
                 </button>
               )}
             </div>
@@ -1401,12 +1318,22 @@ export const WhatIfSimulatorView: React.FC = () => {
                   Chi tiêu gốc hiện tại mỗi tháng (VNĐ)
                 </label>
                 <input
-                  type="number"
-                  step="100000"
+                  type="text"
+                  inputMode="numeric"
                   required
-                  value={newCutExpense}
-                  onChange={(e) => setNewCutExpense(e.target.value)}
-                  placeholder="Ví dụ: 3000000"
+                  value={formatNumberWithDots(newCutExpense)}
+                  onChange={(e) => {
+                    const cleaned = e.target.value.replace(/\D/g, '');
+                    if (cleaned.length <= 18) {
+                      setNewCutExpense(cleaned);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (['e', 'E', '+', '-', '.', ','].includes(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
+                  placeholder="Ví dụ: 3.000.000"
                   className="w-full text-xl font-bold px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl dark:text-white"
                 />
               </div>
@@ -1486,12 +1413,22 @@ export const WhatIfSimulatorView: React.FC = () => {
                   Dư nợ gốc còn lại (VNĐ)
                 </label>
                 <input
-                  type="number"
-                  step="500000"
+                  type="text"
+                  inputMode="numeric"
                   required
-                  value={newLoanDebt}
-                  onChange={(e) => setNewLoanDebt(e.target.value)}
-                  placeholder="Ví dụ: 20000000"
+                  value={formatNumberWithDots(newLoanDebt)}
+                  onChange={(e) => {
+                    const cleaned = e.target.value.replace(/\D/g, '');
+                    if (cleaned.length <= 18) {
+                      setNewLoanDebt(cleaned);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (['e', 'E', '+', '-', '.', ','].includes(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
+                  placeholder="Ví dụ: 20.000.000"
                   className="w-full text-xl font-bold px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl dark:text-white"
                 />
               </div>
@@ -1501,12 +1438,22 @@ export const WhatIfSimulatorView: React.FC = () => {
                   Số tiền phải trả mỗi tháng (VNĐ)
                 </label>
                 <input
-                  type="number"
-                  step="100000"
+                  type="text"
+                  inputMode="numeric"
                   required
-                  value={newLoanPayment}
-                  onChange={(e) => setNewLoanPayment(e.target.value)}
-                  placeholder="Ví dụ: 2000000"
+                  value={formatNumberWithDots(newLoanPayment)}
+                  onChange={(e) => {
+                    const cleaned = e.target.value.replace(/\D/g, '');
+                    if (cleaned.length <= 18) {
+                      setNewLoanPayment(cleaned);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (['e', 'E', '+', '-', '.', ','].includes(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
+                  placeholder="Ví dụ: 2.000.000"
                   className="w-full text-xl font-bold px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl dark:text-white"
                 />
               </div>

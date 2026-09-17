@@ -22,7 +22,7 @@ import {
   DollarSign,
   X,
 } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatNumberWithDots } from '@/lib/utils';
 import { IconHelper } from './IconHelper';
 
 export const BillsView: React.FC = () => {
@@ -128,7 +128,7 @@ export const BillsView: React.FC = () => {
           className="flex items-center space-x-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors"
         >
           <Plus className="w-4 h-4" />
-          <span>+ Thêm hóa đơn định kỳ</span>
+          <span>Thêm hóa đơn định kỳ</span>
         </button>
       </div>
 
@@ -346,10 +346,21 @@ export const BillsView: React.FC = () => {
                   Số tiền thanh toán (VNĐ)
                 </label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   required
-                  value={billAmount}
-                  onChange={(e) => setBillAmount(e.target.value)}
+                  value={formatNumberWithDots(billAmount)}
+                  onChange={(e) => {
+                    const cleaned = e.target.value.replace(/\D/g, '');
+                    if (cleaned.length <= 18) {
+                      setBillAmount(cleaned);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (['e', 'E', '+', '-', '.', ','].includes(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
                   placeholder="0"
                   className="w-full text-xl font-bold px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl dark:text-white"
                 />

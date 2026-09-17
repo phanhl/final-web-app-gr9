@@ -2,11 +2,108 @@ import { Wallet, Transaction, Budget, FinancialSummary, RecurringBill } from '@/
 import * as XLSX from 'xlsx';
 
 export function formatCurrency(amount: number): string {
+  if (typeof amount !== 'number' || isNaN(amount) || !isFinite(amount)) {
+    return '0 ₫';
+  }
   return new Intl.NumberFormat('vi-VN', {
     style: 'currency',
     currency: 'VND',
     maximumFractionDigits: 0,
   }).format(amount);
+}
+
+export function formatNumberWithDots(val: string | number | null | undefined): string {
+  if (val === null || val === undefined || val === '') return '';
+  const str = String(val).replace(/\D/g, '');
+  if (!str) return '';
+  const trimmed = str.length > 1 ? str.replace(/^0+/, '') || '0' : str;
+  return trimmed.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+const DIGITS = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
+
+function readThreeDigits(nStr: string, isHighestGroup: boolean): string {
+  const padded = nStr.padStart(3, '0');
+  const h = parseInt(padded[0], 10);
+  const t = parseInt(padded[1], 10);
+  const u = parseInt(padded[2], 10);
+
+  if (h === 0 && t === 0 && u === 0) return '';
+
+  const words: string[] = [];
+
+  // Hundreds
+  if (!isHighestGroup || h > 0) {
+    words.push(DIGITS[h] + ' trăm');
+  }
+
+  // Tens
+  if (t === 0) {
+    if (u > 0) {
+      if (!isHighestGroup || h > 0) {
+        words.push('lẻ ' + (u === 5 && (h > 0 || !isHighestGroup) ? 'năm' : DIGITS[u]));
+      } else {
+        words.push(DIGITS[u]);
+      }
+    }
+  } else if (t === 1) {
+    words.push('mười');
+    if (u === 1) words.push('một');
+    else if (u === 5) words.push('lăm');
+    else if (u > 0) words.push(DIGITS[u]);
+  } else {
+    words.push(DIGITS[t] + ' mươi');
+    if (u === 1) words.push('mốt');
+    else if (u === 4) words.push('tư');
+    else if (u === 5) words.push('lăm');
+    else if (u > 0) words.push(DIGITS[u]);
+  }
+
+  return words.join(' ');
+}
+
+export function numberToVietnameseWords(value: number | string | null | undefined): string {
+  if (value === null || value === undefined || value === '') return '';
+  const str = String(value).trim().replace(/\D/g, '');
+  if (!str) return '';
+
+  const trimmed = str.replace(/^0+/, '');
+  if (!trimmed) return 'Không đồng';
+
+  const groups: string[] = [];
+  for (let i = trimmed.length; i > 0; i -= 3) {
+    const start = Math.max(0, i - 3);
+    groups.unshift(trimmed.slice(start, i));
+  }
+
+  const groupCount = groups.length;
+  const resultParts: string[] = [];
+
+  for (let i = 0; i < groupCount; i++) {
+    const groupStr = groups[i];
+    const isHighest = i === 0;
+    const groupWords = readThreeDigits(groupStr, isHighest);
+
+    const power = groupCount - 1 - i;
+
+    if (groupWords) {
+      let unit = '';
+      if (power > 0) {
+        const basePower = power % 3;
+        const tyLevel = Math.floor(power / 3);
+        const baseUnit = ['', 'nghìn', 'triệu'][basePower];
+        const tyUnit = ' tỷ'.repeat(tyLevel);
+        unit = (baseUnit ? baseUnit + tyUnit : tyUnit.trim()).trim();
+      }
+      resultParts.push(groupWords + (unit ? ' ' + unit : ''));
+    }
+  }
+
+  let finalStr = resultParts.join(' ').replace(/\s+/g, ' ').trim();
+  if (!finalStr) return 'Không đồng';
+
+  finalStr = finalStr.charAt(0).toUpperCase() + finalStr.slice(1) + ' đồng';
+  return finalStr;
 }
 
 export function formatDate(dateString: string, type: 'short' | 'full' | 'time' | 'dateOnly' = 'short'): string {
@@ -224,4 +321,76 @@ export function exportToExcel(
   XLSX.utils.book_append_sheet(wb, wsKPI, 'Tổng Hợp Tài Chính');
 
   XLSX.writeFile(wb, filename);
+}
+
+export interface WalletFundValidation {
+  isValid: boolean;
+  availableBalance: number;
+  requiredAmount: number;
+  shortfall: number;
+  errorMessage?: string;
+}
+
+export function getWalletAvailableBalance(wallet?: Wallet): number {
+  if (!wallet) return 0;
+  if (wallet.type === 'CREDIT') {
+    const limit = wallet.creditLimit || 0;
+    return Math.max(0, limit - wallet.balance);
+  }
+  return Math.max(0, wallet.balance);
+}
+
+export function checkWalletSufficientFunds(
+  wallet: Wallet | undefined,
+  amount: number,
+  fee: number = 0
+): WalletFundValidation {
+  if (!wallet) {
+    return {
+      isValid: false,
+      availableBalance: 0,
+      requiredAmount: amount + fee,
+      shortfall: amount + fee,
+      errorMessage: 'Vui lòng chọn ví hợp lệ',
+    };
+  }
+
+  const numAmount = Number(amount) || 0;
+  const numFee = Number(fee) || 0;
+  const requiredAmount = numAmount + numFee;
+
+  if (requiredAmount <= 0) {
+    return {
+      isValid: false,
+      availableBalance: getWalletAvailableBalance(wallet),
+      requiredAmount: 0,
+      shortfall: 0,
+      errorMessage: 'Số tiền giao dịch phải lớn hơn 0',
+    };
+  }
+
+  const availableBalance = getWalletAvailableBalance(wallet);
+
+  if (requiredAmount > availableBalance) {
+    const shortfall = requiredAmount - availableBalance;
+    const errorMsg =
+      wallet.type === 'CREDIT'
+        ? `Số tiền (${formatCurrency(requiredAmount)}) vượt quá hạn mức còn lại của thẻ ${wallet.name} (còn ${formatCurrency(availableBalance)}).`
+        : `Số tiền (${formatCurrency(requiredAmount)}) vượt quá số dư hiện có của ví ${wallet.name} (hiện có ${formatCurrency(availableBalance)}). Không thể giao dịch làm âm quỹ!`;
+
+    return {
+      isValid: false,
+      availableBalance,
+      requiredAmount,
+      shortfall,
+      errorMessage: errorMsg,
+    };
+  }
+
+  return {
+    isValid: true,
+    availableBalance,
+    requiredAmount,
+    shortfall: 0,
+  };
 }

@@ -23,7 +23,7 @@ import {
   X,
   Target,
 } from 'lucide-react';
-import { formatCurrency, calculateBudgetStatuses } from '@/lib/utils';
+import { formatCurrency, calculateBudgetStatuses, formatNumberWithDots } from '@/lib/utils';
 import { IconHelper } from './IconHelper';
 import confetti from 'canvas-confetti';
 
@@ -36,6 +36,7 @@ export const BudgetsView: React.FC = () => {
     wallets,
     bills,
     planner,
+    currentMonth,
     addBudget,
     editBudget,
     deleteBudget,
@@ -61,9 +62,12 @@ export const BudgetsView: React.FC = () => {
   const [editingGoal, setEditingGoal] = useState<SavingsGoal | null>(null);
   const [goalName, setGoalName] = useState('');
   const [goalTarget, setGoalTarget] = useState('');
+  const [goalCategory, setGoalCategory] = useState('');
   const [goalDeadline, setGoalDeadline] = useState('');
-  const [goalColor, setGoalColor] = useState('#0ea5e9');
+  const [goalColor, setGoalColor] = useState('#10b981');
+  const [goalIcon, setGoalIcon] = useState('Target');
 
+  // Deposit/Withdraw Modal
   const [depositModalOpen, setDepositModalOpen] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<SavingsGoal | null>(null);
   const [depositAmount, setDepositAmount] = useState('');
@@ -72,7 +76,7 @@ export const BudgetsView: React.FC = () => {
   const [isDepositMode, setIsDepositMode] = useState(true); // true = deposit, false = withdraw
 
   // Calculate budget statuses
-  const budgetStatuses = calculateBudgetStatuses(budgets, transactions);
+  const budgetStatuses = calculateBudgetStatuses(budgets, transactions, currentMonth);
   const totalBudgetLimit = budgets.reduce((sum, b) => sum + b.amount, 0);
   const totalBudgetSpent = budgetStatuses.reduce((sum, b) => sum + b.spent, 0);
   const totalBudgetRemaining = totalBudgetLimit - totalBudgetSpent;
@@ -90,8 +94,8 @@ export const BudgetsView: React.FC = () => {
   const handleSaveBudget = (e: React.FormEvent) => {
     e.preventDefault();
     const amountNum = Number(budgetAmount);
-    if (!amountNum || amountNum <= 0) {
-      alert('Vui lòng nhập hạn mức hợp lệ');
+    if (!budgetCategoryId || !amountNum || amountNum <= 0) {
+      alert('Vui lòng chọn danh mục và nhập hạn mức ngân sách');
       return;
     }
     const cat = categories.find((c) => c.id === budgetCategoryId);
@@ -107,7 +111,7 @@ export const BudgetsView: React.FC = () => {
         categoryId: budgetCategoryId,
         categoryName: cat?.name || 'Khác',
         amount: amountNum,
-        month: '2026-09',
+        month: currentMonth,
         alertThreshold80: true,
         alertThreshold100: true,
       });
@@ -204,7 +208,7 @@ export const BudgetsView: React.FC = () => {
               className="flex items-center space-x-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors"
             >
               <Plus className="w-4 h-4" />
-              <span>+ Thêm hạn mức danh mục</span>
+              <span>Thêm hạn mức danh mục</span>
             </button>
           )}
 
@@ -220,7 +224,7 @@ export const BudgetsView: React.FC = () => {
               className="flex items-center space-x-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors"
             >
               <Plus className="w-4 h-4" />
-              <span>+ Tạo hũ tiết kiệm mới</span>
+              <span>Tạo hũ tiết kiệm mới</span>
             </button>
           )}
         </div>
@@ -473,12 +477,24 @@ export const BudgetsView: React.FC = () => {
                 </label>
                 <div className="relative">
                   <input
-                    type="number"
-                    value={monthlyIncome}
-                    onChange={(e) => updatePlanner({ ...planner, monthlyIncome: Number(e.target.value) })}
-                    className="w-full text-xl font-bold px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none dark:text-white"
+                    type="text"
+                    inputMode="numeric"
+                    value={monthlyIncome ? formatNumberWithDots(monthlyIncome) : ''}
+                    onChange={(e) => {
+                      const cleaned = e.target.value.replace(/\D/g, '');
+                      if (cleaned.length <= 18) {
+                        updatePlanner({ ...planner, monthlyIncome: cleaned ? Number(cleaned) : 0 });
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (['e', 'E', '+', '-', '.', ','].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    placeholder="0"
+                    className="w-full text-xl font-bold pl-4 pr-10 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none dark:text-white"
                   />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₫</span>
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold pointer-events-none">₫</span>
                 </div>
               </div>
 
@@ -706,7 +722,7 @@ export const BudgetsView: React.FC = () => {
                       className="flex-1 flex items-center justify-center space-x-1.5 py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl transition-colors shadow-sm"
                     >
                       <ArrowDownLeft className="w-3.5 h-3.5" />
-                      <span>+ Nạp tiền vào hũ</span>
+                      <span>Nạp tiền vào hũ</span>
                     </button>
 
                     <button
@@ -720,7 +736,7 @@ export const BudgetsView: React.FC = () => {
                       className="flex-1 flex items-center justify-center space-x-1.5 py-2 px-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs rounded-xl transition-colors"
                     >
                       <ArrowUpRight className="w-3.5 h-3.5" />
-                      <span>- Rút tiền</span>
+                      <span>Rút tiền</span>
                     </button>
 
                     <button
@@ -784,11 +800,22 @@ export const BudgetsView: React.FC = () => {
                   Hạn mức chi tiêu tháng (VNĐ)
                 </label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   required
-                  value={budgetAmount}
-                  onChange={(e) => setBudgetAmount(e.target.value)}
-                  placeholder="Ví dụ: 5000000"
+                  value={formatNumberWithDots(budgetAmount)}
+                  onChange={(e) => {
+                    const cleaned = e.target.value.replace(/\D/g, '');
+                    if (cleaned.length <= 18) {
+                      setBudgetAmount(cleaned);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (['e', 'E', '+', '-', '.', ','].includes(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
+                  placeholder="Ví dụ: 5.000.000"
                   className="w-full text-xl font-bold px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl dark:text-white"
                 />
               </div>
@@ -855,11 +882,22 @@ export const BudgetsView: React.FC = () => {
                   Số tiền mục tiêu (VNĐ)
                 </label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   required
-                  value={goalTarget}
-                  onChange={(e) => setGoalTarget(e.target.value)}
-                  placeholder="Ví dụ: 30000000"
+                  value={formatNumberWithDots(goalTarget)}
+                  onChange={(e) => {
+                    const cleaned = e.target.value.replace(/\D/g, '');
+                    if (cleaned.length <= 18) {
+                      setGoalTarget(cleaned);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (['e', 'E', '+', '-', '.', ','].includes(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
+                  placeholder="Ví dụ: 30.000.000"
                   className="w-full text-xl font-bold px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl dark:text-white"
                 />
               </div>
@@ -937,11 +975,22 @@ export const BudgetsView: React.FC = () => {
                   Số tiền {isDepositMode ? 'nạp' : 'rút'} (VNĐ)
                 </label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   required
                   autoFocus
-                  value={depositAmount}
-                  onChange={(e) => setDepositAmount(e.target.value)}
+                  value={formatNumberWithDots(depositAmount)}
+                  onChange={(e) => {
+                    const cleaned = e.target.value.replace(/\D/g, '');
+                    if (cleaned.length <= 18) {
+                      setDepositAmount(cleaned);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (['e', 'E', '+', '-', '.', ','].includes(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
                   placeholder="0"
                   className="w-full text-2xl font-bold px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl dark:text-white"
                 />
