@@ -846,9 +846,10 @@
   "planner": {
     "monthlyIncome": 32000000,
     "needsPercent": 50,
-    "wantsPercent": 30,
-    "savingsPercent": 20,
-    "notes": "Áp dụng quy tắc 50/30/20: 50% thiết yếu, 30% sở thích cá nhân, 20% tích lũy & quỹ khẩn cấp"
+    "wantsPercent": 25,
+    "savingsPercent": 15,
+    "emergencyPercent": 10,
+    "notes": "Quy tắc phân bổ 4 quỹ: 50% thiết yếu, 25% hưởng thụ, 15% tích lũy đầu tư, 10% quỹ dự phòng khẩn cấp & rủi ro phát sinh"
   },
   "currentMonth": "2026-09",
   "userProfile": {

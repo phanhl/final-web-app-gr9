@@ -100,12 +100,15 @@ export const BudgetsView: React.FC = () => {
 
   // Income Planner calculations
   const monthlyIncome = planner.monthlyIncome;
-  const needsBudget = (monthlyIncome * planner.needsPercent) / 100;
-  const wantsBudget = (monthlyIncome * planner.wantsPercent) / 100;
-  const savingsBudget = (monthlyIncome * planner.savingsPercent) / 100;
+  const needsBudget = (monthlyIncome * (planner.needsPercent ?? 50)) / 100;
+  const wantsBudget = (monthlyIncome * (planner.wantsPercent ?? 25)) / 100;
+  const savingsBudget = (monthlyIncome * (planner.savingsPercent ?? 15)) / 100;
+  const emergencyPercent = planner.emergencyPercent !== undefined ? planner.emergencyPercent : 10;
+  const emergencyBudget = (monthlyIncome * emergencyPercent) / 100;
 
   const totalMonthlyBills = bills.reduce((sum, b) => sum + b.amount, 0);
-  const availableFlexibleBudget = Math.max(0, monthlyIncome - totalMonthlyBills - savingsBudget);
+  const availableFlexibleBudget = Math.max(0, monthlyIncome - totalMonthlyBills - savingsBudget - emergencyBudget);
+  const totalPercent = (planner.needsPercent ?? 50) + (planner.wantsPercent ?? 25) + (planner.savingsPercent ?? 15) + emergencyPercent;
 
   // Save or edit budget
   const handleSaveBudget = (e: React.FormEvent) => {
@@ -494,9 +497,9 @@ export const BudgetsView: React.FC = () => {
               <div>
                 <h3 className="text-lg font-bold">Thêm thu nhập cá nhân → Tạo Budget khả dụng để tiêu</h3>
                 <p className="text-xs text-blue-100 mt-1 leading-relaxed">
-                  Thiết lập tổng thu nhập hàng tháng và áp dụng công thức phân bổ ngân sách thông minh (Quy tắc 50/30/20).
-                  Hệ thống tự động trừ các hóa đơn cố định và mục tiêu tích lũy để tính chính xác số tiền bạn được phép
-                  tiêu thoải mái mà không lo thiếu hụt.
+                  Thiết lập tổng thu nhập hàng tháng và áp dụng công thức phân bổ ngân sách thông minh (Quy tắc 50/30/20 hoặc Mô hình 4 quỹ có Khoản dự phòng phát sinh).
+                  Hệ thống tự động khấu trừ các hóa đơn cố định, mục tiêu tích lũy dài hạn và quỹ dự phòng khẩn cấp để tính chính xác số tiền bạn được phép
+                  tiêu linh hoạt mà không lo thiếu hụt.
                 </p>
               </div>
             </div>
@@ -538,11 +541,56 @@ export const BudgetsView: React.FC = () => {
               </div>
 
               {/* Sliders for percentages */}
-              <div className="space-y-3 pt-2">
+              <div className="space-y-3.5 pt-2">
+                {/* Header with total percent indicator */}
+                <div className="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-800">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Tỷ lệ phân bổ 4 quỹ:</span>
+                  <span
+                    className={`text-[11px] px-2.5 py-0.5 rounded-full font-extrabold ${
+                      totalPercent === 100
+                        ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
+                        : 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300'
+                    }`}
+                  >
+                    Tổng: {totalPercent}% {totalPercent === 100 ? '✓ Chuẩn' : `(${totalPercent > 100 ? 'Vượt' : 'Thiếu'} ${Math.abs(100 - totalPercent)}%)`}
+                  </span>
+                </div>
+
+                {/* Preset quick buttons */}
+                <div className="space-y-1.5">
+                  <span className="text-[11px] font-semibold text-slate-400">Gợi ý phân bổ nhanh:</span>
+                  <div className="grid grid-cols-3 gap-1.5 text-[11px]">
+                    <button
+                      type="button"
+                      onClick={() => updatePlanner({ ...planner, needsPercent: 50, wantsPercent: 25, savingsPercent: 15, emergencyPercent: 10 })}
+                      className="px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-blue-500 text-slate-700 dark:text-slate-200 font-medium text-center transition-all"
+                    >
+                      50/25/15/10
+                      <span className="block text-[9px] text-slate-400">Khuyên dùng</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updatePlanner({ ...planner, needsPercent: 50, wantsPercent: 20, savingsPercent: 20, emergencyPercent: 10 })}
+                      className="px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-blue-500 text-slate-700 dark:text-slate-200 font-medium text-center transition-all"
+                    >
+                      50/20/20/10
+                      <span className="block text-[9px] text-slate-400">Vững chắc</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updatePlanner({ ...planner, needsPercent: 50, wantsPercent: 30, savingsPercent: 15, emergencyPercent: 5 })}
+                      className="px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-blue-500 text-slate-700 dark:text-slate-200 font-medium text-center transition-all"
+                    >
+                      50/30/15/5
+                      <span className="block text-[9px] text-slate-400">Linh hoạt</span>
+                    </button>
+                  </div>
+                </div>
+
                 <div>
                   <div className="flex justify-between text-xs font-semibold mb-1">
                     <span className="text-blue-600 dark:text-blue-400">1. Thiết yếu (Needs)</span>
-                    <span>{planner.needsPercent}%</span>
+                    <span className="font-bold text-slate-800 dark:text-white">{planner.needsPercent}%</span>
                   </div>
                   <input
                     type="range"
@@ -558,7 +606,7 @@ export const BudgetsView: React.FC = () => {
                 <div>
                   <div className="flex justify-between text-xs font-semibold mb-1">
                     <span className="text-purple-600 dark:text-purple-400">2. Mong muốn (Wants)</span>
-                    <span>{planner.wantsPercent}%</span>
+                    <span className="font-bold text-slate-800 dark:text-white">{planner.wantsPercent}%</span>
                   </div>
                   <input
                     type="range"
@@ -574,52 +622,83 @@ export const BudgetsView: React.FC = () => {
                 <div>
                   <div className="flex justify-between text-xs font-semibold mb-1">
                     <span className="text-emerald-600 dark:text-emerald-400">3. Tích lũy (Savings)</span>
-                    <span>{planner.savingsPercent}%</span>
+                    <span className="font-bold text-slate-800 dark:text-white">{planner.savingsPercent}%</span>
                   </div>
                   <input
                     type="range"
-                    min="10"
+                    min="5"
                     max="40"
                     value={planner.savingsPercent}
                     onChange={(e) => updatePlanner({ ...planner, savingsPercent: Number(e.target.value) })}
                     className="w-full accent-emerald-600"
                   />
-                  <span className="text-[11px] text-slate-400">Quỹ khẩn cấp, hũ tiết kiệm, đầu tư</span>
+                  <span className="text-[11px] text-slate-400">Hũ tiết kiệm, đầu tư dài hạn</span>
+                </div>
+
+                {/* 4. Khoản dự phòng (Emergency / Contingency) */}
+                <div>
+                  <div className="flex justify-between text-xs font-semibold mb-1">
+                    <span className="text-amber-600 dark:text-amber-400 font-bold flex items-center space-x-1">
+                      <ShieldAlert className="w-3.5 h-3.5 text-amber-500 inline mr-0.5" />
+                      <span>4. Dự phòng (Emergency)</span>
+                    </span>
+                    <span className="font-bold text-slate-800 dark:text-white">{emergencyPercent}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="30"
+                    value={emergencyPercent}
+                    onChange={(e) => updatePlanner({ ...planner, emergencyPercent: Number(e.target.value) })}
+                    className="w-full accent-amber-500"
+                  />
+                  <span className="text-[11px] text-slate-400">Quỹ khẩn cấp, y tế, sửa xe, rủi ro phát sinh</span>
                 </div>
               </div>
             </div>
 
             {/* Calculated Breakdown Cards */}
             <div className="lg:col-span-2 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
                 <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/50">
                   <span className="text-xs font-bold text-blue-700 dark:text-blue-300">
                     Ngân sách Thiết yếu ({planner.needsPercent}%)
                   </span>
-                  <p className="text-xl font-black text-blue-900 dark:text-blue-100 mt-1">
+                  <p className="text-lg font-black text-blue-900 dark:text-blue-100 mt-1">
                     {formatCurrency(needsBudget)}
                   </p>
-                  <span className="text-[10px] text-blue-600/80">Cho các nhu cầu sinh hoạt chính</span>
+                  <span className="text-[10px] text-blue-600/80">Nhu cầu sinh hoạt chính</span>
                 </div>
 
                 <div className="p-4 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-900/50">
                   <span className="text-xs font-bold text-purple-700 dark:text-purple-300">
                     Ngân sách Mong muốn ({planner.wantsPercent}%)
                   </span>
-                  <p className="text-xl font-black text-purple-900 dark:text-purple-100 mt-1">
+                  <p className="text-lg font-black text-purple-900 dark:text-purple-100 mt-1">
                     {formatCurrency(wantsBudget)}
                   </p>
-                  <span className="text-[10px] text-purple-600/80">Hưởng thụ, sở thích cá nhân</span>
+                  <span className="text-[10px] text-purple-600/80">Hưởng thụ, sở thích</span>
                 </div>
 
                 <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50">
                   <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">
                     Mục tiêu Tích lũy ({planner.savingsPercent}%)
                   </span>
-                  <p className="text-xl font-black text-emerald-900 dark:text-emerald-100 mt-1">
+                  <p className="text-lg font-black text-emerald-900 dark:text-emerald-100 mt-1">
                     {formatCurrency(savingsBudget)}
                   </p>
-                  <span className="text-[10px] text-emerald-600/80">Đưa vào hũ tiết kiệm</span>
+                  <span className="text-[10px] text-emerald-600/80">Tích lũy & đầu tư</span>
+                </div>
+
+                <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50">
+                  <span className="text-xs font-bold text-amber-700 dark:text-amber-300 flex items-center space-x-1">
+                    <ShieldAlert className="w-3.5 h-3.5 text-amber-600 inline mr-0.5" />
+                    <span>Khoản Dự phòng ({emergencyPercent}%)</span>
+                  </span>
+                  <p className="text-lg font-black text-amber-900 dark:text-amber-100 mt-1">
+                    {formatCurrency(emergencyBudget)}
+                  </p>
+                  <span className="text-[10px] text-amber-600/80">Phòng rủi ro & phát sinh</span>
                 </div>
               </div>
 
@@ -639,8 +718,15 @@ export const BudgetsView: React.FC = () => {
                     <span className="font-bold text-rose-600">-{formatCurrency(totalMonthlyBills)}</span>
                   </div>
                   <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
-                    <span className="text-slate-500">Trừ Trích lập tích lũy & dự phòng ({planner.savingsPercent}%):</span>
+                    <span className="text-slate-500">Trừ Mục tiêu tích lũy ({planner.savingsPercent}%):</span>
                     <span className="font-bold text-blue-600">-{formatCurrency(savingsBudget)}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
+                    <span className="text-slate-500 flex items-center space-x-1">
+                      <ShieldAlert className="w-3.5 h-3.5 text-amber-500 inline" />
+                      <span>Trừ Khoản trích lập dự phòng khẩn cấp & rủi ro ({emergencyPercent}%):</span>
+                    </span>
+                    <span className="font-bold text-amber-600">-{formatCurrency(emergencyBudget)}</span>
                   </div>
                 </div>
 
@@ -657,6 +743,30 @@ export const BudgetsView: React.FC = () => {
                     <p className="font-bold">~{formatCurrency(Math.round(availableFlexibleBudget / 30))}/ngày</p>
                     <span className="text-[10px] text-slate-400">Chi tiêu an toàn</span>
                   </div>
+                </div>
+
+                {/* Connection to Savings Goals */}
+                <div className="p-3.5 bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/40 rounded-xl flex items-center justify-between gap-3">
+                  <div className="flex items-center space-x-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/60 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+                      <ShieldAlert className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                        Quỹ dự phòng an toàn: {formatCurrency(emergencyBudget)}/tháng
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                        Nên chuyển đều đặn vào hũ dự phòng khẩn cấp để đảm bảo chi tiêu sinh hoạt 3-6 tháng khi có biến cố.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSubTab('SAVINGS_GOALS')}
+                    className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 text-xs font-semibold rounded-lg hover:bg-amber-50 dark:hover:bg-slate-700 transition-all shrink-0 whitespace-nowrap shadow-sm"
+                  >
+                    Xem Hũ dự phòng →
+                  </button>
                 </div>
               </div>
             </div>

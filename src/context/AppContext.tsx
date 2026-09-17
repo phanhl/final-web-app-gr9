@@ -251,7 +251,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             if (d.budgets) setBudgets(d.budgets);
             if (d.bills) setBills(d.bills);
             if (d.goals) setGoals(d.goals);
-            if (d.planner) setPlanner(d.planner);
+            if (d.planner) {
+              setPlanner({
+                ...d.planner,
+                emergencyPercent: d.planner.emergencyPercent !== undefined ? d.planner.emergencyPercent : 10,
+              });
+            }
             if (d.currentMonth) setCurrentMonth(d.currentMonth);
             if (d.userProfile) setUserProfile(d.userProfile);
             if (d.simulatorConfig) setSimulatorConfig(d.simulatorConfig);
@@ -275,7 +280,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             if (parsed.budgets) setBudgets(parsed.budgets);
             if (parsed.bills) setBills(parsed.bills);
             if (parsed.goals) setGoals(parsed.goals);
-            if (parsed.planner) setPlanner(parsed.planner);
+            if (parsed.planner) {
+              setPlanner({
+                ...parsed.planner,
+                emergencyPercent: parsed.planner.emergencyPercent !== undefined ? parsed.planner.emergencyPercent : 10,
+              });
+            }
             if (parsed.currentMonth) setCurrentMonth(parsed.currentMonth);
             if (parsed.userProfile) setUserProfile(parsed.userProfile);
             if (parsed.simulatorConfig) setSimulatorConfig(parsed.simulatorConfig);
@@ -863,8 +873,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setPlanner({
       monthlyIncome: 0,
       needsPercent: 50,
-      wantsPercent: 30,
-      savingsPercent: 20,
+      wantsPercent: 25,
+      savingsPercent: 15,
+      emergencyPercent: 10,
     });
   };
 
@@ -883,12 +894,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     const jsonStr = JSON.stringify(data, null, 2);
     const blob = new Blob([jsonStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = url;
+    link.href = URL.createObjectURL(blob);
     link.download = `quan-ly-chi-tieu-backup-${getLocalDateString()}.json`;
     link.click();
-    URL.revokeObjectURL(url);
+    URL.revokeObjectURL(link.href);
   };
 
   const importDatabaseJSON = (jsonStr: string): boolean => {
@@ -900,7 +910,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (data.budgets && Array.isArray(data.budgets)) setBudgets(data.budgets);
       if (data.bills && Array.isArray(data.bills)) setBills(data.bills);
       if (data.goals && Array.isArray(data.goals)) setGoals(data.goals);
-      if (data.planner) setPlanner(data.planner);
+      if (data.planner) {
+        setPlanner({
+          ...data.planner,
+          emergencyPercent: data.planner.emergencyPercent !== undefined ? data.planner.emergencyPercent : 10,
+        });
+      }
       if (data.simulatorConfig) setSimulatorConfig(data.simulatorConfig);
       return true;
     } catch (e) {

@@ -58,8 +58,9 @@ export interface Budget {
 export interface IncomeBudgetPlanner {
   monthlyIncome: number;
   needsPercent: number; // e.g. 50
-  wantsPercent: number; // e.g. 30
-  savingsPercent: number; // e.g. 20
+  wantsPercent: number; // e.g. 25
+  savingsPercent: number; // e.g. 15
+  emergencyPercent?: number; // e.g. 10 (Quỹ dự phòng khẩn cấp & rủi ro phát sinh)
   notes?: string;
 }
 

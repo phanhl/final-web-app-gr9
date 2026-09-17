@@ -1270,6 +1270,60 @@ Qua quét toàn diện mã nguồn, phát hiện và đã xử lý các vị tr�
 * Nắm bắt ngay nguyên nhân vượt ngân sách bằng danh sách giao dịch được lọc tự động.
 * Thanh toán hóa đơn sắp đến hạn ngay tức thì mà không cần tìm kiếm.
 
+---
+
+# [LẦN CHỈNH SỬA 22] - BỔ SUNG "KHOẢN DỰ PHÒNG" VÀO KẾ HOẠCH PHÂN BỔ THU NHẬP (BUDGET PLANNER)
+
+### 1. Phân Tích Hiện Trạng & Yêu Cầu Người Dùng
+* **Yêu cầu:** Người dùng gửi ảnh màn hình mục *"Thu nhập & Tỷ lệ phân bổ"* (hiện có 3 thanh: 1. Thiết yếu 50%, 2. Mong muốn 30%, 3. Tích lũy 20%) và hỏi: *"xem trong cái web này có khoản dự phòng chưa, nếu chưa thì thêm vào"*.
+* **Kết quả khảo sát toàn bộ mã nguồn:**
+  1. Trong mục **Hũ tiết kiệm & Mục tiêu tích lũy** (`goals`): Hệ thống đã có sẵn 1 mục tiêu mẫu mang tên `"Quỹ dự phòng khẩn cấp 6 tháng"` (Mục tiêu 60.000.000 ₫).
+  2. **TUY NHIÊN**, trong phân mục **"Thu nhập & Tỷ lệ phân bổ"** (Kế hoạch ngân sách phân bổ thu nhập hàng tháng theo quy tắc 50/30/20):
+     - Chưa có thanh trượt riêng cho **Khoản dự phòng** (Emergency / Contingency Fund).
+     - Mục 3 "Tích lũy (Savings)" đang bị gộp chung cả hũ tiết kiệm lẫn quỹ khẩn cấp, khiến người dùng không thể tách bạch số tiền dành cho đầu tư/tiết kiệm dài hạn với số tiền dự phòng phát sinh rủi ro (y tế, ốm đau, sửa chữa đột xuất).
+     - Chưa có thẻ thống kê riêng số tiền phân bổ cho Khoản dự phòng.
+     - Bảng tính "Dòng tiền Khả dụng Thực tế để Tiêu" chưa trừ riêng Khoản dự phòng ra khỏi ngân sách khả dụng.
+
+---
+
+### 2. Các Thay Đổi Đã Triển Khai
+
+1. **Mở rộng Data Model & State Quản lý:**
+   - Cập nhật interface `IncomeBudgetPlanner` trong `src/types/index.ts`: bổ sung thuộc tính `emergencyPercent?: number;`.
+   - Cập nhật `INITIAL_PLANNER` trong `src/lib/mock-data.ts` và `data/database.json`: cấu hình phân bổ chuẩn 4 quỹ:
+     + 1. Thiết yếu (Needs): `50%` (16.000.000 ₫)
+     + 2. Mong muốn (Wants): `25%` (8.000.000 ₫)
+     + 3. Tích lũy (Savings): `15%` (4.800.000 ₫)
+     + 4. Dự phòng (Emergency): `10%` (3.200.000 ₫)
+   - Cập nhật `src/context/AppContext.tsx`: xử lý nạp dữ liệu an toàn khi người dùng đã có sẵn dữ liệu cũ (tự động gán fallback `emergencyPercent = 10%`), cập nhật các hàm `clearAllData`, `exportDatabaseJSON`, `importDatabaseJSON`.
+
+2. **Nâng cấp Giao diện Sub-tab "Kế hoạch Thu nhập & Phân bổ" (`src/components/BudgetsView.tsx`):**
+   - **Huy hiệu Tổng tỷ lệ phân bổ:** Hiển thị tự động `Tổng: X%` (ví dụ `Tổng: 100% ✓ Chuẩn`, hoặc cảnh báo màu cam nếu tổng vượt/thiếu 100%).
+   - **3 Bộ thiết lập nhanh 1-chạm (Quick Presets):**
+     + `[50/25/15/10]` (Khuyên dùng: 50% Thiết yếu, 25% Hưởng thụ, 15% Tích lũy, 10% Dự phòng)
+     + `[50/20/20/10]` (Vững chắc)
+     + `[50/30/15/5]` (Linh hoạt)
+   - **Thanh trượt "4. Dự phòng (Emergency)":** Thiết kế màu hổ phách/cam vàng với icon khiên bảo vệ `ShieldAlert`, cho phép kéo từ 0% đến 30% kèm giải thích: *"Quỹ khẩn cấp, y tế, sửa xe, rủi ro phát sinh"*.
+   - **4 Thẻ phân bổ ngân sách (Calculated Breakdown Cards):**
+     + Chuyển layout sang 4 cột trực quan: Thêm thẻ màu vàng hổ phách **"Khoản Dự phòng (Emergency) ({emergencyPercent}%)"** hiển thị rõ ràng số tiền VNĐ tương ứng hàng tháng.
+   - **Bảng tính Dòng tiền Khả dụng Chuẩn xác:**
+     + Hiển thị thêm dòng: `Trừ Khoản trích lập dự phòng khẩn cấp & rủi ro ({emergencyPercent}%): -{emergencyBudget}`.
+     + Công thức tự động khấu trừ khoản dự phòng khỏi ngân sách khả dụng: `availableFlexibleBudget = Math.max(0, monthlyIncome - totalMonthlyBills - savingsBudget - emergencyBudget)`.
+   - **Banner liên kết liền mạch:** Thêm hộp thông tin nhắc nhở chuyển đều đặn vào hũ dự phòng kèm nút `[Xem Hũ dự phòng →]` giúp chuyển ngay sang tab Hũ tiết kiệm mục tiêu.
+
+---
+
+### 3. Danh Sách Các Tệp Đã Thay Đổi
+
+| STT | Tệp tin | Trạng thái | Mô tả tóm tắt |
+|---|---|---|---|
+| 1 | `src/types/index.ts` | **[CHỈNH SỬA]** | Thêm trường `emergencyPercent` vào `IncomeBudgetPlanner`. |
+| 2 | `src/lib/mock-data.ts` | **[CHỈNH SỬA]** | Cập nhật `INITIAL_PLANNER` với tỷ lệ chuẩn 4 quỹ: 50/25/15/10. |
+| 3 | `data/database.json` | **[CHỈNH SỬA]** | Cập nhật `planner` trong cơ sở dữ liệu với `emergencyPercent: 10`. |
+| 4 | `src/context/AppContext.tsx` | **[CHỈNH SỬA]** | Hỗ trợ nạp, lưu trữ, import/export và reset fallback cho `emergencyPercent`. |
+| 5 | `src/components/BudgetsView.tsx` | **[CHỈNH SỬA]** | Bổ sung thanh trượt Dự phòng, thẻ thống kê số tiền, nút preset và liên kết tới Hũ dự phòng khẩn cấp. |
+| 6 | `TRACKING_CHANGES.md` | **[CHỈNH SỬA]** | Ghi nhận chi tiết lần chỉnh sửa 22. |
+
 
 
 

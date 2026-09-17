@@ -111,9 +111,10 @@ export const INITIAL_WALLETS: Wallet[] = [
 export const INITIAL_PLANNER: IncomeBudgetPlanner = {
   monthlyIncome: 32000000,
   needsPercent: 50, // 16,000,000đ
-  wantsPercent: 30, // 9,600,000đ
-  savingsPercent: 20, // 6,400,000đ
-  notes: 'Áp dụng quy tắc 50/30/20: 50% thiết yếu, 30% sở thích cá nhân, 20% tích lũy & quỹ khẩn cấp',
+  wantsPercent: 25, // 8,000,000đ
+  savingsPercent: 15, // 4,800,000đ
+  emergencyPercent: 10, // 3,200,000đ
+  notes: 'Quy tắc phân bổ 4 quỹ: 50% thiết yếu, 25% hưởng thụ, 15% tích lũy đầu tư, 10% quỹ dự phòng khẩn cấp & rủi ro phát sinh',
 };
 
 export const INITIAL_BUDGETS: Budget[] = [
