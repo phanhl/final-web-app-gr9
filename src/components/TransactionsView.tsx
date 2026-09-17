@@ -22,11 +22,12 @@ import {
   X,
   Upload,
   BarChart3,
+  AlertTriangle,
 } from 'lucide-react';
 import { formatCurrency, formatDate, exportToCSV, exportToExcel, formatNumberWithDots } from '@/lib/utils';
 import { POPULAR_TAGS } from '@/lib/mock-data';
-import { IconHelper } from './IconHelper';
 import { ReceiptModal } from './ReceiptModal';
+import { IconHelper } from './IconHelper';
 import {
   BarChart,
   Bar,
@@ -51,6 +52,8 @@ export const TransactionsView: React.FC = () => {
     currentMonth,
     openQuickAdd,
     deleteTransaction,
+    navTargetCategoryId,
+    setNavTargetCategoryId,
   } = useApp();
 
   const [showCharts, setShowCharts] = useState(true);
@@ -68,6 +71,19 @@ export const TransactionsView: React.FC = () => {
   const [receiptToView, setReceiptToView] = useState<string | null>(null);
   const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
   const [hoveredPieIndex, setHoveredPieIndex] = useState<number | null>(null);
+
+  // Auto-filter when navigated from Trung tâm Cảnh báo
+  useEffect(() => {
+    if (navTargetCategoryId) {
+      setSelectedCategory(navTargetCategoryId);
+      setSelectedType('EXPENSE');
+      setSelectedWallet('ALL');
+      setSelectedTag('ALL');
+      setSearchTerm('');
+      setStartDate('');
+      setEndDate('');
+    }
+  }, [navTargetCategoryId]);
 
   // Filter logic
   const filteredTransactions = useMemo(() => {
@@ -510,6 +526,34 @@ export const TransactionsView: React.FC = () => {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* 2.8 NOTIFICATION DEEP-LINK BANNER */}
+      {navTargetCategoryId && selectedCategory === navTargetCategoryId && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 rounded-2xl text-xs text-rose-700 dark:text-rose-300 shadow-xs gap-3 animate-in fade-in duration-200">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-4 h-4 animate-bounce" />
+            </div>
+            <div>
+              <p className="font-bold text-sm text-rose-800 dark:text-rose-200">
+                Đang xem chi tiết chi tiêu: {categories.find((c) => c.id === navTargetCategoryId)?.name || 'Cảnh báo'}
+              </p>
+              <p className="text-rose-600/90 dark:text-rose-400/90 mt-0.5">
+                Danh sách giao dịch bên dưới đã được tự động lọc theo danh mục này từ <b>Trung tâm Cảnh báo</b>.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              setSelectedCategory('ALL');
+              setNavTargetCategoryId(null);
+            }}
+            className="px-3.5 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl font-bold shadow-xs text-xs border border-slate-200 dark:border-slate-700 cursor-pointer self-start sm:self-auto shrink-0 transition-colors"
+          >
+            Xem tất cả giao dịch
+          </button>
         </div>
       )}
 

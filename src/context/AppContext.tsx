@@ -87,6 +87,19 @@ interface AppContextType {
   simulatorConfig: SimulatorConfig;
   updateSimulatorConfig: (config: Partial<SimulatorConfig>) => void;
 
+  // Deep-linking & Notification Navigation
+  navTargetCategoryId: string | null;
+  setNavTargetCategoryId: (id: string | null) => void;
+  navTargetBudgetId: string | null;
+  setNavTargetBudgetId: (id: string | null) => void;
+  navTargetBillId: string | null;
+  setNavTargetBillId: (id: string | null) => void;
+  billToAutoPayId: string | null;
+  setBillToAutoPayId: (id: string | null) => void;
+  navigateToCategoryTransactions: (categoryId: string) => void;
+  navigateToBudget: (budgetId: string) => void;
+  navigateToBill: (billId: string, autoOpenPay?: boolean) => void;
+
   // Backup & Reset
   resetToDefaultData: () => void;
   clearAllData: () => void;
@@ -142,6 +155,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateSimulatorConfig = (config: Partial<SimulatorConfig>) => {
     setSimulatorConfig((prev) => ({ ...prev, ...config }));
+  };
+
+  // Deep-linking & Notification Navigation States
+  const [navTargetCategoryId, setNavTargetCategoryId] = useState<string | null>(null);
+  const [navTargetBudgetId, setNavTargetBudgetId] = useState<string | null>(null);
+  const [navTargetBillId, setNavTargetBillId] = useState<string | null>(null);
+  const [billToAutoPayId, setBillToAutoPayId] = useState<string | null>(null);
+
+  const navigateToCategoryTransactions = (categoryId: string) => {
+    setNavTargetCategoryId(categoryId);
+    setActiveTab('transactions');
+  };
+
+  const navigateToBudget = (budgetId: string) => {
+    setNavTargetBudgetId(budgetId);
+    setActiveTab('budgets');
+  };
+
+  const navigateToBill = (billId: string, autoOpenPay: boolean = false) => {
+    setNavTargetBillId(billId);
+    if (autoOpenPay) {
+      setBillToAutoPayId(billId);
+    }
+    setActiveTab('bills');
   };
 
   // Theme Management (Light, Dark, System)
@@ -922,6 +959,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         withdrawFromGoal,
         simulatorConfig,
         updateSimulatorConfig,
+        navTargetCategoryId,
+        setNavTargetCategoryId,
+        navTargetBudgetId,
+        setNavTargetBudgetId,
+        navTargetBillId,
+        setNavTargetBillId,
+        billToAutoPayId,
+        setBillToAutoPayId,
+        navigateToCategoryTransactions,
+        navigateToBudget,
+        navigateToBill,
         resetToDefaultData,
         clearAllData,
         exportDatabaseJSON,

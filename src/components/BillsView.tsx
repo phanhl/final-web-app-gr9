@@ -27,7 +27,19 @@ import { formatCurrency, formatNumberWithDots, getLocalDateString, formatDisplay
 import { IconHelper } from './IconHelper';
 
 export const BillsView: React.FC = () => {
-  const { bills, wallets, categories, addBill, editBill, deleteBill, payBill } = useApp();
+  const {
+    bills,
+    wallets,
+    categories,
+    addBill,
+    editBill,
+    deleteBill,
+    payBill,
+    navTargetBillId,
+    setNavTargetBillId,
+    billToAutoPayId,
+    setBillToAutoPayId,
+  } = useApp();
 
   const [billModalOpen, setBillModalOpen] = useState(false);
   const [editingBill, setEditingBill] = useState<RecurringBill | null>(null);
@@ -48,6 +60,31 @@ export const BillsView: React.FC = () => {
   const [billToPay, setBillToPay] = useState<RecurringBill | null>(null);
   const [payWalletId, setPayWalletId] = useState(wallets[0]?.id || '');
   const [payDate, setPayDate] = useState(getLocalDateString());
+
+  // Auto-scroll and auto-open Pay Modal from Trung tâm Cảnh báo
+  useEffect(() => {
+    if (navTargetBillId) {
+      setTimeout(() => {
+        const el = document.getElementById(`bill-card-${navTargetBillId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 150);
+    }
+  }, [navTargetBillId]);
+
+  useEffect(() => {
+    if (billToAutoPayId) {
+      const target = bills.find((b) => b.id === billToAutoPayId);
+      if (target) {
+        setBillToPay(target);
+        setPayWalletId(wallets[0]?.id || '');
+        setPayDate(getLocalDateString());
+        setPayModalOpen(true);
+      }
+      setBillToAutoPayId(null);
+    }
+  }, [billToAutoPayId, bills, wallets, setBillToAutoPayId]);
 
   // Current date & day in month
   const [currentDateInfo, setCurrentDateInfo] = useState(() => {
@@ -243,11 +280,17 @@ export const BillsView: React.FC = () => {
           {bills.map((bill) => {
             const isPaid = bill.status === 'PAID';
             const daysLeft = bill.dueDay - today;
+            const isHighlighted = navTargetBillId === bill.id;
 
             return (
               <div
                 key={bill.id}
-                className="p-5 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+                id={`bill-card-${bill.id}`}
+                className={`p-5 transition-all flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 ${
+                  isHighlighted
+                    ? 'ring-4 ring-blue-500/80 dark:ring-blue-400/80 bg-blue-50/60 dark:bg-blue-950/30 rounded-xl'
+                    : 'hover:bg-slate-50/60 dark:hover:bg-slate-800/40'
+                }`}
               >
                 {/* Left: Info */}
                 <div className="flex items-center space-x-3.5">
@@ -268,6 +311,11 @@ export const BillsView: React.FC = () => {
                   <div>
                     <div className="flex items-center space-x-2 flex-wrap gap-y-1">
                       <h4 className="text-sm font-bold text-slate-900 dark:text-white">{bill.name}</h4>
+                      {isHighlighted && (
+                        <span className="px-1.5 py-0.5 rounded-full text-[9px] font-black bg-blue-600 text-white animate-pulse">
+                          Đang xem từ cảnh báo
+                        </span>
+                      )}
                       {isPaid ? (
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
                           Đã trả ngày {formatDisplayDate(bill.lastPaidDate)}

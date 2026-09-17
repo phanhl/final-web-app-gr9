@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Budget, SavingsGoal } from '@/types';
 import {
@@ -22,6 +22,7 @@ import {
   DollarSign,
   X,
   Target,
+  ReceiptText,
 } from 'lucide-react';
 import { formatCurrency, calculateBudgetStatuses, formatNumberWithDots } from '@/lib/utils';
 import { IconHelper } from './IconHelper';
@@ -46,6 +47,9 @@ export const BudgetsView: React.FC = () => {
     deleteGoal,
     depositToGoal,
     withdrawFromGoal,
+    navTargetBudgetId,
+    setNavTargetBudgetId,
+    navigateToCategoryTransactions,
   } = useApp();
 
   const [activeSubTab, setActiveSubTab] = useState<'CATEGORY_BUDGETS' | 'PLANNER' | 'SAVINGS_GOALS'>(
@@ -74,6 +78,19 @@ export const BudgetsView: React.FC = () => {
   const [depositWalletId, setDepositWalletId] = useState(wallets[0]?.id || '');
   const [depositNote, setDepositNote] = useState('');
   const [isDepositMode, setIsDepositMode] = useState(true); // true = deposit, false = withdraw
+
+  // Respond to deep-link navigation from Trung tâm Cảnh báo
+  useEffect(() => {
+    if (navTargetBudgetId) {
+      setActiveSubTab('CATEGORY_BUDGETS');
+      setTimeout(() => {
+        const el = document.getElementById(`budget-card-${navTargetBudgetId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 150);
+    }
+  }, [navTargetBudgetId]);
 
   // Calculate budget statuses
   const budgetStatuses = calculateBudgetStatuses(budgets, transactions, currentMonth);
@@ -311,12 +328,16 @@ export const BudgetsView: React.FC = () => {
             {budgetStatuses.map((item) => {
               const { budget, spent, remaining, percentage, status } = item;
               const cat = categories.find((c) => c.id === budget.categoryId);
+              const isHighlighted = navTargetBudgetId === budget.id;
 
               return (
                 <div
                   key={budget.id}
+                  id={`budget-card-${budget.id}`}
                   className={`p-5 rounded-2xl bg-white dark:bg-slate-900 border transition-all relative overflow-hidden ${
-                    status === 'EXCEEDED'
+                    isHighlighted
+                      ? 'ring-4 ring-rose-500/80 dark:ring-rose-400/80 shadow-2xl scale-[1.02] border-rose-500'
+                      : status === 'EXCEEDED'
                       ? 'border-rose-400 dark:border-rose-800 shadow-md shadow-rose-500/10'
                       : status === 'WARNING'
                       ? 'border-amber-400 dark:border-amber-800 shadow-md shadow-amber-500/10'
@@ -333,9 +354,16 @@ export const BudgetsView: React.FC = () => {
                         <IconHelper name={cat?.icon || 'CircleDot'} size={20} />
                       </div>
                       <div>
-                        <h3 className="text-sm font-bold text-slate-800 dark:text-white">
-                          {budget.categoryName}
-                        </h3>
+                        <div className="flex items-center space-x-1.5">
+                          <h3 className="text-sm font-bold text-slate-800 dark:text-white">
+                            {budget.categoryName}
+                          </h3>
+                          {isHighlighted && (
+                            <span className="px-1.5 py-0.5 rounded-full text-[9px] font-black bg-rose-600 text-white animate-pulse">
+                              Đang xem cảnh báo
+                            </span>
+                          )}
+                        </div>
                         <span className="text-[11px] text-slate-400">Tháng 09/2026</span>
                       </div>
                     </div>
@@ -411,30 +439,41 @@ export const BudgetsView: React.FC = () => {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
                     <button
-                      onClick={() => {
-                        setEditingBudget(budget);
-                        setBudgetCategoryId(budget.categoryId);
-                        setBudgetAmount(String(budget.amount));
-                        setBudgetModalOpen(true);
-                      }}
-                      className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg transition-colors"
-                      title="Sửa hạn mức"
+                      onClick={() => navigateToCategoryTransactions(budget.categoryId)}
+                      className="px-2.5 py-1 text-[11px] font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-950/50 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg transition-colors flex items-center gap-1 border border-slate-200 dark:border-slate-700 shadow-2xs"
+                      title="Xem danh sách giao dịch đã chi của danh mục này"
                     >
-                      <Edit2 className="w-3.5 h-3.5" />
+                      <ReceiptText className="w-3.5 h-3.5" />
+                      <span>Xem các khoản đã chi</span>
                     </button>
-                    <button
-                      onClick={() => {
-                        if (confirm(`Xác nhận xóa ngân sách danh mục ${budget.categoryName}?`)) {
-                          deleteBudget(budget.id);
-                        }
-                      }}
-                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors"
-                      title="Xóa ngân sách"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+
+                    <div className="flex items-center space-x-1">
+                      <button
+                        onClick={() => {
+                          setEditingBudget(budget);
+                          setBudgetCategoryId(budget.categoryId);
+                          setBudgetAmount(String(budget.amount));
+                          setBudgetModalOpen(true);
+                        }}
+                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg transition-colors"
+                        title="Sửa hạn mức"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm(`Xác nhận xóa ngân sách danh mục ${budget.categoryName}?`)) {
+                            deleteBudget(budget.id);
+                          }
+                        }}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors"
+                        title="Xóa ngân sách"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               );

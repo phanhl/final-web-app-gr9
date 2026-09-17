@@ -1222,6 +1222,55 @@ Qua quét toàn diện mã nguồn, phát hiện và đã xử lý các vị tr�
 * Người dùng có thể tự do điều chỉnh ngày đóng tiền khi thanh toán hoặc khi chỉnh sửa hóa đơn.
 * Người dùng có thể tùy chỉnh ngày đến hạn và số ngày muốn được nhắc nhở trước, có banner cảnh báo nổi bật.
 
+---
+
+## [LẦN CHỈNH SỬA 21] - Nâng Cấp "Trung Tâm Cảnh Báo" Thành Hệ Thống Điều Hướng Thông Minh (Deep-linking)
+
+* **Thời gian thực hiện:** 18/09/2026
+* **Mức độ ảnh hưởng:** Trung tâm cảnh báo & Trải nghiệm điều hướng (Alert Center UX & Quick Actions)
+* **Trạng thái:** ✅ Đã hoàn thành và xác minh
+
+---
+
+### 1. Vấn Đề Người Dùng Gặp Phải
+* Tại popup **Trung tâm Cảnh báo** (chuông thông báo), các mục cảnh báo ("Vượt ngân sách Ăn uống", "Cảnh báo 80%", "Hóa đơn chưa thanh toán") trước đây chỉ là những thẻ thông tin tĩnh dạng `<div>`.
+* Người dùng chỉ đọc được số liệu mà không thể bấm vào. Để kiểm tra tại sao vượt ngân sách hoặc muốn thanh toán hóa đơn, người dùng buộc phải tự bấm qua lại giữa các tab, rồi tự tìm kiếm hoặc lọc danh mục thủ công, gây mất thời gian và giảm trải nghiệm sử dụng.
+
+---
+
+### 2. Cách Xử Lý Triệt Để
+1. **Tương tác trực tiếp & Điều hướng tức thời (Deep-linking):**
+   - Biến toàn bộ các thẻ cảnh báo thành các thẻ tương tác thông minh (`cursor-pointer hover:shadow-md hover:scale-[1.01] transition-all`).
+   - Thêm biểu tượng mũi tên dẫn hướng `ChevronRight` và phản hồi di chuột trực quan.
+2. **Đối với cảnh báo Vượt ngân sách & Cảnh báo 80%:**
+   - **Bấm vào thẻ:** Chuyển ngay lập tức sang tab **"Ngân sách" (`budgets`)**, tự động chuyển sang phân mục *Hạn mức danh mục*, cuộn mượt mà đến đúng thẻ ngân sách đó và kích hoạt viền phát sáng (`ring-4 ring-rose-500`) kèm nhãn *"Đang xem cảnh báo"*.
+   - **Nút "🔍 Xem các khoản đã chi":** Đưa người dùng ngay sang tab **"Sổ giao dịch" (`transactions`)**, **tự động áp dụng bộ lọc đúng danh mục đó** (ví dụ: chỉ lọc danh mục *Ăn uống* đã tiêu 55.705.688 ₫) và hiển thị banner chỉ dẫn rõ ràng kèm nút *"Xem tất cả giao dịch"* để người dùng hủy lọc khi cần.
+   - **Nút "Xem ngân sách ➔":** Chuyển sang xem và chỉnh sửa hạn mức ngân sách.
+3. **Đối với cảnh báo Hóa đơn chưa thanh toán:**
+   - **Bấm vào thẻ:** Chuyển ngay lập tức sang tab **"Định kỳ" (`bills`)**, cuộn đến đúng hóa đơn và làm nổi bật thẻ hóa đơn đó (`ring-4 ring-blue-500`).
+   - **Nút "💳 Thanh toán ngay":** Chuyển sang tab `bills` và **tự động mở luôn hộp thoại xác nhận thanh toán** cho hóa đơn đó tại chỗ để người dùng xác nhận trừ tiền từ ví nào và đóng vào ngày nào mà không cần thêm bất kỳ cú nhấp chuột tìm kiếm nào!
+
+---
+
+### 3. Danh Sách Các Tệp Đã Thay Đổi
+
+| STT | Tệp tin | Trạng thái | Mô tả tóm tắt |
+|---|---|---|---|
+| 1 | `src/context/AppContext.tsx` | **[CHỈNH SỬA]** | Bổ sung các trạng thái điều hướng (`navTargetCategoryId`, `navTargetBudgetId`, `navTargetBillId`, `billToAutoPayId`) và các hàm điều hướng `navigateToCategoryTransactions`, `navigateToBudget`, `navigateToBill`. |
+| 2 | `src/components/Navigation.tsx` | **[CHỈNH SỬA]** | Nâng cấp popup Trung tâm Cảnh báo với kích thước rộng rãi hơn, thẻ có thể nhấp chuột và các nút tác vụ nhanh (Xem các khoản đã chi, Xem ngân sách, Thanh toán ngay). |
+| 3 | `src/components/TransactionsView.tsx` | **[CHỈNH SỬA]** | Lắng nghe `navTargetCategoryId` để tự động kích hoạt lọc giao dịch theo danh mục cảnh báo và hiển thị banner thông báo hữu ích. |
+| 4 | `src/components/BudgetsView.tsx` | **[CHỈNH SỬA]** | Tự động cuộn đến thẻ ngân sách được chọn, gắn viền sáng nổi bật `ring-4` và bổ sung nút "Xem các khoản đã chi" trên từng thẻ. |
+| 5 | `src/components/BillsView.tsx` | **[CHỈNH SỬA]** | Tự động cuộn đến hóa đơn cảnh báo, làm nổi bật viền thẻ và tự động mở hộp thoại thanh toán nếu người dùng bấm "Thanh toán ngay" từ chuông cảnh báo. |
+| 6 | `TRACKING_CHANGES.md` | **[CHỈNH SỬA]** | Ghi nhận chi tiết lần chỉnh sửa 21. |
+
+---
+
+### 4. Kết Quả Sau Khi Chỉnh Sửa
+* Người dùng chỉ cần 1 cú click từ chuông thông báo là đến ngay đúng nơi cần xử lý.
+* Nắm bắt ngay nguyên nhân vượt ngân sách bằng danh sách giao dịch được lọc tự động.
+* Thanh toán hóa đơn sắp đến hạn ngay tức thì mà không cần tìm kiếm.
+
+
 
 
 
