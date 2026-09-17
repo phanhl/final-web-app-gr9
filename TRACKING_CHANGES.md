@@ -1166,6 +1166,63 @@ Qua quét toàn diện mã nguồn, phát hiện và đã xử lý các vị tr�
 * Tiêu đề hiển thị đúng chính xác ngày hôm nay (18/09/2026).
 * Các cảnh báo hóa đơn (đến hạn hôm nay, quá hạn, còn bao nhiêu ngày) tự động tính toán chuẩn xác 100% theo từng ngày trong tháng.
 
+---
+
+## [LẦN CHỈNH SỬA 20] - Sửa Lỗi Lệch Múi Giờ UTC (17/9 thay vì 18/9), Bổ Sung Tùy Chỉnh Ngày Đóng Tiền & Cài Đặt Nhắc Nhở Hóa Đơn
+
+* **Thời gian thực hiện:** 18/09/2026
+* **Mức độ ảnh hưởng:** Module Hóa Đơn Định Kỳ & Múi Giờ Hệ Thống (Timezone & Custom Reminder/Payment Date)
+* **Trạng thái:** ✅ Đã hoàn thành và xác minh
+
+---
+
+### 1. Nguyên Nhân Gây Ra Lỗi Hiển Thị Ngày 17/9 Thay Vì 18/9
+1. **Lệch múi giờ UTC (Timezone Bug):**
+   - Khi người dùng bấm "Thanh toán ngay", hệ thống gán `lastPaidDate: new Date().toISOString().split('T')[0]`.
+   - Hàm `toISOString()` luôn quy đổi thời gian về giờ chuẩn quốc tế UTC (GMT+0).
+   - Tại Việt Nam (UTC+7), khi người dùng thực hiện giao dịch vào lúc 00:38 sáng ngày 18/09, giờ UTC tương ứng mới chỉ là 17:38 chiều ngày 17/09. Kết quả là hệ thống tự động ghi nhận ngày thanh toán là `2026-09-17` thay vì `2026-09-18`.
+2. **Thiếu tính linh hoạt cho ứng dụng tài chính cá nhân:**
+   - Người dùng không có ô chọn ngày thanh toán khi bấm "Thanh toán ngay", dẫn đến không thể ghi nhận thanh toán cho các ngày trước đó hoặc đóng bù.
+   - Khi chỉnh sửa hóa đơn, chưa có tùy chọn điều chỉnh ngày đã đóng (`lastPaidDate`) hoặc chuyển đổi trạng thái đã đóng / chưa đóng.
+   - Chưa có tùy chọn cài đặt nhắc trước bao nhiêu ngày (`reminderDaysBefore`) và banner thông báo nhắc nhở các hóa đơn sắp đến hạn.
+
+---
+
+### 2. Cách Xử Lý Triệt Để
+1. **Đồng bộ múi giờ địa phương an toàn:**
+   - Xây dựng hàm `getLocalDateString()` trong `src/lib/utils.ts` lấy trực tiếp `getFullYear()`, `getMonth() + 1`, `getDate()` theo giờ máy người dùng (Việt Nam UTC+7), định dạng chuẩn `YYYY-MM-DD`.
+   - Xây dựng hàm `formatDisplayDate()` để định dạng hiển thị thân thiện dạng `DD/MM/YYYY` (ví dụ: `18/09/2026`) thay vì chuỗi ISO thô.
+   - Cập nhật toàn bộ các vị trí lưu trữ lịch sử mục tiêu và backup dữ liệu sang dùng `getLocalDateString()`.
+2. **Cho phép tùy chỉnh ngày thanh toán khi bấm "Thanh toán ngay":**
+   - Hộp thoại Xác nhận thanh toán hóa đơn được bổ sung ô chọn ngày: `<input type="date" value={payDate} />`.
+   - Mặc định là ngày hôm nay theo giờ địa phương, người dùng có thể tùy ý chọn bất kỳ ngày nào họ đã đóng.
+   - Giao dịch chi tiêu được tạo ra cũng gắn đúng ngày giờ người dùng đã chọn.
+3. **Cho phép chỉnh sửa ngày đã đóng & trạng thái trong Modal Sửa Hóa Đơn:**
+   - Trong Modal Thêm / Chỉnh sửa hóa đơn, bổ sung mục "Trạng thái thanh toán tháng này" (Chưa thanh toán / Đã thanh toán).
+   - Nếu là "Đã thanh toán", hiển thị ô chọn ngày để người dùng có thể sửa lại ngày đã đóng bất cứ lúc nào (ví dụ sửa từ 17/09 thành 18/09).
+4. **Tùy chỉnh thời gian nhắc đóng:**
+   - Thêm trường "Nhắc trước khi đến hạn" trong form hóa đơn (Đúng ngày đến hạn, trước 1 ngày, 2 ngày, 3 ngày, 5 ngày, 7 ngày).
+   - Thêm Banner nhắc nhở thông minh ở đầu trang Hóa đơn hiển thị danh sách các khoản cần thanh toán hôm nay hoặc sắp đến hạn.
+
+---
+
+### 3. Danh Sách Các Tệp Đã Thay Đổi
+
+| STT | Tệp tin | Trạng thái | Mô tả tóm tắt |
+|---|---|---|---|
+| 1 | `src/lib/utils.ts` | **[CHỈNH SỬA]** | Bổ sung 2 hàm trợ giúp: `getLocalDateString` (lấy ngày địa phương tránh lệch UTC) và `formatDisplayDate` (định dạng ngày DD/MM/YYYY). |
+| 2 | `src/context/AppContext.tsx` | **[CHỈNH SỬA]** | Cập nhật hàm `payBill` hỗ trợ tham số `customPaidDate`, tạo giao dịch đúng ngày được chọn; thay thế toàn bộ `toISOString().split('T')[0]` bằng `getLocalDateString()`. |
+| 3 | `src/components/BillsView.tsx` | **[CHỈNH SỬA]** | Thêm chọn ngày thanh toán trong Pay Modal; thêm chỉnh sửa trạng thái & ngày đã đóng trong Edit Modal; thêm banner nhắc nhở thông minh; định dạng ngày hiển thị theo `DD/MM/YYYY`. |
+| 4 | `TRACKING_CHANGES.md` | **[CHỈNH SỬA]** | Ghi nhận chi tiết lần chỉnh sửa 20. |
+
+---
+
+### 4. Kết Quả Sau Khi Chỉnh Sửa
+* Thanh toán sau 00:00 đêm tại Việt Nam ghi nhận chính xác 100% ngày 18/09/2026, không còn bị lùi về 17/09 do lệch múi giờ quốc tế.
+* Người dùng có thể tự do điều chỉnh ngày đóng tiền khi thanh toán hoặc khi chỉnh sửa hóa đơn.
+* Người dùng có thể tùy chỉnh ngày đến hạn và số ngày muốn được nhắc nhở trước, có banner cảnh báo nổi bật.
+
+
 
 
 

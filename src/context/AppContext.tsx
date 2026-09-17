@@ -24,7 +24,7 @@ import {
   DEFAULT_CATEGORIES,
   INITIAL_SIMULATOR_CONFIG,
 } from '@/lib/mock-data';
-import { calculateFinancialSummary, checkWalletSufficientFunds, formatCurrency } from '@/lib/utils';
+import { calculateFinancialSummary, checkWalletSufficientFunds, formatCurrency, getLocalDateString } from '@/lib/utils';
 
 interface AppContextType {
   wallets: Wallet[];
@@ -74,7 +74,7 @@ interface AppContextType {
   addBill: (bill: Omit<RecurringBill, 'id'>) => void;
   editBill: (id: string, bill: Partial<RecurringBill>) => void;
   deleteBill: (id: string) => void;
-  payBill: (billId: string, walletId: string) => void;
+  payBill: (billId: string, walletId: string, customPaidDate?: string) => void;
 
   // Goals
   addGoal: (goal: Omit<SavingsGoal, 'id' | 'createdAt' | 'history'>) => void;
@@ -611,7 +611,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setBills((prev) => prev.filter((b) => b.id !== id));
   };
 
-  const payBill = (billId: string, walletId: string) => {
+  const payBill = (billId: string, walletId: string, customPaidDate?: string) => {
     const bill = bills.find((b) => b.id === billId);
     if (!bill) return;
 
@@ -623,6 +623,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const billCategory = categories.find((c) => c.id === bill.categoryId);
+    const paidDate = customPaidDate || getLocalDateString();
 
     // 1. Mark bill as PAID
     setBills((prev) =>
@@ -631,7 +632,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           ? {
               ...b,
               status: 'PAID',
-              lastPaidDate: new Date().toISOString().split('T')[0],
+              lastPaidDate: paidDate,
               walletId,
             }
           : b
@@ -639,6 +640,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
 
     // 2. Automatically record transaction (addTransaction will deduct wallet balance safely)
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+    const txDate = `${paidDate}T${timeStr}`;
+
     addTransaction({
       type: 'EXPENSE',
       amount: bill.amount,
@@ -646,7 +651,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       categoryName: billCategory?.name || bill.categoryName || 'Hóa đơn',
       walletId: targetWallet.id,
       walletName: targetWallet.name,
-      date: new Date().toISOString(),
+      date: txDate,
       note: `Thanh toán hóa đơn: ${bill.name}`,
       tags: ['Hóa đơn định kỳ'],
     });
@@ -686,7 +691,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Add to goal
     const newHistoryItem = {
       id: `gh-${Date.now()}`,
-      date: new Date().toISOString().split('T')[0],
+      date: getLocalDateString(),
       amount,
       type: 'DEPOSIT' as const,
       walletId,
@@ -732,7 +737,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Deduct from goal
     const newHistoryItem = {
       id: `gh-${Date.now()}`,
-      date: new Date().toISOString().split('T')[0],
+      date: getLocalDateString(),
       amount,
       type: 'WITHDRAW' as const,
       walletId,
@@ -844,7 +849,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `quan-ly-chi-tieu-backup-${new Date().toISOString().split('T')[0]}.json`;
+    link.download = `quan-ly-chi-tieu-backup-${getLocalDateString()}.json`;
     link.click();
     URL.revokeObjectURL(url);
   };

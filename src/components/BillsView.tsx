@@ -21,8 +21,9 @@ import {
   Droplets,
   DollarSign,
   X,
+  Bell,
 } from 'lucide-react';
-import { formatCurrency, formatNumberWithDots } from '@/lib/utils';
+import { formatCurrency, formatNumberWithDots, getLocalDateString, formatDisplayDate } from '@/lib/utils';
 import { IconHelper } from './IconHelper';
 
 export const BillsView: React.FC = () => {
@@ -38,11 +39,15 @@ export const BillsView: React.FC = () => {
   const [billDueDay, setBillDueDay] = useState('15');
   const [billFrequency, setBillFrequency] = useState<'MONTHLY' | 'QUARTERLY' | 'YEARLY'>('MONTHLY');
   const [billNote, setBillNote] = useState('');
+  const [billReminderDays, setBillReminderDays] = useState('3');
+  const [billStatus, setBillStatus] = useState<'UNPAID' | 'PAID'>('UNPAID');
+  const [billLastPaidDate, setBillLastPaidDate] = useState(getLocalDateString());
 
   // Pay Modal State
   const [payModalOpen, setPayModalOpen] = useState(false);
   const [billToPay, setBillToPay] = useState<RecurringBill | null>(null);
   const [payWalletId, setPayWalletId] = useState(wallets[0]?.id || '');
+  const [payDate, setPayDate] = useState(getLocalDateString());
 
   // Current date & day in month
   const [currentDateInfo, setCurrentDateInfo] = useState(() => {
@@ -72,6 +77,9 @@ export const BillsView: React.FC = () => {
   const totalPaid = paidBills.reduce((sum, b) => sum + b.amount, 0);
   const totalUnpaid = unpaidBills.reduce((sum, b) => sum + b.amount, 0);
 
+  // Upcoming or Overdue reminder
+  const upcomingBills = unpaidBills.filter((b) => (b.dueDay - today) <= (b.reminderDaysBefore ?? 3));
+
   const handleSaveBill = (e: React.FormEvent) => {
     e.preventDefault();
     const amountNum = Number(billAmount);
@@ -92,6 +100,9 @@ export const BillsView: React.FC = () => {
         dueDay: dueDayNum,
         frequency: billFrequency,
         note: billNote,
+        reminderDaysBefore: Number(billReminderDays) || 3,
+        status: billStatus,
+        lastPaidDate: billStatus === 'PAID' ? (billLastPaidDate || getLocalDateString()) : undefined,
       });
     } else {
       addBill({
@@ -101,9 +112,10 @@ export const BillsView: React.FC = () => {
         categoryName: cat?.name || 'Hóa đơn',
         dueDay: dueDayNum,
         frequency: billFrequency,
-        status: 'UNPAID',
+        status: billStatus,
+        lastPaidDate: billStatus === 'PAID' ? (billLastPaidDate || getLocalDateString()) : undefined,
         note: billNote,
-        reminderDaysBefore: 3,
+        reminderDaysBefore: Number(billReminderDays) || 3,
       });
     }
 
@@ -113,7 +125,7 @@ export const BillsView: React.FC = () => {
 
   const handleConfirmPay = () => {
     if (!billToPay) return;
-    payBill(billToPay.id, payWalletId);
+    payBill(billToPay.id, payWalletId, payDate || getLocalDateString());
     setPayModalOpen(false);
     setBillToPay(null);
   };
@@ -140,6 +152,9 @@ export const BillsView: React.FC = () => {
             setBillDueDay('15');
             setBillFrequency('MONTHLY');
             setBillNote('');
+            setBillReminderDays('3');
+            setBillStatus('UNPAID');
+            setBillLastPaidDate(getLocalDateString());
             setBillModalOpen(true);
           }}
           className="flex items-center space-x-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors"
@@ -160,7 +175,7 @@ export const BillsView: React.FC = () => {
         </div>
 
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <span className="text-xs font-semibold text-slate-400 uppercase">Đã thanh toán tháng 9</span>
+          <span className="text-xs font-semibold text-slate-400 uppercase">Đã thanh toán tháng {new Date().getMonth() + 1}</span>
           <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
             {formatCurrency(totalPaid)}
           </p>
@@ -183,6 +198,36 @@ export const BillsView: React.FC = () => {
           </span>
         </div>
       </div>
+
+      {/* 2.5 REMINDER BANNER */}
+      {upcomingBills.length > 0 && (
+        <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 flex items-start sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+              <Bell className="w-5 h-5 animate-bounce" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-amber-900 dark:text-amber-200">
+                Nhắc nhở hóa đơn cần thanh toán ({upcomingBills.length} khoản)
+              </h4>
+              <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
+                {upcomingBills
+                  .map((b) => {
+                    const diff = b.dueDay - today;
+                    const diffLabel =
+                      diff === 0
+                        ? 'Đến hạn hôm nay!'
+                        : diff < 0
+                        ? `Quá hạn ${Math.abs(diff)} ngày`
+                        : `Còn ${diff} ngày (Hạn ngày ${b.dueDay})`;
+                    return `${b.name} (${formatCurrency(b.amount)} - ${diffLabel})`;
+                  })
+                  .join(' • ')}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 3. BILLS LIST */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
@@ -210,8 +255,10 @@ export const BillsView: React.FC = () => {
                     className={`w-11 h-11 rounded-2xl flex items-center justify-center font-bold text-sm shrink-0 shadow-sm ${
                       isPaid
                         ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400'
-                        : daysLeft <= 2
+                        : daysLeft <= 0
                         ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 animate-pulse'
+                        : daysLeft <= (bill.reminderDaysBefore ?? 3)
+                        ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400'
                         : 'bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400'
                     }`}
                   >
@@ -219,29 +266,35 @@ export const BillsView: React.FC = () => {
                   </div>
 
                   <div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 flex-wrap gap-y-1">
                       <h4 className="text-sm font-bold text-slate-900 dark:text-white">{bill.name}</h4>
                       {isPaid ? (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
-                          Đã trả {bill.lastPaidDate}
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
+                          Đã trả ngày {formatDisplayDate(bill.lastPaidDate)}
                         </span>
                       ) : daysLeft < 0 ? (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300">
-                          Quá hạn {Math.abs(daysLeft)} ngày!
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300">
+                          Quá hạn {Math.abs(daysLeft)} ngày! (Hạn N{bill.dueDay})
                         </span>
                       ) : daysLeft === 0 ? (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 animate-pulse">
                           Hôm nay đến hạn!
                         </span>
+                      ) : daysLeft <= (bill.reminderDaysBefore ?? 3) ? (
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300">
+                          Cần đóng trong {daysLeft} ngày (Hạn N{bill.dueDay})
+                        </span>
                       ) : (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300">
-                          Còn {daysLeft} ngày
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                          Còn {daysLeft} ngày (Hạn N{bill.dueDay})
                         </span>
                       )}
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400 mt-1">
                       <span>Đến hạn ngày {bill.dueDay} hàng tháng</span>
+                      <span>•</span>
+                      <span>Nhắc trước {bill.reminderDaysBefore ?? 3} ngày</span>
                       <span>•</span>
                       <span>{bill.categoryName || 'Hóa đơn'}</span>
                       {bill.note && (
@@ -270,6 +323,7 @@ export const BillsView: React.FC = () => {
                       onClick={() => {
                         setBillToPay(bill);
                         setPayWalletId(wallets[0]?.id || '');
+                        setPayDate(getLocalDateString());
                         setPayModalOpen(true);
                       }}
                       className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors flex items-center space-x-1.5"
@@ -301,6 +355,9 @@ export const BillsView: React.FC = () => {
                         setBillDueDay(String(bill.dueDay));
                         setBillFrequency(bill.frequency);
                         setBillNote(bill.note || '');
+                        setBillReminderDays(String(bill.reminderDaysBefore ?? 3));
+                        setBillStatus(bill.status);
+                        setBillLastPaidDate(bill.lastPaidDate || getLocalDateString());
                         setBillModalOpen(true);
                       }}
                       className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg transition-colors"
@@ -395,12 +452,32 @@ export const BillsView: React.FC = () => {
                   >
                     {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
                       <option key={d} value={d}>
-                        Ngày {d}
+                        Ngày {d} hàng tháng
                       </option>
                     ))}
                   </select>
                 </div>
 
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">
+                    Nhắc trước khi đến hạn
+                  </label>
+                  <select
+                    value={billReminderDays}
+                    onChange={(e) => setBillReminderDays(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm dark:text-white"
+                  >
+                    <option value="0">Đúng ngày đến hạn</option>
+                    <option value="1">Trước 1 ngày</option>
+                    <option value="2">Trước 2 ngày</option>
+                    <option value="3">Trước 3 ngày</option>
+                    <option value="5">Trước 5 ngày</option>
+                    <option value="7">Trước 7 ngày</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 mb-1">
                     Tần suất lặp lại
@@ -416,25 +493,56 @@ export const BillsView: React.FC = () => {
                     <option value="YEARLY">Hàng năm</option>
                   </select>
                 </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">
+                    Danh mục gắn kèm
+                  </label>
+                  <select
+                    value={billCategory}
+                    onChange={(e) => setBillCategory(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm dark:text-white"
+                  >
+                    {categories
+                      .filter((c) => c.type === 'EXPENSE')
+                      .map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">
-                  Danh mục gắn kèm
-                </label>
-                <select
-                  value={billCategory}
-                  onChange={(e) => setBillCategory(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm dark:text-white"
-                >
-                  {categories
-                    .filter((c) => c.type === 'EXPENSE')
-                    .map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                </select>
+              {/* Status and Last Paid Date */}
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-700/60 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                    Trạng thái thanh toán tháng này:
+                  </label>
+                  <select
+                    value={billStatus}
+                    onChange={(e) => setBillStatus(e.target.value as 'UNPAID' | 'PAID')}
+                    className="px-2.5 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-xs font-bold dark:text-white"
+                  >
+                    <option value="UNPAID">Chưa thanh toán</option>
+                    <option value="PAID">Đã thanh toán</option>
+                  </select>
+                </div>
+
+                {billStatus === 'PAID' && (
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-500 mb-1">
+                      Ngày đã thanh toán (có thể điều chỉnh tùy ý):
+                    </label>
+                    <input
+                      type="date"
+                      value={billLastPaidDate}
+                      onChange={(e) => setBillLastPaidDate(e.target.value)}
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-semibold dark:text-white"
+                    />
+                  </div>
+                )}
               </div>
 
               <div>
@@ -514,6 +622,21 @@ export const BillsView: React.FC = () => {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                  Ngày thanh toán thực tế:
+                </label>
+                <input
+                  type="date"
+                  value={payDate}
+                  onChange={(e) => setPayDate(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold dark:text-white"
+                />
+                <span className="text-[11px] text-slate-400 mt-1 block">
+                  Mặc định là ngày hôm nay ({formattedToday}). Bạn có thể tùy chỉnh ngày nếu đã đóng trước đó.
+                </span>
               </div>
 
               <p className="text-xs text-slate-500 dark:text-slate-400">
