@@ -435,7 +435,7 @@ export const WhatIfSimulatorView: React.FC = () => {
               totalMonthlyDebtPayment > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-800 dark:text-white'
             }`}
           >
-            {hasExternalLoan ? `-${formatCurrency(totalMonthlyDebtPayment)}${t('whatif.currencyPerMonth', '₫/T')}` : t('whatif.noDebt', '0 ₫ (Không nợ)')}
+            {hasExternalLoan ? `-${formatCurrency(totalMonthlyDebtPayment)}${t('whatif.perMonth', '/tháng')}` : t('whatif.noDebt', '0 ₫ (Không nợ)')}
           </p>
           <span className="text-[10px] text-slate-400">
             {hasExternalLoan ? `${externalLoans.length} ${t('whatif.externalLoansCount', 'khoản nợ vay ngoài')}` : t('whatif.financialSafety', 'An toàn tài chính')}
@@ -699,7 +699,7 @@ export const WhatIfSimulatorView: React.FC = () => {
                           <div className="flex justify-between text-xs">
                             <span className="text-slate-500 text-[11px]">{t('whatif.cutRatio', 'Tỷ lệ cắt giảm:')}</span>
                             <span className="font-extrabold text-rose-600 dark:text-rose-400">
-                              -{cut.cutPercent}% ({t('whatif.savingsPrefix', 'Tiết kiệm')} +{formatCurrency(cutSavings)}{t('whatif.currencyPerMonth', '₫/T')})
+                              -{cut.cutPercent}% ({t('whatif.savingsPrefix', 'Tiết kiệm')} +{formatCurrency(cutSavings)}{t('whatif.perMonth', '/tháng')})
                             </span>
                           </div>
 
