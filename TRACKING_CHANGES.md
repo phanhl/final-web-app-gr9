@@ -1423,6 +1423,48 @@ Qua quét toàn diện mã nguồn, phát hiện và đã xử lý các vị tr�
 | 1 | `src/components/ReportsView.tsx` | **[CHỈNH SỬA TOÀN DIỆN]** | Nâng cấp toàn diện biểu đồ tròn cơ cấu chi tiêu đồng bộ 100% về giao diện, tương tác tâm donut, tooltip và thanh tiến trình danh mục giống hệt Sổ giao dịch. |
 | 2 | `TRACKING_CHANGES.md` | **[CHỈNH SỬA]** | Ghi nhận chi tiết lần chỉnh sửa 24. |
 
+---
+
+# [LẦN CHỈNH SỬA 25] - ĐỒNG NHẤT SỐ LIỆU BIỂU ĐỒ TRÒN GIỮA "BÁO CÁO" VÀ "SỔ GIAO DỊCH"
+
+### 1. Phân Tích Hiện Trạng & Thắc Mắc Của Người Dùng
+* **Thắc mắc của người dùng:** *"ý là cái số liệu có giống nhau ko"*.
+* **Bản chất vấn đề:**
+  - Về công thức toán học: Cả 2 màn hình đều tính chung công thức (tổng chi `type === EXPENSE`, gom theo danh mục, tính % và sắp xếp giảm dần).
+  - **TUY NHIÊN về mặt số liệu mặc định trên màn hình:**
+    + Bên **"Báo cáo"**: Đang mặc định chọn **"Tháng này"** (`2026-09`), tổng chi là **`116.055.688 ₫`**.
+    + Bên **"Sổ giao dịch"**: Do chưa có bộ chọn kỳ thống kê cho biểu đồ tròn nên mặc định gom **toàn bộ lịch sử (bao gồm cả các tháng 7, 8 trước đây)**, hiển thị tổng chi là **`130.505.688 ₫`** (chênh lệch đúng 14.450.000 ₫ của các giao dịch trong tháng 8).
+    + Điều này làm người dùng khi mở 2 tab lên thấy số tiền ở 2 biểu đồ khác nhau (116 triệu vs 130 triệu).
+
+---
+
+### 2. Giải Pháp Triển Khai
+
+1. **Bổ sung Bộ chọn kỳ thống kê nhanh (`pieTimeScope`) tại Biểu đồ Donut Sổ giao dịch:**
+   - Thêm nút gạt trực quan ngay dưới tiêu đề thẻ:
+     + **`[Tháng này (T9/2026)]`** *(Mặc định)*: Tự động lọc các khoản chi của tháng hiện tại.
+     + **`[Tất cả thời gian]`**: Xem phân rã chi phí của toàn bộ lịch sử giao dịch.
+2. **Đồng nhất số liệu chuẩn xác 100%:**
+   - Khi ở trạng thái mặc định: Cả **Báo cáo** và **Sổ giao dịch** đều hiển thị chính xác **`116.055.688 ₫`**, từng danh mục trùng khớp 100% từng đồng một:
+     + 🍔 Ăn uống: `55.705.688 ₫` (48.0%)
+     + 📈 Đầu tư & Tích lũy: `40.200.000 ₫` (34.6%)
+     + 🏠 Nhà cửa & Thuê nhà: `12.000.000 ₫` (10.3%)
+     + 🛍️ Mua sắm: `3.250.000 ₫` (2.8%)
+     + 💡 Hóa đơn & Tiện ích: `2.760.000 ₫` (2.4%)
+     + 🎮 Giải trí & Du lịch: `1.160.000 ₫` (1.0%)
+     + 🚗 Di chuyển & Xe: `980.000 ₫` (0.8%)
+   - Khi chuyển sang *Tất cả thời gian* (hoặc chọn *Năm nay* bên Báo cáo): Cả 2 bên đều hiển thị **`130.505.688 ₫`**.
+
+---
+
+### 3. Danh Sách Các Tệp Đã Thay Đổi
+
+| STT | Tệp tin | Trạng thái | Mô tả tóm tắt |
+|---|---|---|---|
+| 1 | `src/components/TransactionsView.tsx` | **[CHỈNH SỬA]** | Thêm state `pieTimeScope` mặc định `THIS_MONTH` và bộ nút gạt `[Tháng này] / [Tất cả]` trên thẻ biểu đồ tròn. |
+| 2 | `TRACKING_CHANGES.md` | **[CHỈNH SỬA]** | Ghi nhận chi tiết lần chỉnh sửa 25. |
+
+
 
 
 

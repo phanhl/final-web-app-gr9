@@ -71,6 +71,7 @@ export const TransactionsView: React.FC = () => {
   const [receiptToView, setReceiptToView] = useState<string | null>(null);
   const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
   const [hoveredPieIndex, setHoveredPieIndex] = useState<number | null>(null);
+  const [pieTimeScope, setPieTimeScope] = useState<'THIS_MONTH' | 'ALL'>('THIS_MONTH');
 
   // Auto-filter when navigated from Trung tâm Cảnh báo
   useEffect(() => {
@@ -163,7 +164,10 @@ export const TransactionsView: React.FC = () => {
   }, [transactions, currentMonth]);
 
   const pieChartData = useMemo(() => {
-    const expenseTxs = filteredTransactions.filter((t) => t.type === 'EXPENSE');
+    let expenseTxs = filteredTransactions.filter((t) => t.type === 'EXPENSE');
+    if (pieTimeScope === 'THIS_MONTH' && !startDate && !endDate) {
+      expenseTxs = expenseTxs.filter((t) => t.date.split('T')[0].startsWith(currentMonth));
+    }
     const catMap: { [catName: string]: number } = {};
     expenseTxs.forEach((t) => {
       const cat = t.categoryName || 'Khác';
@@ -186,7 +190,7 @@ export const TransactionsView: React.FC = () => {
       ...item,
       color: item.color || pieChartColors[idx % pieChartColors.length],
     }));
-  }, [filteredTransactions, categories]);
+  }, [filteredTransactions, categories, pieTimeScope, startDate, endDate, currentMonth]);
 
   const totalPieExpense = useMemo(() => {
     return pieChartData.reduce((sum, item) => sum + item.value, 0);
@@ -377,6 +381,35 @@ export const TransactionsView: React.FC = () => {
                   {formatCurrency(totalPieExpense)}
                 </span>
               )}
+            </div>
+
+            {/* Quick Scope Toggle: Tháng này vs Tất cả */}
+            <div className="flex items-center justify-between my-2 pb-1.5 border-b border-slate-100 dark:border-slate-800">
+              <span className="text-[11px] text-slate-400 font-medium">Kỳ thống kê:</span>
+              <div className="flex items-center p-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-[11px] font-semibold">
+                <button
+                  type="button"
+                  onClick={() => setPieTimeScope('THIS_MONTH')}
+                  className={`px-2.5 py-1 rounded-md transition-all ${
+                    pieTimeScope === 'THIS_MONTH'
+                      ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs'
+                      : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                  }`}
+                >
+                  Tháng này ({currentMonth.slice(5)}/{currentMonth.slice(0, 4)})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPieTimeScope('ALL')}
+                  className={`px-2.5 py-1 rounded-md transition-all ${
+                    pieTimeScope === 'ALL'
+                      ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs'
+                      : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                  }`}
+                >
+                  Tất cả
+                </button>
+              </div>
             </div>
 
             {pieChartData.length > 0 ? (
