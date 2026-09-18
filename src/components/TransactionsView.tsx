@@ -79,6 +79,7 @@ export const TransactionsView: React.FC = () => {
   const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
   const [hoveredPieIndex, setHoveredPieIndex] = useState<number | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<string>('ALL');
+  const [pieType, setPieType] = useState<'EXPENSE' | 'INCOME'>('EXPENSE');
 
   const handlePrevMonth = () => {
     const activeM = selectedMonth !== 'ALL' ? selectedMonth : currentMonth;
@@ -157,6 +158,17 @@ export const TransactionsView: React.FC = () => {
     });
   }, [transactions, selectedMonth, selectedType, selectedWallet, selectedCategory, selectedTag, startDate, endDate, searchTerm]);
 
+  // Auto switch pieType if active filtered transactions have no expenses but have income
+  useEffect(() => {
+    const hasExpenses = filteredTransactions.some((t) => t.type === 'EXPENSE');
+    const hasIncome = filteredTransactions.some((t) => t.type === 'INCOME');
+    if (!hasExpenses && hasIncome) {
+      setPieType('INCOME');
+    } else if (hasExpenses && !hasIncome) {
+      setPieType('EXPENSE');
+    }
+  }, [filteredTransactions]);
+
   // Aggregate statistics for filtered results
   const stats = useMemo(() => {
     let income = 0;
@@ -173,7 +185,7 @@ export const TransactionsView: React.FC = () => {
     };
   }, [filteredTransactions]);
 
-  // Bar chart & Pie chart data for TransactionsView
+  // Bar chart (6-month comparison) data for TransactionsView
   const barChartData = useMemo(() => {
     const latestMonth = availableMonths[0] || currentMonth || '2026-10';
     const [y, m] = latestMonth.split('-').map(Number);
@@ -195,10 +207,37 @@ export const TransactionsView: React.FC = () => {
     });
   }, [transactions, currentMonth, availableMonths]);
 
+  // Daily breakdown when a specific month is selected
+  const dailyBarChartData = useMemo(() => {
+    if (selectedMonth === 'ALL') return [];
+    const monthTxs = transactions.filter((t) => t.date.startsWith(selectedMonth));
+    const dayMap: { [day: string]: { Thu: number; Chi: number; dateStr: string } } = {};
+    monthTxs.forEach((t) => {
+      const dStr = t.date.split('T')[0];
+      const dayLabel = `${dStr.slice(8, 10)}/${dStr.slice(5, 7)}`;
+      if (!dayMap[dayLabel]) {
+        dayMap[dayLabel] = { Thu: 0, Chi: 0, dateStr: dStr };
+      }
+      if (t.type === 'INCOME') dayMap[dayLabel].Thu += t.amount;
+      if (t.type === 'EXPENSE') dayMap[dayLabel].Chi += t.amount;
+    });
+
+    return Object.keys(dayMap)
+      .sort((a, b) => dayMap[a].dateStr.localeCompare(dayMap[b].dateStr))
+      .map((dayLabel) => ({
+        month: dayLabel,
+        Thu: dayMap[dayLabel].Thu,
+        Chi: dayMap[dayLabel].Chi,
+        rawMonth: dayMap[dayLabel].dateStr,
+      }));
+  }, [transactions, selectedMonth]);
+
+  const activeBarChartData = selectedMonth !== 'ALL' && dailyBarChartData.length > 0 ? dailyBarChartData : barChartData;
+
   const pieChartData = useMemo(() => {
-    const expenseTxs = filteredTransactions.filter((t) => t.type === 'EXPENSE');
+    const targetTxs = filteredTransactions.filter((t) => t.type === pieType);
     const catMap: { [catName: string]: number } = {};
-    expenseTxs.forEach((t) => {
+    targetTxs.forEach((t) => {
       const cat = t.categoryName || tCategory('Khác');
       catMap[cat] = (catMap[cat] || 0) + t.amount;
     });
@@ -217,11 +256,11 @@ export const TransactionsView: React.FC = () => {
 
     return list.map((item, idx) => ({
       ...item,
-      color: item.color || pieChartColors[idx % pieChartColors.length],
+      color: item.color || (pieType === 'INCOME' ? ['#10b981', '#06b6d4', '#3b82f6', '#8b5cf6', '#f59e0b', '#ec4899'][idx % 6] : pieChartColors[idx % pieChartColors.length]),
     }));
-  }, [filteredTransactions, categories, tCategory]);
+  }, [filteredTransactions, categories, pieType, tCategory]);
 
-  const totalPieExpense = useMemo(() => {
+  const totalPieAmount = useMemo(() => {
     return pieChartData.reduce((sum, item) => sum + item.value, 0);
   }, [pieChartData]);
 
@@ -417,18 +456,22 @@ export const TransactionsView: React.FC = () => {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">{t('tx.cashflowMonthly', 'Dòng tiền Thu - Chi')}</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">{t('tx.cashflowSub', 'So sánh thu nhập và chi tiêu 6 tháng gần nhất')}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {selectedMonth !== 'ALL' && dailyBarChartData.length > 0
+                    ? `${t('tx.dailyBreakdown', 'Diễn biến thu - chi theo ngày')} (${formatMonthLabel(selectedMonth, language)})`
+                    : t('tx.cashflowSub', 'So sánh thu nhập và chi tiêu 6 tháng gần nhất')}
+                </p>
               </div>
             </div>
             <div className="h-56 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
-                  data={barChartData}
+                  data={activeBarChartData}
                   margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
                   onClick={(e: any) => {
                     if (e && e.activePayload && e.activePayload.length) {
                       const clickedMonth = e.activePayload[0].payload.rawMonth;
-                      if (clickedMonth) setSelectedMonth(clickedMonth);
+                      if (clickedMonth && clickedMonth.length === 7) setSelectedMonth(clickedMonth);
                     }
                   }}
                 >
@@ -457,22 +500,57 @@ export const TransactionsView: React.FC = () => {
             </div>
           </div>
 
-          {/* Pie Chart: Expense Breakdown */}
+          {/* Pie Chart: Expense / Income Breakdown */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
               <div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                  {t('tx.expenseStructure', 'Cơ cấu chi tiêu')}
+                  {pieType === 'INCOME' ? t('tx.incomeStructure', 'Cơ cấu thu nhập') : t('tx.expenseStructure', 'Cơ cấu chi tiêu')}
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {t('tx.expenseDistribution', 'Phân bổ tỷ trọng chi tiêu')}
+                  {pieType === 'INCOME' ? t('tx.incomeDistribution', 'Phân bổ tỷ trọng nguồn thu') : t('tx.expenseDistribution', 'Phân bổ tỷ trọng chi tiêu')}
                 </p>
               </div>
-              {totalPieExpense > 0 && (
-                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40">
-                  {formatCurrency(totalPieExpense)}
-                </span>
-              )}
+
+              <div className="flex items-center gap-1.5">
+                {/* Toggle Khoản chi / Khoản thu */}
+                <div className="flex items-center p-0.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-[11px] font-semibold border border-slate-200 dark:border-slate-700">
+                  <button
+                    type="button"
+                    onClick={() => setPieType('EXPENSE')}
+                    className={`px-2 py-0.5 rounded-lg transition-all cursor-pointer ${
+                      pieType === 'EXPENSE'
+                        ? 'bg-rose-500 text-white shadow-xs'
+                        : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    {t('dash.expense', 'Chi tiêu')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPieType('INCOME')}
+                    className={`px-2 py-0.5 rounded-lg transition-all cursor-pointer ${
+                      pieType === 'INCOME'
+                        ? 'bg-emerald-500 text-white shadow-xs'
+                        : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    {t('dash.income', 'Thu nhập')}
+                  </button>
+                </div>
+
+                {totalPieAmount > 0 && (
+                  <span
+                    className={`text-xs font-bold px-2.5 py-1 rounded-full border ${
+                      pieType === 'INCOME'
+                        ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/40'
+                        : 'bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/40'
+                    }`}
+                  >
+                    {pieType === 'INCOME' ? '+' : '-'}{formatCurrency(totalPieAmount)}
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Quick Scope Toggle / Month Navigator */}
@@ -562,7 +640,7 @@ export const TransactionsView: React.FC = () => {
                         content={({ active, payload }) => {
                           if (active && payload && payload.length) {
                             const data = payload[0].payload;
-                            const percent = totalPieExpense > 0 ? ((data.value / totalPieExpense) * 100).toFixed(1) : '0';
+                            const percent = totalPieAmount > 0 ? ((data.value / totalPieAmount) * 100).toFixed(1) : '0';
                             return (
                               <div className="bg-slate-900/95 dark:bg-slate-800/95 backdrop-blur-md text-white text-xs px-3 py-2 rounded-xl shadow-xl border border-slate-700/60 pointer-events-none z-50">
                                 <div className="flex items-center gap-1.5 mb-1">
@@ -592,8 +670,8 @@ export const TransactionsView: React.FC = () => {
                           {tCategory(pieChartData[hoveredPieIndex].name)}
                         </p>
                         <p className="text-base font-black text-slate-900 dark:text-white leading-tight">
-                          {totalPieExpense > 0
-                            ? ((pieChartData[hoveredPieIndex].value / totalPieExpense) * 100).toFixed(1)
+                          {totalPieAmount > 0
+                            ? ((pieChartData[hoveredPieIndex].value / totalPieAmount) * 100).toFixed(1)
                             : 0}%
                         </p>
                         <p className="text-[10px] font-bold text-slate-600 dark:text-slate-300">
@@ -603,10 +681,10 @@ export const TransactionsView: React.FC = () => {
                     ) : (
                       <div>
                         <p className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider">
-                          {t('dash.expense', 'Tổng chi')}
+                          {pieType === 'INCOME' ? t('dash.income', 'Tổng thu') : t('dash.expense', 'Tổng chi')}
                         </p>
-                        <p className="text-sm font-black text-slate-900 dark:text-white leading-tight mt-0.5">
-                          {formatCurrency(totalPieExpense)}
+                        <p className={`text-sm font-black leading-tight mt-0.5 ${pieType === 'INCOME' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}`}>
+                          {formatCurrency(totalPieAmount)}
                         </p>
                         <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
                           {pieChartData.length} {t('reports.categories', 'danh mục')}
@@ -619,7 +697,7 @@ export const TransactionsView: React.FC = () => {
                 {/* Category Breakdown List with Percentage & Sleek Progress Bars */}
                 <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1 mt-1 scrollbar-thin [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300 dark:[&::-webkit-scrollbar-thumb]:bg-slate-700">
                   {pieChartData.map((entry, idx) => {
-                    const percent = totalPieExpense > 0 ? ((entry.value / totalPieExpense) * 100).toFixed(1) : '0';
+                    const percent = totalPieAmount > 0 ? ((entry.value / totalPieAmount) * 100).toFixed(1) : '0';
                     const isHovered = hoveredPieIndex === idx;
                     return (
                       <div
