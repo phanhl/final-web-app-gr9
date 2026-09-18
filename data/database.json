@@ -936,7 +936,7 @@
         "icon": "Utensils",
         "color": "#f97316",
         "monthlyExpense": 5500000,
-        "isSelected": true,
+        "isSelected": false,
         "cutPercent": 30
       },
       {
@@ -946,7 +946,7 @@
         "icon": "ShoppingBag",
         "color": "#ec4899",
         "monthlyExpense": 3000000,
-        "isSelected": true,
+        "isSelected": false,
         "cutPercent": 30
       },
       {
@@ -1037,5 +1037,5 @@
       }
     ]
   },
-  "updatedAt": "2026-09-18T02:18:10.755Z"
+  "updatedAt": "2026-09-18T02:34:57.932Z"
 }

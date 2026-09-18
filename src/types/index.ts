@@ -156,3 +156,4 @@ export interface SimulatorConfig {
   externalLoans: ExternalLoanItem[];
 }
 
+export type Language = 'vi' | 'en' | 'fr';

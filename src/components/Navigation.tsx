@@ -34,24 +34,25 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { formatCurrency, calculateBudgetStatuses } from '@/lib/utils';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 const navItems = [
-  { id: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard },
-  { id: 'transactions', label: 'Sổ giao dịch', icon: ReceiptText },
-  { id: 'budgets', label: 'Ngân sách', icon: PieChart },
-  { id: 'whatif', label: 'Mô phỏng What-If', icon: Sparkles },
-  { id: 'bills', label: 'Định kỳ', icon: CalendarCheck },
-  { id: 'reports', label: 'Báo cáo', icon: BarChart3 },
-  { id: 'wallets', label: 'Ví', icon: WalletCards },
-  { id: 'settings', label: 'Cài đặt', icon: Settings },
+  { id: 'dashboard', key: 'nav.dashboard', defaultLabel: 'Tổng quan', icon: LayoutDashboard },
+  { id: 'transactions', key: 'nav.transactions', defaultLabel: 'Sổ giao dịch', icon: ReceiptText },
+  { id: 'budgets', key: 'nav.budgets', defaultLabel: 'Ngân sách', icon: PieChart },
+  { id: 'whatif', key: 'nav.whatif', defaultLabel: 'Mô phỏng What-If', icon: Sparkles },
+  { id: 'bills', key: 'nav.bills', defaultLabel: 'Định kỳ', icon: CalendarCheck },
+  { id: 'reports', key: 'nav.reports', defaultLabel: 'Báo cáo', icon: BarChart3 },
+  { id: 'wallets', key: 'nav.wallets', defaultLabel: 'Ví & Tài khoản', icon: WalletCards },
+  { id: 'settings', key: 'nav.settings', defaultLabel: 'Cài đặt', icon: Settings },
 ];
 
 const bottomNavItems = [
-  { id: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard },
-  { id: 'transactions', label: 'Sổ GD', icon: ReceiptText },
-  { id: 'budgets', label: 'Ngân sách', icon: PieChart },
-  { id: 'reports', label: 'Báo cáo', icon: BarChart3 },
-  { id: 'settings', label: 'Cài đặt', icon: Settings },
+  { id: 'dashboard', key: 'nav.dashboard', defaultLabel: 'Tổng quan', icon: LayoutDashboard },
+  { id: 'transactions', key: 'nav.shortTransactions', defaultLabel: 'Sổ GD', icon: ReceiptText },
+  { id: 'budgets', key: 'nav.budgets', defaultLabel: 'Ngân sách', icon: PieChart },
+  { id: 'reports', key: 'nav.reports', defaultLabel: 'Báo cáo', icon: BarChart3 },
+  { id: 'settings', key: 'nav.settings', defaultLabel: 'Cài đặt', icon: Settings },
 ];
 
 export const Navigation: React.FC = () => {
@@ -76,6 +77,8 @@ export const Navigation: React.FC = () => {
     navigateToCategoryTransactions,
     navigateToBudget,
     navigateToBill,
+    language,
+    t,
   } = useApp();
 
   const [showNotificationModal, setShowNotificationModal] = useState(false);
@@ -105,17 +108,22 @@ export const Navigation: React.FC = () => {
             </div>
             <div>
               <h1 className="text-sm font-bold text-slate-900 dark:text-white leading-tight">FinTrack Pro</h1>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">Quản lý chi tiêu</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
+                {t('app.tagline', 'Quản lý chi tiêu')}
+              </p>
             </div>
           </div>
 
           <div className="flex items-center gap-1.5">
+            {/* Language Switcher */}
+            <LanguageSwitcher />
+
             {/* Dark / Light Mode Toggle Button */}
             <button
               onClick={toggleTheme}
               className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-slate-200 dark:active:bg-slate-700 transition-colors"
-              aria-label="Chuyển chế độ sáng/tối"
-              title={isDarkMode ? 'Chuyển sang chế độ Sáng' : 'Chuyển sang chế độ Tối'}
+              aria-label={isDarkMode ? t('app.themeLight', 'Chuyển sang chế độ Sáng') : t('app.themeDark', 'Chuyển sang chế độ Tối')}
+              title={isDarkMode ? t('app.themeLight', 'Chuyển sang chế độ Sáng') : t('app.themeDark', 'Chuyển sang chế độ Tối')}
             >
               {isDarkMode ? (
                 <Sun className="w-5 h-5 text-amber-400" />
@@ -170,25 +178,29 @@ export const Navigation: React.FC = () => {
                   FinTrack Pro
                 </span>
                 <span className="hidden sm:inline-block px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 rounded-full border border-emerald-200 dark:border-emerald-800">
-                  Quản lý chi tiêu
+                  {t('app.tagline', 'Quản lý chi tiêu')}
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">
-                Hệ thống tài chính cá nhân & Ngân sách thông minh
+                {t('app.subtitle', 'Hệ thống tài chính cá nhân & Ngân sách thông minh')}
               </p>
             </div>
           </div>
 
           <div className="hidden md:flex items-center space-x-4 bg-slate-50 dark:bg-slate-800/80 px-4 py-1.5 rounded-full border border-slate-100 dark:border-slate-700/80 text-xs">
             <div>
-              <span className="text-slate-500 dark:text-slate-400 mr-1.5">Số dư khả dụng:</span>
+              <span className="text-slate-500 dark:text-slate-400 mr-1.5">
+                {t('app.availableBalance', 'Số dư khả dụng:')}
+              </span>
               <span className="font-bold text-emerald-600 dark:text-emerald-400">
                 {formatCurrency(financialSummary.availableBalance)}
               </span>
             </div>
             <div className="w-px h-3.5 bg-slate-300 dark:bg-slate-700" />
             <div>
-              <span className="text-slate-500 dark:text-slate-400 mr-1.5">Tổng tài sản:</span>
+              <span className="text-slate-500 dark:text-slate-400 mr-1.5">
+                {t('app.totalAssets', 'Tổng tài sản:')}
+              </span>
               <span className="font-bold text-slate-800 dark:text-slate-200">
                 {formatCurrency(financialSummary.totalAssets)}
               </span>
@@ -198,18 +210,21 @@ export const Navigation: React.FC = () => {
           <div className="flex items-center space-x-2.5">
             <button
               onClick={() => openQuickAdd('EXPENSE')}
-              className="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-sm font-semibold shadow-md shadow-emerald-500/20 transition-all active:scale-95"
+              className="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-sm font-semibold shadow-md shadow-emerald-500/20 transition-all active:scale-95 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
-              <span>Nhập nhanh</span>
+              <span>{t('app.quickAdd', 'Nhập nhanh')}</span>
             </button>
+
+            {/* Language Switcher on Desktop Header */}
+            <LanguageSwitcher />
 
             {/* Dark / Light Mode Toggle Button */}
             <button
               onClick={toggleTheme}
               className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
-              aria-label="Chuyển chế độ sáng/tối"
-              title={isDarkMode ? 'Chuyển sang chế độ Sáng' : 'Chuyển sang chế độ Tối'}
+              aria-label={isDarkMode ? t('app.themeLight', 'Chuyển sang chế độ Sáng') : t('app.themeDark', 'Chuyển sang chế độ Tối')}
+              title={isDarkMode ? t('app.themeLight', 'Chuyển sang chế độ Sáng') : t('app.themeDark', 'Chuyển sang chế độ Tối')}
             >
               {isDarkMode ? (
                 <Sun className="w-5 h-5 text-amber-400 animate-in spin-in-180 duration-300" />
@@ -270,14 +285,14 @@ export const Navigation: React.FC = () => {
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
+                className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all cursor-pointer ${
                   isActive
                     ? 'bg-emerald-600 text-white shadow-sm'
                     : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <Icon className="w-4 h-4" />
-                <span>{item.label}</span>
+                <span>{t(item.key, item.defaultLabel)}</span>
               </button>
             );
           })}
@@ -294,13 +309,13 @@ export const Navigation: React.FC = () => {
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className="flex flex-col items-center justify-center flex-1 h-full min-w-0"
+                className="flex flex-col items-center justify-center flex-1 h-full min-w-0 cursor-pointer"
               >
                 <div className={`p-1.5 rounded-xl transition-colors ${isActive ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300' : 'text-slate-400 dark:text-slate-500'}`}>
                   <Icon className="w-5 h-5" />
                 </div>
                 <span className={`text-[10px] font-medium mt-0.5 ${isActive ? 'text-emerald-700 dark:text-emerald-300 font-semibold' : 'text-slate-400 dark:text-slate-500'}`}>
-                  {item.label}
+                  {t(item.key, item.defaultLabel)}
                 </span>
               </button>
             );
@@ -309,8 +324,8 @@ export const Navigation: React.FC = () => {
           {/* FAB */}
           <button
             onClick={() => openQuickAdd('EXPENSE')}
-            className="flex-shrink-0 -mt-5 w-14 h-14 rounded-full bg-emerald-600 text-white shadow-lg shadow-emerald-500/30 flex items-center justify-center active:scale-90 transition-transform"
-            aria-label="Thêm giao dịch"
+            className="flex-shrink-0 -mt-5 w-14 h-14 rounded-full bg-emerald-600 text-white shadow-lg shadow-emerald-500/30 flex items-center justify-center active:scale-90 transition-transform cursor-pointer"
+            aria-label={t('app.quickAdd', 'Thêm giao dịch')}
           >
             <Plus className="w-7 h-7" />
           </button>
@@ -322,13 +337,13 @@ export const Navigation: React.FC = () => {
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className="flex flex-col items-center justify-center flex-1 h-full min-w-0"
+                className="flex flex-col items-center justify-center flex-1 h-full min-w-0 cursor-pointer"
               >
                 <div className={`p-1.5 rounded-xl transition-colors ${isActive ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300' : 'text-slate-400 dark:text-slate-500'}`}>
                   <Icon className="w-5 h-5" />
                 </div>
                 <span className={`text-[10px] font-medium mt-0.5 ${isActive ? 'text-emerald-700 dark:text-emerald-300 font-semibold' : 'text-slate-400 dark:text-slate-500'}`}>
-                  {item.label}
+                  {t(item.key, item.defaultLabel)}
                 </span>
               </button>
             );
@@ -349,11 +364,11 @@ export const Navigation: React.FC = () => {
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
               <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                 <Bell className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span>Trung tâm Cảnh báo</span>
+                <span>{t('notif.title', 'Trung tâm Cảnh báo')}</span>
               </h4>
               <div className="flex items-center space-x-2">
                 <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-full">
-                  {alertCount} việc cần xử lý
+                  {alertCount} {language === 'en' ? 'alerts' : language === 'fr' ? 'alertes' : 'việc cần xử lý'}
                 </span>
                 <button
                   onClick={() => setShowNotificationModal(false)}
@@ -404,7 +419,7 @@ export const Navigation: React.FC = () => {
                       className="px-2.5 py-1 bg-white dark:bg-slate-800 text-rose-700 dark:text-rose-300 font-bold rounded-lg hover:bg-rose-100 dark:hover:bg-rose-900/60 transition-colors shadow-2xs border border-rose-200 dark:border-rose-800 flex items-center gap-1"
                     >
                       <Search className="w-3 h-3" />
-                      <span>Xem các khoản đã chi</span>
+                      <span>{t('notif.viewExpenses', 'Xem các khoản đã chi')}</span>
                     </button>
 
                     <button
@@ -416,7 +431,7 @@ export const Navigation: React.FC = () => {
                       }}
                       className="text-rose-600 dark:text-rose-400 font-semibold hover:underline flex items-center gap-0.5"
                     >
-                      <span>Xem ngân sách</span>
+                      <span>{t('nav.budgets', 'Ngân sách')}</span>
                       <ChevronRight className="w-3 h-3" />
                     </button>
                   </div>
@@ -462,7 +477,7 @@ export const Navigation: React.FC = () => {
                       className="px-2.5 py-1 bg-white dark:bg-slate-800 text-amber-700 dark:text-amber-300 font-bold rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/60 transition-colors shadow-2xs border border-amber-200 dark:border-amber-800 flex items-center gap-1"
                     >
                       <Search className="w-3 h-3" />
-                      <span>Xem các khoản đã chi</span>
+                      <span>{t('notif.viewExpenses', 'Xem các khoản đã chi')}</span>
                     </button>
 
                     <button
@@ -474,7 +489,7 @@ export const Navigation: React.FC = () => {
                       }}
                       className="text-amber-600 dark:text-amber-400 font-semibold hover:underline flex items-center gap-0.5"
                     >
-                      <span>Xem ngân sách</span>
+                      <span>{t('nav.budgets', 'Ngân sách')}</span>
                       <ChevronRight className="w-3 h-3" />
                     </button>
                   </div>
@@ -498,10 +513,10 @@ export const Navigation: React.FC = () => {
                       </div>
                       <div className="text-xs">
                         <p className="font-bold text-blue-700 dark:text-blue-300 flex items-center gap-1">
-                          <span>Hóa đơn chưa trả: {bill.name}</span>
+                          <span>{bill.name}</span>
                         </p>
                         <p className="text-blue-600/90 dark:text-blue-400/90 mt-0.5 font-medium">
-                          Hạn ngày {bill.dueDay} hàng tháng • {formatCurrency(bill.amount)}
+                          {t('notif.dueDay', 'Hạn ngày')} {bill.dueDay} • {formatCurrency(bill.amount)}
                         </p>
                       </div>
                     </div>
@@ -520,7 +535,7 @@ export const Navigation: React.FC = () => {
                       className="px-3 py-1 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-2xs flex items-center gap-1"
                     >
                       <CreditCard className="w-3 h-3" />
-                      <span>Thanh toán ngay</span>
+                      <span>{t('notif.payNow', 'Thanh toán ngay')}</span>
                     </button>
 
                     <button
@@ -532,7 +547,7 @@ export const Navigation: React.FC = () => {
                       }}
                       className="text-blue-600 dark:text-blue-400 font-semibold hover:underline flex items-center gap-0.5"
                     >
-                      <span>Xem lịch hóa đơn</span>
+                      <span>{t('nav.bills', 'Định kỳ')}</span>
                       <ChevronRight className="w-3 h-3" />
                     </button>
                   </div>
@@ -542,8 +557,7 @@ export const Navigation: React.FC = () => {
               {alertCount === 0 && (
                 <div className="text-center py-8 text-slate-500 dark:text-slate-400">
                   <CheckCircle2 className="w-9 h-9 mx-auto text-emerald-500 dark:text-emerald-400 mb-1.5" />
-                  <p className="text-xs font-bold text-slate-700 dark:text-slate-200">Mọi chỉ số đều an toàn!</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Không có cảnh báo ngân sách hay hóa đơn nào trễ hạn.</p>
+                  <p className="text-xs font-bold text-slate-700 dark:text-slate-200">{t('notif.noAlerts', 'Tuyệt vời! Không có cảnh báo tài chính nào.')}</p>
                 </div>
               )}
             </div>

@@ -21,7 +21,9 @@ import {
   Monitor,
   Check,
   Palette,
+  Globe,
 } from 'lucide-react';
+import { LANGUAGES } from '@/lib/i18n';
 
 export const SettingsView: React.FC = () => {
   const {
@@ -33,6 +35,9 @@ export const SettingsView: React.FC = () => {
     serverSyncStatus,
     theme,
     setTheme,
+    language,
+    setLanguage,
+    t,
     resetToDefaultData,
     clearAllData,
     exportDatabaseJSON,
@@ -81,7 +86,68 @@ export const SettingsView: React.FC = () => {
         </div>
       )}
 
-      {/* 2. THEME & APPEARANCE */}
+      {/* 2. DISPLAY LANGUAGE */}
+      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center space-x-2">
+            <Globe className="w-5 h-5 text-emerald-500" />
+            <h3 className="text-base font-bold text-slate-800 dark:text-white">
+              {t('settings.languageTitle', 'Ngôn Ngữ Hiển Thị (Display Language)')}
+            </h3>
+          </div>
+          <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold self-start sm:self-auto flex items-center gap-1.5">
+            <span>{LANGUAGES.find((l) => l.code === language)?.flag}</span>
+            <span>{LANGUAGES.find((l) => l.code === language)?.nativeName}</span>
+          </span>
+        </div>
+
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          {t('settings.languageDesc', 'Chọn ngôn ngữ hiển thị giao diện phù hợp với bạn hoặc chuyển đổi nhanh bằng nút góc màn hình.')}
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+          {LANGUAGES.map((item) => {
+            const isSelected = item.code === language;
+            return (
+              <button
+                key={item.code}
+                type="button"
+                onClick={() => setLanguage(item.code)}
+                className={`p-4 rounded-xl border-2 text-left transition-all flex flex-col justify-between relative cursor-pointer ${
+                  isSelected
+                    ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-sm'
+                    : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40'
+                }`}
+              >
+                <div className="flex items-center justify-between w-full mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xl shadow-2xs">
+                    {item.flag}
+                  </div>
+                  {isSelected && (
+                    <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center">
+                      <Check className="w-3.5 h-3.5" />
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <p className="font-bold text-sm text-slate-900 dark:text-white">
+                    {item.nativeName}
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    {item.code === 'vi'
+                      ? 'Giao diện tiếng Việt chuẩn hóa'
+                      : item.code === 'en'
+                      ? 'English user interface'
+                      : 'Interface utilisateur en français'}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 3. THEME & APPEARANCE */}
       <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center space-x-2">

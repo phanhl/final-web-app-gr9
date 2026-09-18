@@ -13,6 +13,7 @@ import {
   FilterPeriod,
   UserProfile,
   SimulatorConfig,
+  Language,
 } from '@/types';
 import {
   INITIAL_WALLETS,
@@ -25,6 +26,7 @@ import {
   INITIAL_SIMULATOR_CONFIG,
 } from '@/lib/mock-data';
 import { calculateFinancialSummary, checkWalletSufficientFunds, formatCurrency, getLocalDateString } from '@/lib/utils';
+import { translate } from '@/lib/i18n';
 
 interface AppContextType {
   wallets: Wallet[];
@@ -51,6 +53,11 @@ interface AppContextType {
   isDarkMode: boolean;
   userProfile: UserProfile;
   updateUserProfile: (profile: Partial<UserProfile>) => void;
+
+  // Language & i18n
+  language: Language;
+  setLanguage: (lang: Language) => void;
+  t: (key: string, fallback?: string) => string;
 
   // Transactions
   addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) => boolean;
@@ -232,6 +239,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const toggleTheme = () => {
     setThemeState(isDarkMode ? 'light' : 'dark');
+  };
+
+  // Language & i18n Management
+  const [language, setLanguageState] = useState<Language>('vi');
+
+  useEffect(() => {
+    try {
+      const savedLang = localStorage.getItem('fintrack_language') as Language;
+      if (savedLang && ['vi', 'en', 'fr'].includes(savedLang)) {
+        setLanguageState(savedLang);
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, []);
+
+  const setLanguage = (lang: Language) => {
+    setLanguageState(lang);
+    try {
+      localStorage.setItem('fintrack_language', lang);
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  const t = (key: string, fallback?: string): string => {
+    return translate(language, key, fallback);
   };
 
   // Load from server disk first, fallback to local storage
@@ -1003,6 +1037,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isDarkMode,
         userProfile,
         updateUserProfile,
+        language,
+        setLanguage,
+        t,
         addTransaction,
         editTransaction,
         deleteTransaction,

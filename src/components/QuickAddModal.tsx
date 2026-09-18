@@ -19,6 +19,8 @@ export const QuickAddModal: React.FC = () => {
     currentMonth,
     setCurrentMonth,
     addTransaction,
+    language,
+    t,
   } = useApp();
 
   const [type, setType] = useState<TransactionType>('EXPENSE');
@@ -149,12 +151,14 @@ export const QuickAddModal: React.FC = () => {
             <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
               +
             </div>
-            <h2 className="text-lg font-bold text-slate-800 dark:text-white">Ghi nhận giao dịch nhanh</h2>
+            <h2 className="text-lg font-bold text-slate-800 dark:text-white">
+              {t('qa.title', 'Ghi nhận giao dịch nhanh')}
+            </h2>
           </div>
           <button
             onClick={() => setQuickAddOpen(false)}
-            className="p-2.5 -mr-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-            aria-label="Đóng"
+            className="p-2.5 -mr-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            aria-label={t('common.close', 'Đóng')}
           >
             <X className="w-5 h-5" />
           </button>
@@ -170,13 +174,13 @@ export const QuickAddModal: React.FC = () => {
                 const cat = categories.find((c) => c.type === 'EXPENSE');
                 if (cat) setCategoryId(cat.id);
               }}
-              className={`py-2.5 text-sm font-semibold rounded-lg transition-all ${
+              className={`py-2.5 text-sm font-semibold rounded-lg transition-all cursor-pointer ${
                 type === 'EXPENSE'
                   ? 'bg-rose-500 text-white shadow'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              Khoản chi
+              {t('qa.expense', 'Khoản chi')}
             </button>
             <button
               type="button"
@@ -185,31 +189,31 @@ export const QuickAddModal: React.FC = () => {
                 const cat = categories.find((c) => c.type === 'INCOME');
                 if (cat) setCategoryId(cat.id);
               }}
-              className={`py-2.5 text-sm font-semibold rounded-lg transition-all ${
+              className={`py-2.5 text-sm font-semibold rounded-lg transition-all cursor-pointer ${
                 type === 'INCOME'
                   ? 'bg-emerald-500 text-white shadow'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              Khoản thu
+              {t('qa.income', 'Khoản thu')}
             </button>
             <button
               type="button"
               onClick={() => setType('TRANSFER')}
-              className={`py-2.5 text-sm font-semibold rounded-lg transition-all ${
+              className={`py-2.5 text-sm font-semibold rounded-lg transition-all cursor-pointer ${
                 type === 'TRANSFER'
                   ? 'bg-blue-600 text-white shadow'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              Chuyển khoản
+              {t('qa.transfer', 'Chuyển khoản')}
             </button>
           </div>
 
           {/* Amount input */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-              Số tiền (VNĐ) <span className="text-rose-500">*</span>
+              {t('qa.amount', 'Số tiền')} (VNĐ) <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
               <input
@@ -492,9 +496,9 @@ export const QuickAddModal: React.FC = () => {
             <button
               type="button"
               onClick={() => setQuickAddOpen(false)}
-              className="px-5 py-2.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl font-medium text-sm transition-colors"
+              className="px-5 py-2.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl font-medium text-sm transition-colors cursor-pointer"
             >
-              Hủy bỏ
+              {t('qa.cancel', 'Hủy bỏ')}
             </button>
             <button
               type="submit"
@@ -506,7 +510,7 @@ export const QuickAddModal: React.FC = () => {
               }`}
             >
               <Plus className="w-4 h-4" />
-              <span>{isOverdraft ? 'Số dư không đủ' : 'Thêm giao dịch'}</span>
+              <span>{isOverdraft ? t('qa.insufficientFunds', 'Số dư không đủ') : t('qa.save', 'Lưu giao dịch')}</span>
             </button>
           </div>
         </form>

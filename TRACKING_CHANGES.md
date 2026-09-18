@@ -1464,6 +1464,60 @@ Qua quét toàn diện mã nguồn, phát hiện và đã xử lý các vị tr�
 | 1 | `src/components/TransactionsView.tsx` | **[CHỈNH SỬA]** | Thêm state `pieTimeScope` mặc định `THIS_MONTH` và bộ nút gạt `[Tháng này] / [Tất cả]` trên thẻ biểu đồ tròn. |
 | 2 | `TRACKING_CHANGES.md` | **[CHỈNH SỬA]** | Ghi nhận chi tiết lần chỉnh sửa 25. |
 
+---
+
+## [LẦN CHỈNH SỬA 26] - Nút Chuyển Đổi Đa Ngôn Ngữ Góc Màn Hình (Tiếng Việt 🇻🇳, English 🇬🇧, Français 🇫🇷) & Hệ Thống Dịch Thuật i18n
+
+### 1. Vấn Đề & Yêu Cầu Của Người Dùng
+- **Yêu cầu:** *"tạo 1 cái nút nhỏ trên góc màn hình để có thể đổi từ tiếng việt sang tiếng anh và tiếng pháp dễ dàng để phù hợp vs người dùng"*.
+- **Mục tiêu:**
+  - Bổ sung một nút nhỏ tinh tế, hiện đại ở góc màn hình (Header Desktop và Header Mobile).
+  - Hỗ trợ 3 ngôn ngữ: **Tiếng Việt 🇻🇳**, **English 🇬🇧**, **Français 🇫🇷**.
+  - Dropdown kính mờ (Glassmorphism) với cờ quốc gia, tên bản địa, dấu tích chọn và hiệu ứng đóng khi click ra ngoài.
+  - Tự động lưu ngôn ngữ đã chọn vào `localStorage` (`fintrack_language`), nhớ vĩnh viễn khi tải lại trang.
+  - Tích hợp thêm thẻ cài đặt "Ngôn ngữ hiển thị (Display Language)" trong tab Cài đặt.
+  - Đồng bộ hệ thống dịch thuật cho toàn bộ Header, các tab điều hướng, modal nhập nhanh, trung tâm cảnh báo và trang tổng quan.
+
+---
+
+### 2. Giải Pháp Triển Khai
+
+1. **Kiểu dữ liệu & Từ điển i18n (`src/types/index.ts`, `src/lib/i18n.ts`):**
+   - Khai báo `export type Language = 'vi' | 'en' | 'fr'`.
+   - Tạo từ điển `TRANSLATIONS` phong phú với hơn 100+ từ khóa cho cả 3 thứ tiếng: Tiếng Việt, Tiếng Anh, Tiếng Pháp.
+   - Hàm trợ giúp `translate(lang, key, fallback)`.
+
+2. **Nút góc màn hình (`src/components/LanguageSwitcher.tsx`):**
+   - Thiết kế nút pill badge nhỏ gọn, hiện đại: cờ quốc gia + mã ngôn ngữ (🇻🇳 VI, 🇬🇧 EN, 🇫🇷 FR) kèm mũi tên nhỏ.
+   - Khi bấm, mở menu dropdown sang trọng với hiệu ứng glassmorphism, cờ sắc nét, dấu check `✓` và click outside listener.
+   - Đặt cố định ở góc trên bên phải của cả Desktop Header và Mobile Header (`sticky top-0 z-30`), luôn hiển thị ở góc màn hình.
+
+3. **Context Quản lý Ngôn ngữ (`src/context/AppContext.tsx`):**
+   - Quản lý state `language`, hàm `setLanguage(lang)` và hàm dịch `t(key, fallback)`.
+   - Tự động đọc và lưu vào `localStorage`.
+
+4. **Tích hợp giao diện toàn diện:**
+   - **`Navigation.tsx`**: Nhúng `LanguageSwitcher` vào góc trên phải, dịch động toàn bộ 8 menu tab điều hướng (Tổng quan, Sổ giao dịch, Ngân sách, Mô phỏng What-If, Định kỳ, Báo cáo, Ví & Tài khoản, Cài đặt), các số dư và thông báo.
+   - **`QuickAddModal.tsx`**: Dịch toàn bộ modal ghi nhận giao dịch nhanh (Khoản chi, Khoản thu, Chuyển khoản, Số tiền, nút Lưu/Hủy).
+   - **`SettingsView.tsx`**: Thêm khối tùy chọn "Ngôn Ngữ Hiển Thị (Display Language)" với 3 thẻ lớn trực quan tương ứng 3 ngôn ngữ.
+   - **`DashboardView.tsx`**: Dịch tiêu đề, các thẻ tài sản, thu nhập, chi tiêu, các nút thao tác nhanh và giao dịch gần đây.
+
+---
+
+### 3. Danh Sách Các Tệp Đã Thay Đổi
+
+| STT | Tệp tin | Trạng thái | Mô tả tóm tắt |
+|---|---|---|---|
+| 1 | `src/types/index.ts` | **[CHỈNH SỬA]** | Bổ sung export type `Language = 'vi' \| 'en' \| 'fr'`. |
+| 2 | `src/lib/i18n.ts` | **[TẠO MỚI]** | Định nghĩa từ điển đa ngôn ngữ cho Tiếng Việt, Tiếng Anh, Tiếng Pháp và hàm `translate`. |
+| 3 | `src/components/LanguageSwitcher.tsx` | **[TẠO MỚI]** | Nút chuyển đổi ngôn ngữ góc màn hình với icon cờ quốc gia và menu dropdown mượt mà. |
+| 4 | `src/context/AppContext.tsx` | **[CHỈNH SỬA]** | Bổ sung `language`, `setLanguage`, `t` vào Context và lưu vào LocalStorage. |
+| 5 | `src/components/Navigation.tsx` | **[CHỈNH SỬA]** | Nhúng `LanguageSwitcher` vào góc Header Mobile & Desktop, dịch động toàn bộ menu tab và thông báo. |
+| 6 | `src/components/QuickAddModal.tsx` | **[CHỈNH SỬA]** | Bản địa hóa modal Nhập nhanh giao dịch. |
+| 7 | `src/components/SettingsView.tsx` | **[CHỈNH SỬA]** | Thêm khối cài đặt Ngôn ngữ hiển thị trực quan 3 lựa chọn. |
+| 8 | `src/components/DashboardView.tsx` | **[CHỈNH SỬA]** | Bản địa hóa các khối số liệu tổng quan và thao tác nhanh. |
+| 9 | `TRACKING_CHANGES.md` | **[CHỈNH SỬA]** | Ghi nhận chi tiết lần chỉnh sửa 26. |
+
 
 
 
