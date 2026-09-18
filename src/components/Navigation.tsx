@@ -32,6 +32,7 @@ import {
   Search,
   CreditCard,
   ArrowRight,
+  RefreshCw,
 } from 'lucide-react';
 import { formatCurrency, calculateBudgetStatuses } from '@/lib/utils';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
@@ -66,6 +67,7 @@ export const Navigation: React.FC = () => {
     financialSummary,
     currentMonth,
     serverSyncStatus,
+    syncDataFromServer,
     theme,
     toggleTheme,
     isDarkMode,
@@ -85,6 +87,15 @@ export const Navigation: React.FC = () => {
 
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [isManualSyncing, setIsManualSyncing] = useState(false);
+
+  const handleManualSync = async () => {
+    setIsManualSyncing(true);
+    await syncDataFromServer();
+    setTimeout(() => {
+      setIsManualSyncing(false);
+    }, 600);
+  };
 
   // Profile editing state
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -119,6 +130,25 @@ export const Navigation: React.FC = () => {
           <div className="flex items-center gap-1.5">
             {/* Language Switcher */}
             <LanguageSwitcher />
+
+            {/* Real-time Multi-device Sync Button (Mobile) */}
+            <button
+              onClick={handleManualSync}
+              disabled={isManualSyncing || serverSyncStatus === 'syncing'}
+              className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-slate-200 dark:active:bg-slate-700 transition-colors cursor-pointer"
+              aria-label={t('nav.syncLiveTooltip', 'Đồng bộ thời gian thực đa thiết bị (Nhấn để làm mới ngay)')}
+              title={t('nav.syncLiveTooltip', 'Đồng bộ thời gian thực đa thiết bị (Nhấn để làm mới ngay)')}
+            >
+              <RefreshCw
+                className={`w-4 h-4 ${
+                  isManualSyncing || serverSyncStatus === 'syncing'
+                    ? 'animate-spin text-emerald-500'
+                    : serverSyncStatus === 'synced'
+                    ? 'text-emerald-500'
+                    : 'text-amber-500'
+                }`}
+              />
+            </button>
 
             {/* Dark / Light Mode Toggle Button */}
             <button
@@ -220,6 +250,31 @@ export const Navigation: React.FC = () => {
 
             {/* Language Switcher on Desktop Header */}
             <LanguageSwitcher />
+
+            {/* Real-time Multi-device Sync Status & Button */}
+            <button
+              onClick={handleManualSync}
+              disabled={isManualSyncing || serverSyncStatus === 'syncing'}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium border border-slate-200/80 dark:border-slate-700/80 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-slate-600 dark:text-slate-300 active:scale-95 cursor-pointer"
+              title={t('nav.syncLiveTooltip', 'Đồng bộ thời gian thực đa thiết bị (Nhấn để làm mới ngay)')}
+            >
+              <RefreshCw
+                className={`w-3.5 h-3.5 ${
+                  isManualSyncing || serverSyncStatus === 'syncing'
+                    ? 'animate-spin text-emerald-500'
+                    : serverSyncStatus === 'synced'
+                    ? 'text-emerald-500'
+                    : 'text-amber-500'
+                }`}
+              />
+              <span className="hidden xl:inline text-[11px]">
+                {serverSyncStatus === 'synced'
+                  ? t('settings.statusSynced', 'Đã đồng bộ')
+                  : serverSyncStatus === 'syncing' || isManualSyncing
+                  ? t('settings.statusSyncing', 'Đang lưu...')
+                  : t('settings.statusOffline', 'Ngoại tuyến')}
+              </span>
+            </button>
 
             {/* Dark / Light Mode Toggle Button */}
             <button

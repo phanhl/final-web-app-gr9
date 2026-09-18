@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import {
   Wallet,
   Transaction,
@@ -111,6 +111,7 @@ interface AppContextType {
 
   // Backup & Reset
   saveDataNow: () => Promise<boolean>;
+  syncDataFromServer: () => Promise<boolean>;
   resetToDefaultData: () => void;
   clearAllData: () => void;
   exportDatabaseJSON: () => void;
@@ -278,7 +279,98 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return translateWalletType(type || '', language);
   };
 
-  // Load from server disk first, fallback to local storage
+  // Real-time multi-device sync refs
+  const lastServerUpdatedAtRef = useRef<string | null>(null);
+  const isSavingRef = useRef<boolean>(false);
+  const lastSavedDataSignatureRef = useRef<string>('');
+
+  const computeDataSignature = (data: {
+    wallets?: Wallet[];
+    transactions?: Transaction[];
+    categories?: Category[];
+    budgets?: Budget[];
+    bills?: RecurringBill[];
+    goals?: SavingsGoal[];
+    planner?: IncomeBudgetPlanner;
+    currentMonth?: string;
+    userProfile?: UserProfile;
+    simulatorConfig?: SimulatorConfig;
+  }) => {
+    return JSON.stringify({
+      wallets: data.wallets || [],
+      transactions: data.transactions || [],
+      categories: data.categories || [],
+      budgets: data.budgets || [],
+      bills: data.bills || [],
+      goals: data.goals || [],
+      planner: data.planner || {},
+      currentMonth: data.currentMonth || '',
+      userProfile: data.userProfile || {},
+      simulatorConfig: data.simulatorConfig || {},
+    });
+  };
+
+  // Centralized server data applicator
+  const applyServerData = useCallback((d: any) => {
+    if (!d) return;
+    if (d.wallets) setWallets(d.wallets);
+    if (d.transactions) setTransactions(d.transactions);
+    if (d.categories) setCategories(d.categories);
+    if (d.budgets) setBudgets(d.budgets);
+    if (d.bills) setBills(d.bills);
+    if (d.goals) setGoals(d.goals);
+    if (d.planner) {
+      setPlanner({
+        ...d.planner,
+        emergencyPercent: d.planner.emergencyPercent !== undefined ? d.planner.emergencyPercent : 10,
+      });
+    }
+    if (d.currentMonth) setCurrentMonth(d.currentMonth);
+    if (d.userProfile) setUserProfile(d.userProfile);
+    if (d.simulatorConfig) setSimulatorConfig(d.simulatorConfig);
+
+    if (d.updatedAt) {
+      lastServerUpdatedAtRef.current = d.updatedAt;
+    }
+
+    // Update signature to match current server payload so auto-save won't echo back
+    lastSavedDataSignatureRef.current = computeDataSignature(d);
+
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
+    } catch (e) {
+      console.warn('Failed to update localStorage cache:', e);
+    }
+  }, []);
+
+  // Manual or automatic pull from server
+  const syncDataFromServer = useCallback(async (): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/storage', {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store',
+          Pragma: 'no-cache',
+        },
+      });
+      if (res.ok) {
+        const result = await res.json();
+        if (result.success && result.data) {
+          applyServerData(result.data);
+          setServerSyncStatus('synced');
+          return true;
+        }
+      }
+      setServerSyncStatus('offline');
+      return false;
+    } catch (err) {
+      console.warn('syncDataFromServer failed:', err);
+      setServerSyncStatus('offline');
+      return false;
+    }
+  }, [applyServerData]);
+
+  // Initial load: prioritize server disk as single source of truth across all devices
   useEffect(() => {
     let isSubscribed = true;
 
@@ -312,37 +404,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.error('Failed to parse localStorage data:', e);
       }
 
-      // Pick the freshest dataset between server disk and localStorage
-      let chosenData = serverData;
-      if (!serverData && localData) {
-        chosenData = localData;
-      } else if (serverData && localData) {
-        const serverTime = serverData.updatedAt ? new Date(serverData.updatedAt).getTime() : 0;
-        const localTime = localData.updatedAt ? new Date(localData.updatedAt).getTime() : 0;
-        // If local data is newer by more than 500ms, prioritize local
-        if (localTime > serverTime + 500) {
-          chosenData = localData;
-        }
-      }
+      // Server is single source of truth. Fallback to local only if server completely unreachable
+      const chosenData = serverData || localData;
 
       if (chosenData && isSubscribed) {
-        const d = chosenData;
-        if (d.wallets) setWallets(d.wallets);
-        if (d.transactions) setTransactions(d.transactions);
-        if (d.categories) setCategories(d.categories);
-        if (d.budgets) setBudgets(d.budgets);
-        if (d.bills) setBills(d.bills);
-        if (d.goals) setGoals(d.goals);
-        if (d.planner) {
-          setPlanner({
-            ...d.planner,
-            emergencyPercent: d.planner.emergencyPercent !== undefined ? d.planner.emergencyPercent : 10,
-          });
-        }
-        if (d.currentMonth) setCurrentMonth(d.currentMonth);
-        if (d.userProfile) setUserProfile(d.userProfile);
-        if (d.simulatorConfig) setSimulatorConfig(d.simulatorConfig);
-        setServerSyncStatus('synced');
+        applyServerData(chosenData);
+        setServerSyncStatus(serverData ? 'synced' : 'offline');
       } else if (!chosenData && isSubscribed) {
         setServerSyncStatus('offline');
       }
@@ -357,13 +424,81 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => {
       isSubscribed = false;
     };
-  }, []);
+  }, [applyServerData]);
 
-  // Save to local storage & persist to server disk
+  // Real-time polling & focus/visibility sync across multi-devices (Phone <-> PC)
   useEffect(() => {
     if (!mounted) return;
 
-    const payload = {
+    let isChecking = false;
+
+    const checkForUpdates = async () => {
+      // Don't poll if actively saving local changes or already fetching
+      if (isSavingRef.current || isChecking) return;
+
+      try {
+        isChecking = true;
+        const res = await fetch('/api/storage', {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache, no-store',
+            Pragma: 'no-cache',
+          },
+        });
+
+        if (res.ok) {
+          const result = await res.json();
+          if (result.success && result.data) {
+            const serverUpdatedAt = result.data.updatedAt;
+            // If server timestamp differs from our last applied state
+            if (serverUpdatedAt && serverUpdatedAt !== lastServerUpdatedAtRef.current) {
+              const serverSig = computeDataSignature(result.data);
+              if (serverSig !== lastSavedDataSignatureRef.current) {
+                applyServerData(result.data);
+              } else {
+                lastServerUpdatedAtRef.current = serverUpdatedAt;
+              }
+            }
+            setServerSyncStatus('synced');
+          }
+        }
+      } catch (e) {
+        console.warn('[Sync] Poll check error:', e);
+      } finally {
+        isChecking = false;
+      }
+    };
+
+    // 1. Polling interval every 3.5s for seamless background sync
+    const interval = setInterval(checkForUpdates, 3500);
+
+    // 2. Immediate check when unlocking phone or switching back to browser tab
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        checkForUpdates();
+      }
+    };
+
+    // 3. Immediate check when window gains focus
+    const handleFocus = () => {
+      checkForUpdates();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [mounted, applyServerData]);
+
+  // Auto-save local changes to server disk
+  useEffect(() => {
+    if (!mounted) return;
+
+    const currentData = {
       wallets,
       transactions,
       categories,
@@ -374,6 +509,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       currentMonth,
       userProfile,
       simulatorConfig,
+    };
+
+    const currentSignature = computeDataSignature(currentData);
+
+    // If state equals what we last saved or loaded from server, do nothing!
+    if (currentSignature === lastSavedDataSignatureRef.current) {
+      return;
+    }
+
+    const payload = {
+      ...currentData,
       updatedAt: new Date().toISOString(),
     };
 
@@ -385,7 +531,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     // 2. Persist to server disk via API
+    isSavingRef.current = true;
     setServerSyncStatus('syncing');
+
     const timer = setTimeout(async () => {
       try {
         const res = await fetch('/api/storage', {
@@ -394,6 +542,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           body: JSON.stringify(payload),
         });
         if (res.ok) {
+          const result = await res.json();
+          lastSavedDataSignatureRef.current = currentSignature;
+          if (result.updatedAt) {
+            lastServerUpdatedAtRef.current = result.updatedAt;
+          }
           setServerSyncStatus('synced');
         } else {
           setServerSyncStatus('offline');
@@ -401,15 +554,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } catch (err) {
         console.warn('Failed to sync to server storage API:', err);
         setServerSyncStatus('offline');
+      } finally {
+        isSavingRef.current = false;
       }
     }, 400);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      isSavingRef.current = false;
+    };
   }, [mounted, wallets, transactions, categories, budgets, bills, goals, planner, currentMonth, userProfile, simulatorConfig]);
 
   // Immediate save on demand
   const saveDataNow = async (): Promise<boolean> => {
-    const payload = {
+    const currentData = {
       wallets,
       transactions,
       categories,
@@ -420,6 +578,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       currentMonth,
       userProfile,
       simulatorConfig,
+    };
+
+    const currentSignature = computeDataSignature(currentData);
+    const payload = {
+      ...currentData,
       updatedAt: new Date().toISOString(),
     };
 
@@ -429,7 +592,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.error('Failed to save to localStorage:', e);
     }
 
+    isSavingRef.current = true;
     setServerSyncStatus('syncing');
+
     try {
       const res = await fetch('/api/storage', {
         method: 'POST',
@@ -437,6 +602,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         body: JSON.stringify(payload),
       });
       if (res.ok) {
+        const result = await res.json();
+        lastSavedDataSignatureRef.current = currentSignature;
+        if (result.updatedAt) {
+          lastServerUpdatedAtRef.current = result.updatedAt;
+        }
         setServerSyncStatus('synced');
         return true;
       } else {
@@ -447,6 +617,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Failed to sync to server storage API:', err);
       setServerSyncStatus('offline');
       return false;
+    } finally {
+      isSavingRef.current = false;
     }
   };
 
@@ -1087,6 +1259,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         navigateToBudget,
         navigateToBill,
         saveDataNow,
+        syncDataFromServer,
         resetToDefaultData,
         clearAllData,
         exportDatabaseJSON,

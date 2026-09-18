@@ -107,7 +107,11 @@ export async function POST(req: NextRequest) {
 
     await fs.writeFile(DB_FILE, JSON.stringify(dataToSave, null, 2), 'utf-8');
 
-    return NextResponse.json({ success: true, message: 'Đã lưu dữ liệu vào server disk' });
+    return NextResponse.json({
+      success: true,
+      message: 'Đã lưu dữ liệu vào server disk',
+      updatedAt: dataToSave.updatedAt,
+    });
   } catch (error) {
     console.error('API /api/storage POST Error:', error);
     return NextResponse.json(
