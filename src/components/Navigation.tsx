@@ -251,7 +251,7 @@ export const Navigation: React.FC = () => {
             <div className="w-px h-3.5 bg-slate-300 dark:bg-slate-700" />
             <div>
               <span className="text-slate-500 dark:text-slate-400 mr-1.5">
-                {t('app.totalAssets', 'Tổng tài sản:')}
+                {t('app.totalAssets', 'Tài sản ròng:')}
               </span>
               <span className="font-bold text-slate-800 dark:text-slate-200">
                 {formatCurrency(financialSummary.totalAssets)}

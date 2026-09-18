@@ -1,19 +1,76 @@
 {
   "wallets": [
     {
-      "name": "tiền ặt",
-      "type": "CASH",
-      "balance": 405010500461400,
+      "name": "Tech",
+      "type": "BANK",
+      "balance": 10680000,
       "initialBalance": 0,
       "currency": "VND",
+      "bankName": "Vietcombank",
       "accountNumber": "",
       "color": "#0ea5e9",
-      "icon": "Banknote",
-      "id": "wal-1789745951728",
-      "createdAt": "2026-09-18T15:39:11.728Z"
+      "icon": "Building2",
+      "id": "wal-1789749593421",
+      "createdAt": "2026-09-18T16:39:53.421Z"
     }
   ],
   "transactions": [
+    {
+      "type": "EXPENSE",
+      "amount": 22555555,
+      "categoryId": "cat-food",
+      "categoryName": "Ăn uống",
+      "walletId": "wal-1789749593421",
+      "walletName": "Tech",
+      "fee": 0,
+      "date": "2026-09-18T09:41:00.000Z",
+      "note": "Ăn uống",
+      "tags": [],
+      "id": "tx-1789749708674",
+      "createdAt": "2026-09-18T16:41:48.674Z"
+    },
+    {
+      "type": "INCOME",
+      "amount": 11111111,
+      "categoryId": "cat-salary",
+      "categoryName": "Lương chính",
+      "walletId": "wal-1789749593421",
+      "walletName": "Tech",
+      "fee": 0,
+      "date": "2026-09-18T09:41:00.000Z",
+      "note": "Lương chính",
+      "tags": [],
+      "id": "tx-1789749699508",
+      "createdAt": "2026-09-18T16:41:39.508Z"
+    },
+    {
+      "type": "INCOME",
+      "amount": 12124444,
+      "categoryId": "cat-salary",
+      "categoryName": "Lương chính",
+      "walletId": "wal-1789749593421",
+      "walletName": "Tech",
+      "fee": 0,
+      "date": "2026-09-18T09:41:00.000Z",
+      "note": "Lương chính",
+      "tags": [],
+      "id": "tx-1789749689492",
+      "createdAt": "2026-09-18T16:41:29.492Z"
+    },
+    {
+      "type": "INCOME",
+      "amount": 10000000,
+      "categoryId": "cat-salary",
+      "categoryName": "Lương chính",
+      "walletId": "wal-1789749593421",
+      "walletName": "Tech",
+      "fee": 0,
+      "date": "2026-09-20T09:39:00.000Z",
+      "note": "Lương chính",
+      "tags": [],
+      "id": "tx-1789749619569",
+      "createdAt": "2026-09-18T16:40:19.569Z"
+    },
     {
       "type": "EXPENSE",
       "amount": 100000,
@@ -1120,5 +1177,5 @@
       }
     ]
   },
-  "updatedAt": "2026-09-18T16:32:49.249Z"
+  "updatedAt": "2026-09-18T16:41:49.088Z"
 }
