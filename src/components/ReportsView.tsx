@@ -7,7 +7,6 @@ import {
   PieChart as PieChartIcon,
   TrendingUp,
   Download,
-  Printer,
   Calendar,
   FileSpreadsheet,
   FileText,
@@ -151,10 +150,6 @@ export const ReportsView: React.FC = () => {
     });
   }, [monthlyComparisonData]);
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   return (
     <div className="space-y-6 pb-12 print:p-0 print:m-0">
       {/* 1. HEADER & PERIOD SELECTOR */}
@@ -184,14 +179,6 @@ export const ReportsView: React.FC = () => {
           >
             <FileSpreadsheet className="w-4 h-4" />
             <span>{t('rep.exportExcel', 'Xuất Excel (.xlsx)')}</span>
-          </button>
-
-          <button
-            onClick={handlePrint}
-            className="flex items-center space-x-1.5 px-3.5 py-2 bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors"
-          >
-            <Printer className="w-4 h-4" />
-            <span>{t('rep.printPDF', 'In / Xuất PDF')}</span>
           </button>
         </div>
       </div>
