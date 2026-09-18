@@ -3,7 +3,7 @@
     {
       "name": "tiền ặt",
       "type": "CASH",
-      "balance": 405010503116955,
+      "balance": 405010500461400,
       "initialBalance": 0,
       "currency": "VND",
       "accountNumber": "",
@@ -14,6 +14,34 @@
     }
   ],
   "transactions": [
+    {
+      "type": "EXPENSE",
+      "amount": 100000,
+      "categoryId": "cat-food",
+      "categoryName": "Ăn uống",
+      "walletId": "wal-1789745951728",
+      "walletName": "tiền ặt",
+      "fee": 0,
+      "date": "2026-09-18T09:19:00.000Z",
+      "note": "Ăn uống",
+      "tags": [],
+      "id": "tx-1789748349423",
+      "createdAt": "2026-09-18T16:19:09.423Z"
+    },
+    {
+      "type": "EXPENSE",
+      "amount": 2555555,
+      "categoryId": "cat-food",
+      "categoryName": "Ăn uống",
+      "walletId": "wal-1789745951728",
+      "walletName": "tiền ặt",
+      "fee": 0,
+      "date": "2026-09-18T09:17:00.000Z",
+      "note": "Ăn uống",
+      "tags": [],
+      "id": "tx-1789748251246",
+      "createdAt": "2026-09-18T16:17:31.246Z"
+    },
     {
       "type": "EXPENSE",
       "amount": 233323,
@@ -972,7 +1000,7 @@
     "notes": "Áp dụng quy tắc 50/30/20: 50% thiết yếu, 30% sở thích cá nhân, 20% tích lũy & quỹ khẩn cấp",
     "emergencyPercent": 10
   },
-  "currentMonth": "2026-07",
+  "currentMonth": "2026-09",
   "userProfile": {
     "name": "PanC",
     "email": "admin@fintrack.vn",
@@ -1092,5 +1120,5 @@
       }
     ]
   },
-  "updatedAt": "2026-09-18T15:53:17.560Z"
+  "updatedAt": "2026-09-18T16:19:09.860Z"
 }
