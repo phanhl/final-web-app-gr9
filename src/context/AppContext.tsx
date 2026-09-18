@@ -250,8 +250,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     try {
       const savedLang = localStorage.getItem('fintrack_language') as Language;
-      if (savedLang && ['vi', 'en', 'fr'].includes(savedLang)) {
+      if (savedLang && ['vi', 'en'].includes(savedLang)) {
         setLanguageState(savedLang);
+      } else {
+        setLanguageState('vi');
       }
     } catch (e) {
       // ignore

@@ -54,7 +54,7 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ variant = 'h
         aria-haspopup="true"
         aria-expanded={isOpen}
         aria-label={t('app.language', 'Ngôn ngữ')}
-        title={t('app.language', 'Đổi ngôn ngữ: Tiếng Việt, English, Français')}
+        title={t('app.language', 'Đổi ngôn ngữ: Tiếng Việt, English')}
         className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl transition-all duration-150 border cursor-pointer select-none text-xs font-semibold ${
           isOpen
             ? 'bg-slate-100 dark:bg-slate-800 border-emerald-500/50 text-emerald-600 dark:text-emerald-400 ring-2 ring-emerald-500/20'

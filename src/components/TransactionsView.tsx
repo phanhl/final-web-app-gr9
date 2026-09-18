@@ -310,7 +310,7 @@ export const TransactionsView: React.FC = () => {
             {t('tx.txCount', 'Số giao dịch')}
           </span>
           <p className="text-lg font-black text-slate-800 dark:text-white">
-            {stats.count} {language === 'en' ? 'txs' : language === 'fr' ? 'op.' : 'GD'}
+            {stats.count} {language === 'en' ? 'txs' : 'GD'}
           </p>
         </div>
         <div>
