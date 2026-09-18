@@ -1169,13 +1169,13 @@
     "hasExternalLoan": true,
     "externalLoans": [
       {
-        "id": "loan-1789668909858",
-        "name": "duyên nợ cần trả",
-        "originalDebt": 3000300003,
-        "monthlyPayment": 15200000,
+        "id": "loan-1789750235513",
+        "name": "nợ",
+        "originalDebt": 10000000,
+        "monthlyPayment": 100000,
         "annualInterestRate": 0
       }
     ]
   },
-  "updatedAt": "2026-09-18T16:41:49.088Z"
+  "updatedAt": "2026-09-18T16:50:53.329Z"
 }
