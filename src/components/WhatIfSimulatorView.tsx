@@ -177,7 +177,7 @@ export const WhatIfSimulatorView: React.FC = () => {
       if (m === 0) {
         rows.push({
           monthIndex: 0,
-          label: 'Hiện tại (T0)',
+          label: t('whatif.month0', 'Hiện tại (T0)'),
           income: monthlyIncome,
           actualExpense: baseMonthlyExpense,
           cutSavings: 0,
@@ -237,7 +237,7 @@ export const WhatIfSimulatorView: React.FC = () => {
 
       rows.push({
         monthIndex: m,
-        label: `Tháng ${m}`,
+        label: `${t('budget.monthLabel', 'Tháng')} ${m}`,
         income: monthlyIncome,
         actualExpense: effectiveExpense,
         cutSavings: totalCutSavings,
@@ -339,18 +339,18 @@ export const WhatIfSimulatorView: React.FC = () => {
     const wb = XLSX.utils.book_new();
 
     const tableData = detailedMonthlyProjections.map((row) => ({
-      'Mốc Thời Gian': row.label,
-      'Thu Nhập (₫)': row.income,
-      'Chi Tiêu Thực Tế (₫)': row.actualExpense,
-      'Tiết Kiệm Nhờ Cắt Giảm (₫)': row.cutSavings,
-      'Trả Nợ Vay Ngoài (₫)': row.debtPaid,
-      'Dư Nợ Còn Lại (₫)': row.remainingDebtTotal,
-      'Gửi Tiết Kiệm Tích Lũy (₫)': row.savingsPot,
-      'Đầu Tư Tài Chính (₫)': row.investPot,
-      'Lãi/Lỗ Đầu Tư Tháng (₫)': row.investReturn,
-      'Tài Sản What-If (₫)': row.whatIfTotal,
-      'Kịch Bản Gốc (₫)': row.baselineTotal,
-      'Chênh Lệch Dôi Ra (₫)': row.netDelta,
+      [t('whatif.colMilestone', 'Mốc Thời Gian')]: row.label,
+      [t('whatif.colIncome', 'Thu Nhập (₫)')]: row.income,
+      [t('whatif.colExpenseAfterCut', 'Chi Tiêu Thực Tế (₫)')]: row.actualExpense,
+      [t('sim.colCutSavings', 'Tiết Kiệm Nhờ Cắt Giảm (₫)')]: row.cutSavings,
+      [t('whatif.colDebtPaid', 'Trả Nợ Vay Ngoài (₫)')]: row.debtPaid,
+      [t('whatif.colRemainingDebt', 'Dư Nợ Còn Lại (₫)')]: row.remainingDebtTotal,
+      [t('whatif.colSavingsDeposit', 'Gửi Tiết Kiệm Tích Lũy (₫)')]: row.savingsPot,
+      [t('whatif.colInvested', 'Đầu Tư Tài Chính (₫)')]: row.investPot,
+      [t('whatif.colInvestReturn', 'Lãi/Lỗ Đầu Tư Tháng (₫)')]: row.investReturn,
+      [t('whatif.colWhatIfWealth', 'Tài Sản What-If (₫)')]: row.whatIfTotal,
+      [t('whatif.colBaselineWealth', 'Kịch Bản Gốc (₫)')]: row.baselineTotal,
+      [t('sim.colNetDelta', 'Chênh Lệch Dôi Ra (₫)')]: row.netDelta,
     }));
 
     const ws = XLSX.utils.json_to_sheet(tableData);
@@ -407,11 +407,11 @@ export const WhatIfSimulatorView: React.FC = () => {
       {/* 2. TOP IMPACT KPI SUMMARY CARDS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <span className="text-[11px] font-bold text-slate-400 uppercase">{language === 'en' ? 'Current Assets' : language === 'fr' ? 'Actif actuel' : 'Tài sản hiện tại'}</span>
+          <span className="text-[11px] font-bold text-slate-400 uppercase">{t('sim.currentNetWorth', 'Tài sản hiện tại')}</span>
           <p className="text-xl font-black text-slate-800 dark:text-white mt-1">
             {formatCurrency(startingNetWorth)}
           </p>
-          <span className="text-[10px] text-slate-400">Thời điểm Tháng 0</span>
+          <span className="text-[10px] text-slate-400">{t('whatif.month0', 'Thời điểm Tháng 0')}</span>
         </div>
 
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -419,10 +419,10 @@ export const WhatIfSimulatorView: React.FC = () => {
             {t('sim.colCutSavings', 'Tiết kiệm nhờ cắt giảm')}
           </span>
           <p className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
-            +{formatCurrency(totalCutSavings)}/tháng
+            +{formatCurrency(totalCutSavings)}{t('whatif.perMonth', '/tháng')}
           </p>
           <span className="text-[10px] text-emerald-600 font-semibold">
-            Đã chọn {selectedCuts.length} / {spendingCategories.length} danh mục
+            {t('budget.usedBudget', 'Đã chọn')} {selectedCuts.length} / {spendingCategories.length} {t('whatif.categoriesSelected', 'danh mục')}
           </span>
         </div>
 
@@ -435,22 +435,22 @@ export const WhatIfSimulatorView: React.FC = () => {
               totalMonthlyDebtPayment > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-800 dark:text-white'
             }`}
           >
-            {hasExternalLoan ? `-${formatCurrency(totalMonthlyDebtPayment)}/T` : '0 ₫ (Không nợ)'}
+            {hasExternalLoan ? `-${formatCurrency(totalMonthlyDebtPayment)}/T` : t('whatif.noDebt', '0 ₫ (Không nợ)')}
           </p>
           <span className="text-[10px] text-slate-400">
-            {hasExternalLoan ? `${externalLoans.length} khoản nợ vay ngoài` : 'An toàn tài chính'}
+            {hasExternalLoan ? `${externalLoans.length} ${t('whatif.externalLoansCount', 'khoản nợ vay ngoài')}` : t('whatif.financialSafety', 'An toàn tài chính')}
           </span>
         </div>
 
         <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-900 to-slate-900 text-white shadow-lg border border-indigo-500/30">
           <span className="text-[11px] font-bold text-indigo-300 uppercase">
-            {language === 'en' ? `FORECAST AFTER ${projectionMonths} MONTHS` : language === 'fr' ? `PRÉVISION APRÈS ${projectionMonths} MOIS` : `DỰ BÁO SAU ${projectionMonths} THÁNG`}
+            `${t('sim.forecastAfter', 'DỰ BÁO SAU')} ${projectionMonths} ${t('whatif.monthsCount', 'THÁNG')}`
           </span>
           <p className="text-xl font-black text-emerald-400 mt-1">
             {formatCurrency(finalRow.whatIfTotal)}
           </p>
           <span className="text-[10px] text-indigo-200">
-            Đã trừ nợ &amp; tính rủi ro đầu tư
+            {t('whatif.netAssetDeduction', 'Đã trừ nợ & tính rủi ro đầu tư')}
           </span>
         </div>
 
@@ -463,21 +463,21 @@ export const WhatIfSimulatorView: React.FC = () => {
         >
           <span className="text-[11px] font-extrabold uppercase flex items-center space-x-1">
             <Zap className="w-3.5 h-3.5 fill-current" />
-            <span>{language === 'en' ? 'Net Gain Delta' : language === 'fr' ? 'Gain net différentiel' : 'Chênh lệch Net Gain'}</span>
+            <span>{t('sim.netDelta', 'Chênh lệch Net Gain')}</span>
           </span>
           <p className="text-xl font-black mt-1">
             {finalDelta >= 0 ? '+' : ''}
             {formatCurrency(finalDelta)}
           </p>
           <span className="text-[10px]">
-            {finalDelta >= 0 ? 'Dôi ra so với kịch bản cũ' : 'Thâm hụt do nợ / lỗ'}
+            {finalDelta >= 0 ? t('whatif.surplusVersusOld', 'Dôi ra so với kịch bản cũ') : t('whatif.deficitDueToDebt', 'Thâm hụt do nợ / lỗ')}
           </span>
         </div>
       </div>
 
-      {/* 3. BẢNG ĐIỀU KHIỂN TÙY BIẾN ĐA MỤC (Multi-Item Controls) */}
+      {/* 3. MULTI-ITEM CONTROLS */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* CỘT 1 & 2: CÁC KHOẢN CẮT GIẢM & KÊNH ĐẦU TƯ / NỢ VAY */}
+        {/* COLUMNS 1 & 2 */}
         <div className="lg:col-span-2 space-y-6">
           {/* ========================================================================= */}
           {/* BƯỚC 1: MỨC TIÊU DÙNG CHI TIÊU CÁ NHÂN HIỆN TẠI (HIỆN MỨC TIÊU DÙNG TRƯỚC) */}
@@ -486,22 +486,22 @@ export const WhatIfSimulatorView: React.FC = () => {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
               <div>
                 <div className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 text-[11px] font-bold uppercase tracking-wider mb-1">
-                  <span>Bước 1 • Khảo sát mức tiêu dùng</span>
+                  <span>{t('whatif.step1Title', 'Bước 1 • Khảo sát mức tiêu dùng')}</span>
                 </div>
                 <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center space-x-2">
                   <Wallet className="w-5 h-5 text-blue-600" />
                   <span>{t('sim.spendingOptTitle', '1. Mức Tiêu Dùng Chi Tiêu Cá Nhân Hiện Tại')} ({spendingCategories.length})</span>
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Xem trước mức chi tiêu hàng tháng theo từng khoản của bạn. Bấm <strong>&quot;Chọn cắt giảm&quot;</strong> để đưa mục đó xuống bảng tối ưu.
+                  {t('whatif.step1Desc', 'Xem trước mức chi tiêu hàng tháng theo từng khoản của bạn. Bấm "Chọn cắt giảm" để đưa mục đó xuống bảng tối ưu.')}
                 </p>
               </div>
 
               <div className="flex items-center space-x-2 shrink-0">
                 <div className="px-3.5 py-1.5 bg-slate-50 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700 text-right">
-                  <span className="text-[10px] text-slate-400 block font-bold uppercase">Tổng tiêu dùng cá nhân</span>
+                  <span className="text-[10px] text-slate-400 block font-bold uppercase">{t('whatif.totalPersonalExpense', 'Tổng tiêu dùng cá nhân')}</span>
                   <span className="text-sm font-black text-slate-800 dark:text-white">
-                    {formatCurrency(totalPersonalExpense)}/tháng
+                    {formatCurrency(totalPersonalExpense)}{t('whatif.perMonth', '/tháng')}
                   </span>
                 </div>
                 <button
@@ -509,12 +509,12 @@ export const WhatIfSimulatorView: React.FC = () => {
                   className="flex items-center space-x-1 px-3 py-2 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/50 dark:hover:bg-blue-900 text-blue-600 dark:text-blue-300 font-bold text-xs rounded-xl transition-colors shrink-0"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Thêm khoản chi</span>
+                  <span className="hidden sm:inline">{t('whatif.addExpenseItem', 'Thêm khoản chi')}</span>
                 </button>
               </div>
             </div>
 
-            {/* Grid các khoản tiêu dùng cá nhân */}
+            {/* Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
               {spendingCategories.map((item) => (
                 <div
@@ -538,21 +538,21 @@ export const WhatIfSimulatorView: React.FC = () => {
                           {tCategory(item.categoryName)}
                         </h4>
                         <span className="text-[10px] text-slate-400 block">
-                          {language === 'en' ? 'Personal Expense' : language === 'fr' ? 'Dépense personnelle' : 'Chi tiêu cá nhân'}
+                          {t('whatif.personalExpense', 'Chi tiêu cá nhân')}
                         </span>
                       </div>
                     </div>
 
                     {item.isSelected && (
                       <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/60 text-rose-600 dark:text-rose-300 shrink-0">
-                        Đang giảm -{item.cutPercent}%
+                        {t('whatif.cuttingBy', 'Đang giảm')} -{item.cutPercent}%
                       </span>
                     )}
                   </div>
 
-                  {/* Nhập/Sửa nhanh số tiền tiêu dùng hàng tháng */}
+                  {/* Monthly expense input */}
                   <div className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between text-xs">
-                    <span className="text-[11px] text-slate-500 font-medium">Mức tiêu dùng:</span>
+                    <span className="text-[11px] text-slate-500 font-medium">{t('whatif.spendingLevel', 'Mức tiêu dùng:')}</span>
                     <div className="flex items-center space-x-1">
                       <input
                         type="text"
@@ -578,7 +578,7 @@ export const WhatIfSimulatorView: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Nút chọn/bỏ chọn cắt giảm */}
+                  {/* Select/Deselect button */}
                   <button
                     type="button"
                     onClick={() => {
@@ -597,12 +597,12 @@ export const WhatIfSimulatorView: React.FC = () => {
                     {item.isSelected ? (
                       <>
                         <CheckCircle2 className="w-3.5 h-3.5 text-white" />
-                        <span>{language === 'en' ? 'Selected for cuts (Click to cancel)' : language === 'fr' ? 'Sélectionné pour réduction (Cliquer pour annuler)' : 'Đang chọn cắt giảm (Bấm để hủy)'}</span>
+                        <span>{t('whatif.selectedCutClickCancel', 'Đang chọn cắt giảm (Bấm để hủy)')}</span>
                       </>
                     ) : (
                       <>
                         <Plus className="w-3.5 h-3.5 text-rose-500" />
-                        <span>{language === 'en' ? 'Select to cut' : language === 'fr' ? 'Sélectionner pour réduire' : 'Chọn để cắt giảm'}</span>
+                        <span>{t('whatif.selectToCut', 'Chọn để cắt giảm')}</span>
                       </>
                     )}
                   </button>
@@ -612,27 +612,27 @@ export const WhatIfSimulatorView: React.FC = () => {
           </div>
 
           {/* ========================================================================= */}
-          {/* BƯỚC 2: KHU VỰC ĐIỀU CHỈNH CẮT GIẢM CHO CÁC MỤC ĐÃ CHỌN */}
+          {/* STEP 2: CUT SLIDERS */}
           {/* ========================================================================= */}
           <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
               <div>
                 <div className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 text-[11px] font-bold uppercase tracking-wider mb-1">
-                  <span>Bước 2 • Tùy chỉnh cắt giảm</span>
+                  <span>{t('whatif.step2Title', 'Bước 2 • Tùy chỉnh cắt giảm')}</span>
                 </div>
                 <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center space-x-2">
                   <Sliders className="w-5 h-5 text-rose-500" />
-                  <span>{language === 'en' ? '2. Selected Cuts' : language === 'fr' ? '2. Réductions sélectionnées' : '2. Các Khoản Đã Chọn Để Cắt Giảm'} ({selectedCuts.length})</span>
+                  <span>{t('whatif.selectedCutsHeading', '2. Các Khoản Đã Chọn Để Cắt Giảm')} ({selectedCuts.length})</span>
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Kéo thanh trượt hoặc chọn nhanh tỷ lệ cắt giảm (0% - 50%) cho từng khoản bạn đã chọn ở trên
+                  {t('whatif.step2Desc', 'Kéo thanh trượt hoặc chọn nhanh tỷ lệ cắt giảm (0% - 50%) cho từng khoản bạn đã chọn ở trên')}
                 </p>
               </div>
 
               {selectedCuts.length > 0 && (
                 <div className="px-3 py-1 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 rounded-xl text-rose-700 dark:text-rose-300 font-extrabold text-xs shrink-0 flex items-center space-x-1.5">
                   <Zap className="w-3.5 h-3.5 fill-current" />
-                  <span>Dôi ra: +{formatCurrency(totalCutSavings)}/tháng</span>
+                  <span>{t('whatif.surplusBadge', 'Dôi ra:')} +{formatCurrency(totalCutSavings)}{t('whatif.perMonth', '/tháng')}</span>
                 </div>
               )}
             </div>
@@ -643,10 +643,10 @@ export const WhatIfSimulatorView: React.FC = () => {
                   <Sliders className="w-6 h-6" />
                 </div>
                 <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300">
-                  Chưa có khoản chi tiêu nào được chọn để cắt giảm
+                  {t('whatif.noSelectedCuts', 'Chưa có khoản chi tiêu nào được chọn để cắt giảm')}
                 </h4>
                 <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
-                  Vui lòng bấm vào nút <strong>&quot;+ Chọn để cắt giảm&quot;</strong> tại các mục trong bảng <strong>&quot;Mức Tiêu Dùng Chi Tiêu Cá Nhân&quot;</strong> ở Bước 1 phía trên (ví dụ: Ăn uống, Mua sắm, Giải trí...) để thanh trượt cắt giảm xuất hiện tại đây.
+                  {t('whatif.noSelectedCutsHelp', 'Vui lòng bấm vào nút "+ Chọn để cắt giảm" tại các mục trong bảng "Mức Tiêu Dùng Chi Tiêu Cá Nhân" ở Bước 1 phía trên để thanh trượt cắt giảm xuất hiện tại đây.')}
                 </p>
               </div>
             ) : (
@@ -674,7 +674,7 @@ export const WhatIfSimulatorView: React.FC = () => {
                                 {tCategory(cut.categoryName)}
                               </h4>
                               <span className="text-[10px] text-slate-400">
-                                Mức tiêu dùng gốc: {formatCurrency(cut.monthlyExpense)}/tháng
+                                {t('whatif.baselineExpense', 'Mức tiêu dùng gốc:')} {formatCurrency(cut.monthlyExpense)}{t('whatif.perMonth', '/tháng')}
                               </span>
                             </div>
                           </div>
@@ -688,18 +688,18 @@ export const WhatIfSimulatorView: React.FC = () => {
                               );
                             }}
                             className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-100 dark:hover:bg-rose-950 rounded-lg transition-colors"
-                            title="Bỏ chọn cắt giảm mục này"
+                            title={t('whatif.deselectCut', 'Bỏ chọn cắt giảm mục này')}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
 
-                        {/* Slider % cắt giảm */}
+                        {/* Slider */}
                         <div className="space-y-1.5">
                           <div className="flex justify-between text-xs">
-                            <span className="text-slate-500 text-[11px]">Tỷ lệ cắt giảm:</span>
+                            <span className="text-slate-500 text-[11px]">{t('whatif.cutRatio', 'Tỷ lệ cắt giảm:')}</span>
                             <span className="font-extrabold text-rose-600 dark:text-rose-400">
-                              -{cut.cutPercent}% (Tiết kiệm +{formatCurrency(cutSavings)}/T)
+                              -{cut.cutPercent}% ({t('whatif.savingsPrefix', 'Tiết kiệm')} +{formatCurrency(cutSavings)}/T)
                             </span>
                           </div>
 
@@ -752,11 +752,11 @@ export const WhatIfSimulatorView: React.FC = () => {
                           </div>
                         </div>
 
-                        {/* Chi tiêu còn lại sau khi giảm */}
+                        {/* Post cut expense */}
                         <div className="pt-2 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between text-[11px]">
-                          <span className="text-slate-400">Chi phí sau khi giảm:</span>
+                          <span className="text-slate-400">{t('whatif.postCutExpense', 'Chi phí sau khi giảm:')}</span>
                           <span className="font-bold text-slate-700 dark:text-slate-200">
-                            {formatCurrency(remainingExpense)}/tháng
+                            {formatCurrency(remainingExpense)}{t('whatif.perMonth', '/tháng')}
                           </span>
                         </div>
                       </div>
@@ -766,46 +766,46 @@ export const WhatIfSimulatorView: React.FC = () => {
 
                 <div className="p-3 rounded-2xl bg-rose-50/60 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/40 flex items-center justify-between text-xs">
                   <span className="font-bold text-rose-800 dark:text-rose-300">
-                    Tổng số tiền cắt giảm dôi ra mỗi tháng ({selectedCuts.length} mục đã chọn):
+                    {t('whatif.totalMonthlySavingsSummary', 'Tổng số tiền cắt giảm dôi ra mỗi tháng')} ({selectedCuts.length} {t('whatif.selectedItems', 'mục đã chọn')}):
                   </span>
                   <span className="text-sm font-black text-rose-600 dark:text-rose-400">
-                    +{formatCurrency(totalCutSavings)}/tháng
+                    +{formatCurrency(totalCutSavings)}{t('whatif.perMonth', '/tháng')}
                   </span>
                 </div>
               </div>
             )}
           </div>
 
-          {/* PHẦN B: KÊNH ĐẦU TƯ & TÍNH TOÁN RỦI RO THUA LỖ TÀI CHÍNH */}
+          {/* SECTION B: INVEST & RISK */}
           <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
             <div className="pb-3 border-b border-slate-100 dark:border-slate-800">
               <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center space-x-2">
                 <TrendingUp className="w-5 h-5 text-emerald-500" />
-                <span>3. Kênh Đầu Tư / Gửi Tiết Kiệm &amp; Tính Toán Rủi Ro Thua Lỗ</span>
+                <span>{t('whatif.section3Title', '3. Kênh Đầu Tư / Gửi Tiết Kiệm & Tính Toán Rủi Ro Thua Lỗ')}</span>
               </h3>
               <p className="text-xs text-slate-400 mt-0.5">
-                Mô phỏng cả kịch bản có lãi lẫn <strong>thua lỗ đầu tư tài chính</strong> (thị trường sụt giảm, mất vốn)
+                {t('whatif.section3Desc', 'Mô phỏng cả kịch bản có lãi lẫn thua lỗ đầu tư tài chính (thị trường sụt giảm, mất vốn)')}
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Kênh 1: Tiết kiệm ngân hàng an toàn */}
+              {/* Channel 1: Safe savings */}
               <div className="p-4 rounded-2xl bg-blue-50/40 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/50 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <Building2 className="w-4 h-4 text-blue-600" />
                     <span className="text-xs font-bold text-blue-900 dark:text-blue-100">
-                      Gửi Tiết Kiệm An Toàn
+                      {t('whatif.safeSavingsTitle', 'Gửi Tiết Kiệm An Toàn')}
                     </span>
                   </div>
                   <span className="text-[10px] font-bold px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full">
-                    Không rủi ro
+                    {t('whatif.noRisk', 'Không rủi ro')}
                   </span>
                 </div>
 
                 <div>
                   <label className="block text-[11px] text-slate-500 mb-1">
-                    Gửi thêm mỗi tháng: <strong>{formatCurrency(savingsAmount)}</strong>
+                    {t('whatif.depositMorePerMonth', 'Gửi thêm mỗi tháng:')} <strong>{formatCurrency(savingsAmount)}</strong>
                   </label>
                   <input
                     type="range"
@@ -819,7 +819,7 @@ export const WhatIfSimulatorView: React.FC = () => {
                 </div>
 
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-500">Lãi suất gửi (%/năm):</span>
+                  <span className="text-slate-500">{t('whatif.depositInterestRate', 'Lãi suất gửi (%/năm):')}</span>
                   <input
                     type="number"
                     step="0.1"
@@ -830,23 +830,23 @@ export const WhatIfSimulatorView: React.FC = () => {
                 </div>
               </div>
 
-              {/* Kênh 2: Đầu tư tài chính & RỦI RO THUA LỖ */}
+              {/* Channel 2: Investments */}
               <div className="p-4 rounded-2xl bg-purple-50/40 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/50 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <TrendingUp className="w-4 h-4 text-purple-600" />
                     <span className="text-xs font-bold text-purple-900 dark:text-purple-100">
-                      Đầu Tư Tài Chính (Cổ phiếu, Quỹ, Coin)
+                      {t('whatif.financialInvestTitle', 'Đầu Tư Tài Chính (Cổ phiếu, Quỹ, Coin)')}
                     </span>
                   </div>
                   <span className="text-[10px] font-bold px-2 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded-full">
-                    Có rủi ro
+                    {t('whatif.hasRisk', 'Có rủi ro')}
                   </span>
                 </div>
 
                 <div>
                   <label className="block text-[11px] text-slate-500 mb-1">
-                    Số tiền đầu tư mỗi tháng: <strong>{formatCurrency(investmentAmount)}</strong>
+                    {t('whatif.investPerMonth', 'Số tiền đầu tư mỗi tháng:')} <strong>{formatCurrency(investmentAmount)}</strong>
                   </label>
                   <input
                     type="range"
@@ -859,10 +859,10 @@ export const WhatIfSimulatorView: React.FC = () => {
                   />
                 </div>
 
-                {/* Chọn Kịch Bản Lãi hoặc THUA LỖ */}
+                {/* Scenario */}
                 <div>
                   <label className="block text-[11px] text-slate-500 mb-1 font-semibold">
-                    Kịch bản sinh lời / Thua lỗ (%/năm):
+                    {t('whatif.scenarioReturnLoss', 'Kịch bản sinh lời / Thua lỗ (%/năm):')}
                   </label>
                   <div className="grid grid-cols-4 gap-1.5 text-[10px] font-bold">
                     <button
@@ -874,7 +874,7 @@ export const WhatIfSimulatorView: React.FC = () => {
                           : 'bg-white dark:bg-slate-900 text-emerald-600 border-emerald-200'
                       }`}
                     >
-                      Lãi +12%
+                      {t('whatif.profit12', 'Lãi +12%')}
                     </button>
                     <button
                       type="button"
@@ -885,7 +885,7 @@ export const WhatIfSimulatorView: React.FC = () => {
                           : 'bg-white dark:bg-slate-900 text-blue-600 border-blue-200'
                       }`}
                     >
-                      Lãi +8.5%
+                      {t('whatif.profit85', 'Lãi +8.5%')}
                     </button>
                     <button
                       type="button"
@@ -896,7 +896,7 @@ export const WhatIfSimulatorView: React.FC = () => {
                           : 'bg-white dark:bg-slate-900 text-rose-600 border-rose-200'
                       }`}
                     >
-                      Lỗ -10%
+                      {t('whatif.loss10', 'Lỗ -10%')}
                     </button>
                     <button
                       type="button"
@@ -907,7 +907,7 @@ export const WhatIfSimulatorView: React.FC = () => {
                           : 'bg-white dark:bg-slate-900 text-rose-700 border-rose-200'
                       }`}
                     >
-                      Lỗ nặng -25%
+                      {t('whatif.loss25', 'Lỗ nặng -25%')}
                     </button>
                   </div>
 
@@ -915,7 +915,7 @@ export const WhatIfSimulatorView: React.FC = () => {
                     <p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 mt-2 flex items-center space-x-1">
                       <AlertTriangle className="w-3.5 h-3.5" />
                       <span>
-                        Đang mô phỏng thị trường sập: Vốn đầu tư bị lỗ {Math.abs(investmentRateScenario)}%/năm!
+                        {t('whatif.crashAlert', 'Đang mô phỏng thị trường sập: Vốn đầu tư bị lỗ')} {Math.abs(investmentRateScenario)}%/năm!
                       </span>
                     </p>
                   )}
@@ -941,10 +941,10 @@ export const WhatIfSimulatorView: React.FC = () => {
                     className="text-base font-bold text-slate-800 dark:text-white cursor-pointer flex items-center space-x-2"
                   >
                     <CreditCard className="w-5 h-5 text-amber-500" />
-                    <span>4. Tính Thêm Các Khoản Vay Ngoài &amp; Nghĩa Vụ Trả Nợ</span>
+                    <span>{t('whatif.section4Title', '4. Tính Thêm Các Khoản Vay Ngoài & Nghĩa Vụ Trả Nợ')}</span>
                   </label>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    Hệ thống tự động trừ tiền gốc + lãi vay vào dòng tiền và giảm dần dư nợ theo từng tháng
+                    {t('whatif.section4Desc', 'Hệ thống tự động trừ tiền gốc + lãi vay vào dòng tiền và giảm dần dư nợ theo từng tháng')}
                   </p>
                 </div>
               </div>
@@ -955,7 +955,7 @@ export const WhatIfSimulatorView: React.FC = () => {
                   className="flex items-center space-x-1 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 font-bold text-xs rounded-xl transition-colors shrink-0"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Thêm khoản nợ vay</span>
+                  <span>{t('whatif.addLoanBtn', 'Thêm khoản nợ vay')}</span>
                 </button>
               )}
             </div>
@@ -974,7 +974,7 @@ export const WhatIfSimulatorView: React.FC = () => {
                             {loan.name}
                           </h4>
                           <span className="text-[11px] text-amber-700 dark:text-amber-300">
-                            Gốc còn lại: {formatCurrency(loan.originalDebt)} • Lãi: {loan.annualInterestRate}%/năm
+                            {t('whatif.remainingPrincipal', 'Gốc còn lại:')} {formatCurrency(loan.originalDebt)} • {t('whatif.interestPerYr', 'Lãi:')} {loan.annualInterestRate}%/năm
                           </span>
                         </div>
                         <button
@@ -986,9 +986,9 @@ export const WhatIfSimulatorView: React.FC = () => {
                       </div>
 
                       <div className="flex justify-between text-xs pt-1 border-t border-amber-200/50 dark:border-amber-900/30">
-                        <span className="text-slate-500">Phải trả hàng tháng:</span>
+                        <span className="text-slate-500">{t('whatif.mustPayMonthly', 'Phải trả hàng tháng:')}</span>
                         <span className="font-extrabold text-rose-600 dark:text-rose-400">
-                          -{formatCurrency(loan.monthlyPayment)}/tháng
+                          -{formatCurrency(loan.monthlyPayment)}{t('whatif.perMonth', '/tháng')}
                         </span>
                       </div>
                     </div>
@@ -997,30 +997,30 @@ export const WhatIfSimulatorView: React.FC = () => {
 
                 <div className="p-3 rounded-2xl bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/40 flex items-center justify-between text-xs">
                   <span className="font-bold text-rose-800 dark:text-rose-300">
-                    Tổng áp lực trả nợ vay ngoài mỗi tháng:
+                    {t('whatif.totalDebtPressure', 'Tổng áp lực trả nợ vay ngoài mỗi tháng:')}
                   </span>
                   <span className="text-sm font-black text-rose-600 dark:text-rose-400">
-                    -{formatCurrency(totalMonthlyDebtPayment)}/tháng
+                    -{formatCurrency(totalMonthlyDebtPayment)}{t('whatif.perMonth', '/tháng')}
                   </span>
                 </div>
               </div>
             ) : (
               <p className="text-xs text-slate-400 italic">
-                Chế độ không có nợ vay ngoài đang bật. Dòng tiền tiết kiệm sẽ không bị khấu trừ nợ.
+                {t('whatif.zeroDebtMode', 'Chế độ không có nợ vay ngoài đang bật. Dòng tiền tiết kiệm sẽ không bị khấu trừ nợ.')}
               </p>
             )}
           </div>
         </div>
 
-        {/* CỘT 3: TỔNG QUAN THỜI GIAN & BIỂU ĐỒ SO SÁNH */}
+        {/* COLUMN 3: TIMEFRAME & CHARTS */}
         <div className="space-y-6">
           <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <h3 className="text-sm font-bold text-slate-800 dark:text-white">
-                Khung Thời Gian Dự Phóng
+                {t('whatif.forecastTimeframe', 'Khung Thời Gian Dự Phóng')}
               </h3>
               <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">
-                {projectionMonths} Tháng
+                {projectionMonths} {t('whatif.monthsCount', 'Tháng')}
               </span>
             </div>
 
@@ -1074,7 +1074,7 @@ export const WhatIfSimulatorView: React.FC = () => {
                   <Area
                     type="monotone"
                     dataKey="baselineTotal"
-                    name="Kịch bản gốc"
+                    name={t('whatif.baselineScenario', 'Kịch bản gốc')}
                     stroke="#94a3b8"
                     strokeWidth={1.5}
                     strokeDasharray="3 3"
@@ -1083,7 +1083,7 @@ export const WhatIfSimulatorView: React.FC = () => {
                   <Area
                     type="monotone"
                     dataKey="whatIfTotal"
-                    name="What-If Thực Tế"
+                    name={t('whatif.whatifActual', 'What-If Thực Tế')}
                     stroke="#6366f1"
                     strokeWidth={2.5}
                     fillOpacity={1}
@@ -1095,14 +1095,13 @@ export const WhatIfSimulatorView: React.FC = () => {
 
             {/* Insight Note */}
             <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
-              📌 <strong>Kết luận:</strong> Sau {projectionMonths} tháng, bạn cắt giảm được{' '}
-              <strong>{formatCurrency(totalCutSavings * projectionMonths)}</strong> chi tiêu, trả được{' '}
-              <strong>{formatCurrency(finalRow.debtPaid * projectionMonths)}</strong> tiền nợ. Lợi nhuận/lỗ
-              đầu tư là{' '}
+              📌 <strong>{t('whatif.conclusion', 'Kết luận:')}</strong> {t('whatif.afterMonths', 'Sau')} {projectionMonths} {t('whatif.monthsYouCut', 'tháng, bạn cắt giảm được')}{' '}
+              <strong>{formatCurrency(totalCutSavings * projectionMonths)}</strong> {t('whatif.expensePaid', 'chi tiêu, trả được')}{' '}
+              <strong>{formatCurrency(finalRow.debtPaid * projectionMonths)}</strong> {t('whatif.debtProfitLoss', 'tiền nợ. Lợi nhuận/lỗ đầu tư là')}{' '}
               <strong className={investmentRateScenario >= 0 ? 'text-emerald-600' : 'text-rose-600'}>
                 {formatCurrency(finalRow.investReturn * projectionMonths)}
               </strong>
-              . Tổng chênh lệch tài sản dôi ra là{' '}
+              {t('whatif.totalSurplusDelta', '. Tổng chênh lệch tài sản dôi ra là')}{' '}
               <span className="font-extrabold text-indigo-600 dark:text-indigo-400">
                 {formatCurrency(finalDelta)}
               </span>
@@ -1118,10 +1117,10 @@ export const WhatIfSimulatorView: React.FC = () => {
           <div>
             <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center space-x-2">
               <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
-              <span>Bảng Phân Tích Dòng Tiền &amp; Tài Sản Chi Tiết Từng Tháng</span>
+              <span>{t('whatif.monthlyTableTitle', 'Bảng Phân Tích Dòng Tiền & Tài Sản Chi Tiết Từng Tháng')}</span>
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">
-              Chi tiết thu nhập, chi tiêu đã giảm, trả nợ vay ngoài, lãi/lỗ đầu tư và tài sản tích lũy qua từng cột
+              {t('whatif.monthlyTableDesc', 'Chi tiết thu nhập, chi tiêu đã giảm, trả nợ vay ngoài, lãi/lỗ đầu tư và tài sản tích lũy qua từng cột')}
             </p>
           </div>
 
@@ -1130,7 +1129,7 @@ export const WhatIfSimulatorView: React.FC = () => {
             className="flex items-center space-x-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm transition-colors shrink-0"
           >
             <FileSpreadsheet className="w-4 h-4" />
-            <span>Xuất Bảng Sang Excel (.xlsx)</span>
+            <span>{t('whatif.exportExcelBtn', 'Xuất Bảng Sang Excel (.xlsx)')}</span>
           </button>
         </div>
 
@@ -1138,16 +1137,16 @@ export const WhatIfSimulatorView: React.FC = () => {
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 uppercase font-semibold">
               <tr>
-                <th className="px-4 py-3">Mốc</th>
-                <th className="px-4 py-3">Thu nhập (₫)</th>
-                <th className="px-4 py-3">Chi tiêu sau giảm (₫)</th>
-                <th className="px-4 py-3 text-rose-600">Trả nợ vay (₫)</th>
-                <th className="px-4 py-3">Dư nợ còn lại (₫)</th>
-                <th className="px-4 py-3 text-blue-600">Gửi tiết kiệm (₫)</th>
-                <th className="px-4 py-3 text-purple-600">Đầu tư (₫)</th>
-                <th className="px-4 py-3">Lãi / Lỗ đầu tư (₫)</th>
-                <th className="px-4 py-3 font-extrabold text-indigo-600">Tài sản What-If (₫)</th>
-                <th className="px-4 py-3">Kịch bản gốc (₫)</th>
+                <th className="px-4 py-3">{t('whatif.colMilestone', 'Mốc')}</th>
+                <th className="px-4 py-3">{t('whatif.colIncome', 'Thu nhập (₫)')}</th>
+                <th className="px-4 py-3">{t('whatif.colExpenseAfterCut', 'Chi tiêu sau giảm (₫)')}</th>
+                <th className="px-4 py-3 text-rose-600">{t('whatif.colDebtPaid', 'Trả nợ vay (₫)')}</th>
+                <th className="px-4 py-3">{t('whatif.colRemainingDebt', 'Dư nợ còn lại (₫)')}</th>
+                <th className="px-4 py-3 text-blue-600">{t('whatif.colSavingsDeposit', 'Gửi tiết kiệm (₫)')}</th>
+                <th className="px-4 py-3 text-purple-600">{t('whatif.colInvested', 'Đầu tư (₫)')}</th>
+                <th className="px-4 py-3">{t('whatif.colInvestReturn', 'Lãi / Lỗ đầu tư (₫)')}</th>
+                <th className="px-4 py-3 font-extrabold text-indigo-600">{t('whatif.colWhatIfWealth', 'Tài sản What-If (₫)')}</th>
+                <th className="px-4 py-3">{t('whatif.colBaselineWealth', 'Kịch bản gốc (₫)')}</th>
                 <th className="px-4 py-3 font-extrabold text-emerald-600">Net Gain (₫)</th>
               </tr>
             </thead>
@@ -1218,10 +1217,10 @@ export const WhatIfSimulatorView: React.FC = () => {
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-800 dark:text-white">
-                Kiểm Tra Hiệu Năng &amp; Benchmark Kỹ Thuật (Live Performance Audit)
+                {t('whatif.perfAuditTitle', 'Kiểm Tra Hiệu Năng & Benchmark Kỹ Thuật (Live Performance Audit)')}
               </h3>
               <p className="text-xs text-slate-400">
-                Chứng minh khả năng tính toán aggregation tốc độ cao trên 1.000+ giao dịch theo yêu cầu đồ án
+                {t('whatif.perfAuditDesc', 'Chứng minh khả năng tính toán aggregation tốc độ cao trên 1.000+ giao dịch theo yêu cầu đồ án')}
               </p>
             </div>
           </div>
@@ -1232,26 +1231,26 @@ export const WhatIfSimulatorView: React.FC = () => {
             className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isBenchmarking ? 'animate-spin' : ''}`} />
-            <span>{isBenchmarking ? 'Đang đo đạc...' : 'Chạy Benchmark Kiểm Tra'}</span>
+            <span>{isBenchmarking ? t('whatif.benchmarking', 'Đang đo đạc...') : t('whatif.runBenchmark', 'Chạy Benchmark Kiểm Tra')}</span>
           </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
           <div className="p-4 rounded-2xl bg-rose-50/60 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/40">
             <div className="flex items-center justify-between font-bold text-rose-700 dark:text-rose-300 mb-2">
-              <span>Chưa Tối Ưu (Before)</span>
+              <span>{t('whatif.beforeOpt', 'Chưa Tối Ưu (Before)')}</span>
               <span className="text-[10px] px-2 py-0.5 bg-rose-200 dark:bg-rose-900 rounded-full">
                 Full Table Scan
               </span>
             </div>
             <p className="text-2xl font-black text-rose-600 mt-1">184.5 ms</p>
             <p className="text-[11px] text-slate-500 mt-1">Throughput: ~180 requests/sec</p>
-            <p className="text-[10px] text-rose-600/80 mt-1">Khi kéo thanh trượt: Bị lag, nghẽn request</p>
+            <p className="text-[10px] text-rose-600/80 mt-1">{t('whatif.beforeDesc', 'Khi kéo thanh trượt: Bị lag, nghẽn request')}</p>
           </div>
 
           <div className="p-4 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40">
             <div className="flex items-center justify-between font-bold text-emerald-700 dark:text-emerald-300 mb-2">
-              <span>Sau Tối Ưu (After)</span>
+              <span>{t('whatif.afterOpt', 'Sau Tối Ưu (After)')}</span>
               <span className="text-[10px] px-2 py-0.5 bg-emerald-200 dark:bg-emerald-900 rounded-full">
                 Index + Cache
               </span>
@@ -1261,19 +1260,19 @@ export const WhatIfSimulatorView: React.FC = () => {
             </p>
             <p className="text-[11px] text-slate-500 mt-1">Throughput: ~2.840 requests/sec</p>
             <p className="text-[10px] text-emerald-600 font-semibold mt-1">
-              Nhanh hơn gấp 102 lần • 60 FPS mượt mà
+              {t('whatif.afterMetrics', 'Nhanh hơn gấp 102 lần • 60 FPS mượt mà')}
             </p>
           </div>
 
           <div className="p-4 rounded-2xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40">
             <div className="flex items-center justify-between font-bold text-blue-700 dark:text-blue-300 mb-2">
-              <span>3 Kỹ Thuật Cốt Lõi Đã Áp Dụng</span>
+              <span>{t('whatif.techniquesApplied', '3 Kỹ Thuật Cốt Lõi Đã Áp Dụng')}</span>
               <CheckCircle2 className="w-4 h-4 text-blue-600" />
             </div>
             <ul className="space-y-1 text-slate-600 dark:text-slate-300 text-[11px]">
-              <li>✓ <strong>Debounce 150ms</strong> ở Frontend triệt tiêu spam API</li>
+              <li>✓ {t('whatif.techDebounce', 'Debounce 150ms ở Frontend triệt tiêu spam API')}</li>
               <li>✓ <strong>Compound Index</strong>: `{`userId, date, category`}`</li>
-              <li>✓ <strong>Dataset In-place Mutation</strong> trên Recharts</li>
+              <li>✓ {t('whatif.techDataset', 'Dataset In-place Mutation trên Recharts')}</li>
             </ul>
           </div>
         </div>
@@ -1287,7 +1286,7 @@ export const WhatIfSimulatorView: React.FC = () => {
           <div className="relative max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-6">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
               <h3 className="text-lg font-bold text-slate-800 dark:text-white">
-                Thêm danh mục cắt giảm chi tiêu
+                {t('whatif.addCategoryModal', 'Thêm danh mục cắt giảm chi tiêu')}
               </h3>
               <button
                 onClick={() => setAddCutModalOpen(false)}
@@ -1300,7 +1299,7 @@ export const WhatIfSimulatorView: React.FC = () => {
             <form onSubmit={handleAddExpenseCut} className="space-y-4 pt-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-500 mb-1">
-                  Chọn danh mục muốn giảm chi
+                  {t('whatif.selectCategoryLabel', 'Chọn danh mục muốn giảm chi')}
                 </label>
                 <select
                   value={newCutCatId}
@@ -1319,7 +1318,7 @@ export const WhatIfSimulatorView: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-500 mb-1">
-                  Chi tiêu gốc hiện tại mỗi tháng (VNĐ)
+                  {t('whatif.currentMonthlyExpense', 'Chi tiêu gốc hiện tại mỗi tháng (VNĐ)')}
                 </label>
                 <input
                   type="text"
@@ -1337,14 +1336,14 @@ export const WhatIfSimulatorView: React.FC = () => {
                       e.preventDefault();
                     }
                   }}
-                  placeholder="Ví dụ: 3.000.000"
+                  placeholder={t('budget.limitPlaceholder', 'Ví dụ: 3.000.000')}
                   className="w-full text-xl font-bold px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl dark:text-white"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-500 mb-1">
-                  Tỷ lệ muốn cắt giảm ban đầu (%)
+                  {t('whatif.initialCutPercent', 'Tỷ lệ muốn cắt giảm ban đầu (%)')}
                 </label>
                 <input
                   type="number"
@@ -1354,7 +1353,7 @@ export const WhatIfSimulatorView: React.FC = () => {
                   required
                   value={newCutPercent}
                   onChange={(e) => setNewCutPercent(e.target.value)}
-                  placeholder="Ví dụ: 20"
+                  placeholder="20"
                   className="w-full text-xl font-bold px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl dark:text-white"
                 />
               </div>
@@ -1365,13 +1364,13 @@ export const WhatIfSimulatorView: React.FC = () => {
                   onClick={() => setAddCutModalOpen(false)}
                   className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 rounded-xl"
                 >
-                  Hủy
+                  {t('common.cancel', 'Hủy')}
                 </button>
                 <button
                   type="submit"
                   className="px-5 py-2 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-sm"
                 >
-                  Tạo thẻ cắt giảm
+                  {t('whatif.createCutCard', 'Tạo thẻ cắt giảm')}
                 </button>
               </div>
             </form>
@@ -1387,7 +1386,7 @@ export const WhatIfSimulatorView: React.FC = () => {
           <div className="relative max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-6">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
               <h3 className="text-lg font-bold text-slate-800 dark:text-white">
-                Thêm khoản vay ngoài / Nợ phải trả
+                {t('whatif.addLoanModal', 'Thêm khoản vay ngoài / Nợ phải trả')}
               </h3>
               <button
                 onClick={() => setAddLoanModalOpen(false)}
@@ -1400,21 +1399,21 @@ export const WhatIfSimulatorView: React.FC = () => {
             <form onSubmit={handleAddLoan} className="space-y-4 pt-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-500 mb-1">
-                  Tên khoản nợ / Đối tác vay
+                  {t('whatif.loanNameLabel', 'Tên khoản nợ / Đối tác vay')}
                 </label>
                 <input
                   type="text"
                   required
                   value={newLoanName}
                   onChange={(e) => setNewLoanName(e.target.value)}
-                  placeholder="Ví dụ: Vay mua xe máy, Vay người thân..."
+                  placeholder={t('whatif.loanNamePlaceholder', 'Ví dụ: Vay mua xe máy, Vay người thân...')}
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm dark:text-white"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-500 mb-1">
-                  Dư nợ gốc còn lại (VNĐ)
+                  {t('whatif.remainingDebtLabel', 'Dư nợ gốc còn lại (VNĐ)')}
                 </label>
                 <input
                   type="text"
@@ -1432,14 +1431,14 @@ export const WhatIfSimulatorView: React.FC = () => {
                       e.preventDefault();
                     }
                   }}
-                  placeholder="Ví dụ: 20.000.000"
+                  placeholder="20.000.000"
                   className="w-full text-xl font-bold px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl dark:text-white"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-500 mb-1">
-                  Số tiền phải trả mỗi tháng (VNĐ)
+                  {t('whatif.monthlyDebtPaymentLabel', 'Số tiền phải trả mỗi tháng (VNĐ)')}
                 </label>
                 <input
                   type="text"
@@ -1457,14 +1456,14 @@ export const WhatIfSimulatorView: React.FC = () => {
                       e.preventDefault();
                     }
                   }}
-                  placeholder="Ví dụ: 2.000.000"
+                  placeholder="2.000.000"
                   className="w-full text-xl font-bold px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl dark:text-white"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-500 mb-1">
-                  Lãi suất vay (%/năm, nếu có)
+                  {t('whatif.loanInterestRateLabel', 'Lãi suất vay (%/năm, nếu có)')}
                 </label>
                 <input
                   type="number"
@@ -1482,13 +1481,13 @@ export const WhatIfSimulatorView: React.FC = () => {
                   onClick={() => setAddLoanModalOpen(false)}
                   className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 rounded-xl"
                 >
-                  Hủy
+                  {t('common.cancel', 'Hủy')}
                 </button>
                 <button
                   type="submit"
                   className="px-5 py-2 text-xs font-semibold bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-sm"
                 >
-                  Lưu khoản nợ
+                  {t('whatif.saveLoanBtn', 'Lưu khoản nợ')}
                 </button>
               </div>
             </form>

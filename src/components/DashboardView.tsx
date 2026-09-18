@@ -26,6 +26,9 @@ export const DashboardView: React.FC = () => {
     openQuickAdd,
     setActiveTab,
     t,
+    tCategory,
+    tWalletType,
+    language,
   } = useApp();
   const [selectedReceipt, setSelectedReceipt] = useState<string | null>(null);
   const [showBalance, setShowBalance] = useState(true);
@@ -48,7 +51,7 @@ export const DashboardView: React.FC = () => {
 
   return (
     <div className="space-y-5 pb-4">
-      {/* Header: Khối tiêu đề với nền màu xanh dương nhạt tinh tế, rõ ràng */}
+      {/* Header */}
       <div className="flex items-center justify-between p-4 sm:p-5 rounded-2xl bg-sky-50/90 dark:bg-sky-950/40 border border-sky-200/80 dark:border-sky-900/60 shadow-sm">
         <div>
           <h1 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
@@ -157,9 +160,9 @@ export const DashboardView: React.FC = () => {
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-rose-800 dark:text-rose-200">Vượt ngân sách {item.budget.categoryName}</p>
+                <p className="text-sm font-bold text-rose-800 dark:text-rose-200">{t('dashboard.alertOverBudget', 'Vượt ngân sách')} {tCategory(item.budget.categoryName)}</p>
                 <p className="text-xs text-rose-600/80 dark:text-rose-400 truncate">
-                  Đã chi {formatCurrency(item.spent)} / {formatCurrency(item.budget.amount)}
+                  {t('dashboard.spent', 'Đã chi')} {formatCurrency(item.spent)} / {formatCurrency(item.budget.amount)}
                 </p>
               </div>
               <ChevronRight className="w-4 h-4 text-rose-300 dark:text-rose-500 shrink-0" />
@@ -176,8 +179,8 @@ export const DashboardView: React.FC = () => {
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-amber-800 dark:text-amber-200">Sắp vượt ngân sách {item.budget.categoryName}</p>
-                <p className="text-xs text-amber-600/80 dark:text-amber-400 truncate">Đã sử dụng {item.percentage}%</p>
+                <p className="text-sm font-bold text-amber-800 dark:text-amber-200">{t('dashboard.alertNearBudget', 'Sắp vượt ngân sách')} {tCategory(item.budget.categoryName)}</p>
+                <p className="text-xs text-amber-600/80 dark:text-amber-400 truncate">{t('budget.usedBudget', 'Đã sử dụng')} {item.percentage}%</p>
               </div>
               <ChevronRight className="w-4 h-4 text-amber-300 dark:text-amber-500 shrink-0" />
             </button>
@@ -192,9 +195,9 @@ export const DashboardView: React.FC = () => {
                 <Wallet className="w-5 h-5" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-blue-800 dark:text-blue-200">{unpaidBills.length} hóa đơn sắp đến hạn</p>
+                <p className="text-sm font-bold text-blue-800 dark:text-blue-200">{unpaidBills.length} {t('dashboard.billsDueSoon', 'hóa đơn sắp đến hạn')}</p>
                 <p className="text-xs text-blue-600/80 dark:text-blue-400 truncate">
-                  Tổng {formatCurrency(unpaidBills.reduce((s, b) => s + b.amount, 0))}
+                  {t('tx.total', 'Tổng')} {formatCurrency(unpaidBills.reduce((s, b) => s + b.amount, 0))}
                 </p>
               </div>
               <ChevronRight className="w-4 h-4 text-blue-300 dark:text-blue-500 shrink-0" />
@@ -214,11 +217,11 @@ export const DashboardView: React.FC = () => {
           </div>
           <div>
             <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
-              Mô phỏng tài chính What-If
-              <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">Công cụ dự báo</span>
+              {t('dashboard.whatifTitle', 'Mô phỏng tài chính What-If')}
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">{t('dashboard.whatifBadge', 'Công cụ dự báo')}</span>
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Kéo thanh trượt để dự báo tăng trưởng tài sản khi cắt giảm chi tiêu hoặc đầu tư thêm
+              {t('dashboard.whatifDesc', 'Kéo thanh trượt để dự báo tăng trưởng tài sản khi cắt giảm chi tiêu hoặc đầu tư thêm')}
             </p>
           </div>
         </div>
@@ -270,10 +273,10 @@ export const DashboardView: React.FC = () => {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                    {tx.type === 'TRANSFER' ? `Chuyển sang ${tx.toWalletName || 'Ví'}` : tx.categoryName || 'Khác'}
+                    {tx.type === 'TRANSFER' ? `${t('tx.transferTo', 'Chuyển sang')} ${tx.toWalletName || t('nav.wallets', 'Ví')}` : tCategory(tx.categoryName || 'Khác')}
                   </p>
                   {tx.receiptImage && (
-                    <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-1.5 py-0.5 rounded-full">Hóa đơn</span>
+                    <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-1.5 py-0.5 rounded-full">{t('bills.title', 'Hóa đơn')}</span>
                   )}
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
@@ -299,7 +302,7 @@ export const DashboardView: React.FC = () => {
         isOpen={Boolean(selectedReceipt)}
         onClose={() => setSelectedReceipt(null)}
         imageUrl={selectedReceipt || undefined}
-        title="Ảnh chụp chứng từ hóa đơn"
+        title={t('wallets.viewReceiptTitle', 'Ảnh chụp chứng từ hóa đơn')}
       />
     </div>
   );

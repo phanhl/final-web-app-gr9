@@ -96,7 +96,7 @@ export const ReportsView: React.FC = () => {
     const catMap: { [name: string]: { total: number; count: number } } = {};
 
     expenseTxs.forEach((t) => {
-      const name = t.categoryName || 'Khác';
+      const name = t.categoryName || tCategory('Khác');
       if (!catMap[name]) catMap[name] = { total: 0, count: 0 };
       catMap[name].total += t.amount;
       catMap[name].count += 1;
@@ -145,8 +145,8 @@ export const ReportsView: React.FC = () => {
       runningBalance += diff;
       return {
         month: d.month,
-        'Dòng tiền thuần': diff,
-        'Tổng tích lũy': runningBalance,
+        [t('reports.netCashflow', 'Dòng tiền thuần')]: diff,
+        [t('reports.accumulated', 'Tổng tích lũy')]: runningBalance,
       };
     });
   }, [monthlyComparisonData]);
@@ -313,9 +313,9 @@ export const ReportsView: React.FC = () => {
         </div>
       </div>
 
-      {/* 4. CHARTS: BIỂU ĐỒ TRÒN & BIỂU ĐỒ CỘT */}
+      {/* 4. CHARTS */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print:block print:space-y-6">
-        {/* Chart 1: Biểu đồ tròn Cơ cấu chi tiêu (Đồng bộ giao diện hoàn toàn với Sổ giao dịch) */}
+        {/* Chart 1: Expense breakdown donut chart */}
         <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -412,13 +412,13 @@ export const ReportsView: React.FC = () => {
                     ) : (
                       <div>
                         <p className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider">
-                          Tổng chi
+                          {t('reports.totalExpense', 'Tổng chi')}
                         </p>
                         <p className="text-base font-black text-slate-900 dark:text-white leading-tight mt-0.5">
                           {formatCurrency(totalExpense)}
                         </p>
                         <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
-                          {categoryBreakdown.length} danh mục
+                          {categoryBreakdown.length} {t('reports.categories', 'danh mục')}
                         </p>
                       </div>
                     )}
@@ -480,22 +480,22 @@ export const ReportsView: React.FC = () => {
                 <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 mb-2">
                   <PieChartIcon className="w-6 h-6" />
                 </div>
-                <p className="text-xs text-slate-400 font-medium">Chưa có dữ liệu chi tiêu trong kỳ này</p>
+                <p className="text-xs text-slate-400 font-medium">{t('reports.noExpenseData', 'Chưa có dữ liệu chi tiêu trong kỳ này')}</p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Chart 2: Biểu đồ cột Thu - Chi qua các tháng */}
+        {/* Chart 2: Income vs Expense bar chart */}
         <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center space-x-2">
                 <BarChart3 className="w-5 h-5 text-blue-500" />
-                <span>So sánh Thu - Chi theo thời gian</span>
+                <span>{t('reports.incomeExpenseComparison', 'So sánh Thu - Chi theo thời gian')}</span>
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Biến động dòng tiền qua 5 tháng gần nhất
+                {t('reports.cashflow5Months', 'Biến động dòng tiền qua 5 tháng gần nhất')}
               </p>
             </div>
           </div>
@@ -535,10 +535,10 @@ export const ReportsView: React.FC = () => {
           <div>
             <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center space-x-2">
               <TrendingUp className="w-5 h-5 text-indigo-500" />
-              <span>Phân tích Xu hướng Dòng tiền & Tích lũy</span>
+              <span>{t('reports.trendAnalysis', 'Phân tích Xu hướng Dòng tiền & Tích lũy')}</span>
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Biểu đồ tăng trưởng tổng tài sản tích lũy qua các tháng
+              {t('reports.growthChartDesc', 'Biểu đồ tăng trưởng tổng tài sản tích lũy qua các tháng')}
             </p>
           </div>
         </div>
@@ -571,7 +571,7 @@ export const ReportsView: React.FC = () => {
               />
               <Area
                 type="monotone"
-                dataKey="Tổng tích lũy"
+                dataKey={t('reports.accumulated', 'Tổng tích lũy')}
                 stroke="#6366f1"
                 strokeWidth={3}
                 fillOpacity={1}
@@ -586,7 +586,7 @@ export const ReportsView: React.FC = () => {
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800">
           <h3 className="text-base font-bold text-slate-800 dark:text-white">
-            Xếp hạng Danh mục Chi tiêu trong Kỳ
+            {t('reports.categoryRanking', 'Xếp hạng Danh mục Chi tiêu trong Kỳ')}
           </h3>
         </div>
 
@@ -594,12 +594,12 @@ export const ReportsView: React.FC = () => {
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 uppercase font-semibold">
               <tr>
-                <th className="px-6 py-3">Hạng</th>
-                <th className="px-6 py-3">Danh mục</th>
-                <th className="px-6 py-3">Tổng chi (₫)</th>
-                <th className="px-6 py-3">Tỷ trọng (%)</th>
-                <th className="px-6 py-3">Số giao dịch</th>
-                <th className="px-6 py-3">Trung bình / lần</th>
+                <th className="px-6 py-3">{t('reports.rank', 'Hạng')}</th>
+                <th className="px-6 py-3">{t('reports.category', 'Danh mục')}</th>
+                <th className="px-6 py-3">{t('reports.totalSpentCol', 'Tổng chi (₫)')}</th>
+                <th className="px-6 py-3">{t('reports.percentageCol', 'Tỷ trọng (%)')}</th>
+                <th className="px-6 py-3">{t('reports.txCountCol', 'Số giao dịch')}</th>
+                <th className="px-6 py-3">{t('reports.avgPerTxCol', 'Trung bình / lần')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -627,7 +627,7 @@ export const ReportsView: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-3.5 text-slate-600 dark:text-slate-400 font-medium">
-                    {cat.count} lần
+                    {cat.count} {t('reports.times', 'lần')}
                   </td>
                   <td className="px-6 py-3.5 font-semibold text-slate-700 dark:text-slate-300">
                     {formatCurrency(Math.round(cat.value / (cat.count || 1)))}

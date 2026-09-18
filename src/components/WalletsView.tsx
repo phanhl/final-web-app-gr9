@@ -255,7 +255,7 @@ export const WalletsView: React.FC = () => {
   return (
     <div className="space-y-6 pb-12">
       {/* ========================================================================= */}
-      {/* 1. SCENARIO A: CHI TIẾT 1 VÍ ĐƯỢC CHỌN (WALLET DETAIL & CASHFLOW VIEW)    */}
+      {/* 1. SCENARIO A: WALLET DETAIL */}
       {/* ========================================================================= */}
       {selectedWallet ? (
         <div className="space-y-6">
@@ -294,16 +294,16 @@ export const WalletsView: React.FC = () => {
                     </span>
                   </div>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                    {selectedWallet.bankName ? `${selectedWallet.bankName} • STK: ${selectedWallet.accountNumber || 'Chưa cập nhật'}` : 'Tiền mặt tại ví cá nhân'}
+                    {selectedWallet.bankName ? `${selectedWallet.bankName} • STK: ${selectedWallet.accountNumber || t('wallets.notUpdated', 'Chưa cập nhật')}` : t('wallets.personalCash', 'Tiền mặt tại ví cá nhân')}
                   </p>
                   {selectedWallet.type === 'CREDIT' && selectedWallet.creditLimit && (
                     <p className="text-xs text-purple-600 dark:text-purple-400 font-medium mt-0.5">
-                      Hạn mức tín dụng: {formatCurrency(selectedWallet.creditLimit)} • Khả dụng: {formatCurrency(Math.max(0, selectedWallet.creditLimit - selectedWallet.balance))}
+                      {t('wallets.creditLimit', 'Hạn mức tín dụng:')} {formatCurrency(selectedWallet.creditLimit)} • {t('qa.availableBalance', 'Khả dụng')}: {formatCurrency(Math.max(0, selectedWallet.creditLimit - selectedWallet.balance))}
                     </p>
                   )}
                   {selectedWallet.type === 'SAVINGS' && selectedWallet.interestRate && (
                     <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-0.5">
-                      Lãi suất tiền gửi: {selectedWallet.interestRate}% / năm
+                      {t('wallets.depositInterest', 'Lãi suất tiền gửi:')} {selectedWallet.interestRate}% {t('wallets.perYear', '/ năm')}
                     </p>
                   )}
                 </div>
@@ -351,52 +351,52 @@ export const WalletsView: React.FC = () => {
             {/* Current Balance */}
             <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
               <span className="text-xs font-semibold text-slate-400 uppercase">
-                {selectedWallet.type === 'CREDIT' ? 'Dư nợ cần trả' : 'Số dư hiện tại'}
+                {selectedWallet.type === 'CREDIT' ? t('wallets.currentDebt', 'Dư nợ cần trả') : t('wallets.currentBalance', 'Số dư hiện tại')}
               </span>
               <p className={`text-2xl font-black mt-1 ${selectedWallet.type === 'CREDIT' ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-white'}`}>
                 {formatCurrency(selectedWallet.balance)}
               </p>
               <span className="text-[11px] text-slate-400">
-                {selectedWallet.type === 'CREDIT' ? 'Đã chi tiêu bằng thẻ' : 'Tiền thực tế sẵn sàng sử dụng'}
+                {selectedWallet.type === 'CREDIT' ? t('wallets.creditSpent', 'Đã chi tiêu bằng thẻ') : t('wallets.readyMoney', 'Tiền thực tế sẵn sàng sử dụng')}
               </span>
             </div>
 
             {/* Total Inflow */}
             <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-400 uppercase">Tổng tiền thu / nạp vào</span>
+                <span className="text-xs font-semibold text-slate-400 uppercase">{t('wallets.totalIncomeIn', 'Tổng tiền thu / nạp vào')}</span>
                 <TrendingUp className="w-4 h-4 text-emerald-500" />
               </div>
               <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
                 +{formatCurrency(totalInflow)}
               </p>
               <span className="text-[11px] text-emerald-600/80 dark:text-emerald-400/80">
-                Từ các khoản thu & nhận chuyển khoản
+                {t('wallets.fromIncomeTransfers', 'Từ các khoản thu & nhận chuyển khoản')}
               </span>
             </div>
 
             {/* Total Outflow */}
             <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-400 uppercase">Tổng tiền chi / rút ra</span>
+                <span className="text-xs font-semibold text-slate-400 uppercase">{t('wallets.totalExpenseOut', 'Tổng tiền chi / rút ra')}</span>
                 <TrendingDown className="w-4 h-4 text-rose-500" />
               </div>
               <p className="text-2xl font-black text-rose-600 dark:text-rose-400 mt-1">
                 -{formatCurrency(totalOutflow)}
               </p>
               <span className="text-[11px] text-rose-600/80 dark:text-rose-400/80">
-                Từ các khoản chi & chuyển sang ví khác
+                {t('wallets.fromExpensesTransfers', 'Từ các khoản chi & chuyển sang ví khác')}
               </span>
             </div>
 
             {/* Net Cash Flow */}
             <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-              <span className="text-xs font-semibold text-slate-400 uppercase">Chênh lệch dòng tiền</span>
+              <span className="text-xs font-semibold text-slate-400 uppercase">{t('wallets.cashflowDiff', 'Chênh lệch dòng tiền')}</span>
               <p className={`text-2xl font-black mt-1 ${netCashFlow >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-amber-600 dark:text-amber-400'}`}>
                 {netCashFlow >= 0 ? `+${formatCurrency(netCashFlow)}` : formatCurrency(netCashFlow)}
               </p>
               <span className="text-[11px] text-slate-400">
-                Tổng thu trừ tổng chi qua ví này
+                {t('wallets.incomeMinusExpense', 'Tổng thu trừ tổng chi qua ví này')}
               </span>
             </div>
           </div>
@@ -407,10 +407,10 @@ export const WalletsView: React.FC = () => {
               {/* Filter Tabs */}
               <div className="flex items-center space-x-1.5 overflow-x-auto no-scrollbar w-full sm:w-auto">
                 {[
-                  { id: 'ALL', label: `Tất cả (${walletTransactions.length})` },
-                  { id: 'EXPENSE', label: `Chi tiêu (${countExpense})` },
-                  { id: 'INCOME', label: `Thu nhập (${countIncome})` },
-                  { id: 'TRANSFER', label: `Chuyển khoản (${countTransfer})` },
+                  { id: 'ALL', label: `${t('common.all', 'Tất cả')} (${walletTransactions.length})` },
+                  { id: 'EXPENSE', label: `${t('dashboard.expense', 'Chi tiêu')} (${countExpense})` },
+                  { id: 'INCOME', label: `${t('dashboard.income', 'Thu nhập')} (${countIncome})` },
+                  { id: 'TRANSFER', label: `${t('nav.transfer', 'Chuyển khoản')} (${countTransfer})` },
                 ].map((f) => (
                   <button
                     key={f.id}
@@ -433,7 +433,7 @@ export const WalletsView: React.FC = () => {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Tìm kiếm giao dịch của ví..."
+                  placeholder={t('wallets.searchTxPlaceholder', 'Tìm kiếm giao dịch của ví...')}
                   className="w-full pl-9 pr-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 {searchQuery && (
@@ -452,10 +452,10 @@ export const WalletsView: React.FC = () => {
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
               <h3 className="text-sm font-bold text-slate-800 dark:text-white">
-                Lịch Sử Thu Chi Của Ví ({filteredWalletTransactions.length} giao dịch)
+                {t('wallets.walletHistory', 'Lịch Sử Thu Chi Của Ví')} ({filteredWalletTransactions.length} {t('nav.transactionsCount', 'giao dịch')})
               </h3>
               <p className="text-xs text-slate-400">
-                Sắp xếp theo ngày mới nhất
+                {t('wallets.sortByNewest', 'Sắp xếp theo ngày mới nhất')}
               </p>
             </div>
 
@@ -465,18 +465,18 @@ export const WalletsView: React.FC = () => {
                   <Inbox className="w-7 h-7" />
                 </div>
                 <h4 className="text-sm font-bold text-slate-800 dark:text-white">
-                  Chưa có giao dịch nào phù hợp
+                  {t('wallets.noTxFound', 'Chưa có giao dịch nào phù hợp')}
                 </h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
                   {searchQuery
-                    ? `Không tìm thấy giao dịch nào khớp với từ khóa "${searchQuery}"`
-                    : 'Ví này chưa ghi nhận khoản thu hoặc chi nào. Hãy thêm giao dịch đầu tiên để bắt đầu theo dõi!'}
+                    ? `${t('wallets.noTxFound', 'Không tìm thấy giao dịch nào khớp với từ khóa')} "${searchQuery}"`
+                    : t('wallets.noTxEmpty', 'Ví này chưa ghi nhận khoản thu hoặc chi nào. Hãy thêm giao dịch đầu tiên để bắt đầu theo dõi!')}
                 </p>
                 <button
                   onClick={() => openQuickAdd('EXPENSE', selectedWallet.id)}
                   className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors cursor-pointer"
                 >
-                  + Thêm giao dịch cho ví này
+                  {t('wallets.addTxForWallet', '+ Thêm giao dịch cho ví này')}
                 </button>
               </div>
             ) : (
@@ -517,9 +517,9 @@ export const WalletsView: React.FC = () => {
                             <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
                               {isTransfer
                                 ? isOutgoingTransfer
-                                  ? `Chuyển sang: ${tx.toWalletName || 'Ví khác'}`
-                                  : `Nhận từ: ${tx.walletName || 'Ví khác'}`
-                                : tx.categoryName || 'Khác'}
+                                  ? `${t('tx.transferTo', 'Chuyển sang:')} ${tx.toWalletName || t('wallets.transferToOther', 'Ví khác')}`
+                                  : `${t('wallets.receivedFrom', 'Nhận từ:')} ${tx.walletName || t('wallets.transferToOther', 'Ví khác')}`
+                                : tCategory(tx.categoryName || 'Khác')}
                             </h4>
                             <span
                               className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
@@ -531,12 +531,12 @@ export const WalletsView: React.FC = () => {
                               }`}
                             >
                               {isIncome
-                                ? 'Thu nhập'
+                                ? t('wallets.incomeTag', 'Thu nhập')
                                 : isExpense
-                                ? 'Khoản chi'
+                                ? t('wallets.expenseTag', 'Khoản chi')
                                 : isOutgoingTransfer
-                                ? 'Chuyển đi'
-                                : 'Nhận tiền'}
+                                ? t('wallets.transferOutTag', 'Chuyển đi')
+                                : t('wallets.transferInTag', 'Nhận tiền')}
                             </span>
                           </div>
 
@@ -581,7 +581,7 @@ export const WalletsView: React.FC = () => {
                           </p>
                           {isOutgoingTransfer && tx.fee && tx.fee > 0 ? (
                             <p className="text-[10px] text-slate-400">
-                              Phí: {formatCurrency(tx.fee)}
+                              {t('wallets.feeLabel', 'Phí:')} {formatCurrency(tx.fee)}
                             </p>
                           ) : null}
                         </div>
@@ -591,7 +591,7 @@ export const WalletsView: React.FC = () => {
                           <button
                             onClick={() => setReceiptModalImage(tx.receiptImage || null)}
                             className="p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg transition-colors cursor-pointer"
-                            title="Xem ảnh chứng từ"
+                            title={t('wallets.viewReceiptTitle', 'Xem ảnh chứng từ')}
                           >
                             <Receipt className="w-4 h-4" />
                           </button>
@@ -600,12 +600,12 @@ export const WalletsView: React.FC = () => {
                         {/* Delete Transaction */}
                         <button
                           onClick={() => {
-                            if (confirm(`Bạn có chắc muốn xóa giao dịch này (${formatCurrency(tx.amount)})? Số dư ví sẽ được tự động hoàn tác.`)) {
+                            if (confirm(t('wallets.deleteTxConfirm', 'Bạn có chắc muốn xóa giao dịch này? Số dư ví sẽ được tự động hoàn tác.'))) {
                               deleteTransaction(tx.id);
                             }
                           }}
                           className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer"
-                          title="Xóa giao dịch"
+                          title={t('wallets.deleteTxTitle', 'Xóa giao dịch')}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -626,10 +626,10 @@ export const WalletsView: React.FC = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">
-                Quản Lý Tài Khoản & Ví
+                {t('wallets.title', 'Quản Lý Tài Khoản & Ví')}
               </h1>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Bấm vào từng ví để xem chi tiết thu - chi và dòng tiền. Quản lý tiền mặt, ngân hàng, thẻ tín dụng và tiết kiệm
+                {t('wallets.subtitle', 'Bấm vào từng ví để xem chi tiết thu - chi và dòng tiền. Quản lý tiền mặt, ngân hàng, thẻ tín dụng và tiết kiệm')}
               </p>
             </div>
 
@@ -639,7 +639,7 @@ export const WalletsView: React.FC = () => {
                 className="flex items-center space-x-1.5 px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold shadow-sm transition-colors cursor-pointer"
               >
                 <ArrowRightLeft className="w-4 h-4 text-blue-600" />
-                <span>Chuyển khoản nội bộ</span>
+                <span>{t('wallets.internalTransfer', 'Chuyển khoản nội bộ')}</span>
               </button>
 
               <button
@@ -647,7 +647,7 @@ export const WalletsView: React.FC = () => {
                 className="flex items-center space-x-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
-                <span>Tạo ví mới</span>
+                <span>{t('wallets.createNew', 'Tạo ví mới')}</span>
               </button>
             </div>
           </div>
@@ -659,42 +659,42 @@ export const WalletsView: React.FC = () => {
               <p className="text-2xl font-black mt-1 text-white">
                 {formatCurrency(financialSummary.totalAssets)}
               </p>
-              <span className="text-[11px] text-slate-300">Toàn bộ tài sản trừ nợ thẻ</span>
+              <span className="text-[11px] text-slate-300">{t('wallets.netWorthSub', 'Toàn bộ tài sản trừ nợ thẻ')}</span>
             </div>
 
             <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-              <span className="text-xs font-semibold text-slate-400 uppercase">Số dư khả dụng</span>
+              <span className="text-xs font-semibold text-slate-400 uppercase">{t('wallets.availableBalance', 'Số dư khả dụng')}</span>
               <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
                 {formatCurrency(financialSummary.availableBalance)}
               </p>
-              <span className="text-[11px] text-slate-400">Tiền mặt + Tài khoản ngân hàng</span>
+              <span className="text-[11px] text-slate-400">{t('wallets.availableSub', 'Tiền mặt + Tài khoản ngân hàng')}</span>
             </div>
 
             <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-              <span className="text-xs font-semibold text-slate-400 uppercase">Tiền gửi tiết kiệm</span>
+              <span className="text-xs font-semibold text-slate-400 uppercase">{t('wallets.savingsTotal', 'Tiền gửi tiết kiệm')}</span>
               <p className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">
                 {formatCurrency(financialSummary.totalSavings)}
               </p>
-              <span className="text-[11px] text-slate-400">Đang sinh lãi tại các ngân hàng</span>
+              <span className="text-[11px] text-slate-400">{t('wallets.savingsSub', 'Đang sinh lãi tại các ngân hàng')}</span>
             </div>
 
             <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-              <span className="text-xs font-semibold text-slate-400 uppercase">Dư nợ thẻ tín dụng</span>
+              <span className="text-xs font-semibold text-slate-400 uppercase">{t('wallets.creditDebt', 'Dư nợ thẻ tín dụng')}</span>
               <p className="text-2xl font-black text-rose-600 dark:text-rose-400 mt-1">
                 {formatCurrency(financialSummary.totalCreditDebt)}
               </p>
-              <span className="text-[11px] text-rose-500 font-semibold">Cần thanh toán đúng kỳ sao kê</span>
+              <span className="text-[11px] text-rose-500 font-semibold">{t('wallets.creditSub', 'Cần thanh toán đúng kỳ sao kê')}</span>
             </div>
           </div>
 
           {/* 3. WALLETS LIST BY GROUP */}
           <div className="space-y-6">
-            {/* Nhóm 1: Tiền mặt */}
+            {/* Group 1: Cash */}
             <div>
               <div className="flex items-center space-x-2 mb-3">
                 <Banknote className="w-5 h-5 text-emerald-500" />
                 <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">
-                  1. Tiền Mặt ({cashWallets.length})
+                  1. {t('wallets.cashGroup', 'Tiền Mặt')} ({cashWallets.length})
                 </h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -705,7 +705,7 @@ export const WalletsView: React.FC = () => {
                     onViewDetail={() => setSelectedWalletId(w.id)}
                     onEdit={(e) => handleStartEditWallet(w, e)}
                     onDelete={(e) => {
-                      if (confirm(`Bạn có chắc muốn xóa ví ${w.name}?`)) {
+                      if (confirm(`${t('wallets.deleteWalletConfirm', 'Bạn có chắc muốn xóa ví')} ${w.name}?`)) {
                         deleteWallet(w.id);
                       }
                     }}
@@ -714,12 +714,12 @@ export const WalletsView: React.FC = () => {
               </div>
             </div>
 
-            {/* Nhóm 2: Tài khoản ngân hàng */}
+            {/* Group 2: Bank */}
             <div>
               <div className="flex items-center space-x-2 mb-3">
                 <Building2 className="w-5 h-5 text-blue-500" />
                 <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">
-                  2. Tài Khoản Ngân Hàng ({bankWallets.length})
+                  2. {t('wallets.bankGroup', 'Tài Khoản Ngân Hàng')} ({bankWallets.length})
                 </h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -730,7 +730,7 @@ export const WalletsView: React.FC = () => {
                     onViewDetail={() => setSelectedWalletId(w.id)}
                     onEdit={(e) => handleStartEditWallet(w, e)}
                     onDelete={(e) => {
-                      if (confirm(`Bạn có chắc muốn xóa ví ${w.name}?`)) {
+                      if (confirm(`${t('wallets.deleteWalletConfirm', 'Bạn có chắc muốn xóa ví')} ${w.name}?`)) {
                         deleteWallet(w.id);
                       }
                     }}
@@ -744,7 +744,7 @@ export const WalletsView: React.FC = () => {
               <div className="flex items-center space-x-2 mb-3">
                 <CreditCard className="w-5 h-5 text-purple-500" />
                 <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">
-                  3. Thẻ Tín Dụng ({creditWallets.length})
+                  3. {t('wallets.creditGroup', 'Thẻ Tín Dụng')} ({creditWallets.length})
                 </h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -755,7 +755,7 @@ export const WalletsView: React.FC = () => {
                     onViewDetail={() => setSelectedWalletId(w.id)}
                     onEdit={(e) => handleStartEditWallet(w, e)}
                     onDelete={(e) => {
-                      if (confirm(`Bạn có chắc muốn xóa ví ${w.name}?`)) {
+                      if (confirm(`${t('wallets.deleteWalletConfirm', 'Bạn có chắc muốn xóa ví')} ${w.name}?`)) {
                         deleteWallet(w.id);
                       }
                     }}
@@ -764,12 +764,12 @@ export const WalletsView: React.FC = () => {
               </div>
             </div>
 
-            {/* Nhóm 4: Sổ tiết kiệm */}
+            {/* Group 4: Savings */}
             <div>
               <div className="flex items-center space-x-2 mb-3">
                 <PiggyBank className="w-5 h-5 text-amber-500" />
                 <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">
-                  4. Sổ Tiết Kiệm ({savingsWallets.length})
+                  4. {t('wallets.savingsGroup', 'Sổ Tiết Kiệm')} ({savingsWallets.length})
                 </h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -780,7 +780,7 @@ export const WalletsView: React.FC = () => {
                     onViewDetail={() => setSelectedWalletId(w.id)}
                     onEdit={(e) => handleStartEditWallet(w, e)}
                     onDelete={(e) => {
-                      if (confirm(`Bạn có chắc muốn xóa ví ${w.name}?`)) {
+                      if (confirm(`${t('wallets.deleteWalletConfirm', 'Bạn có chắc muốn xóa ví')} ${w.name}?`)) {
                         deleteWallet(w.id);
                       }
                     }}
@@ -800,7 +800,7 @@ export const WalletsView: React.FC = () => {
           <div className="relative max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-6">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
               <h3 className="text-lg font-bold text-slate-800 dark:text-white">
-                {editingWallet ? 'Chỉnh sửa ví / tài khoản' : 'Tạo nguồn tiền mới'}
+                {editingWallet ? t('wallets.editWalletModal', 'Chỉnh sửa ví / tài khoản') : t('wallets.newWalletModal', 'Tạo nguồn tiền mới')}
               </h3>
               <button
                 onClick={() => setWalletModalOpen(false)}
@@ -813,14 +813,14 @@ export const WalletsView: React.FC = () => {
             <form onSubmit={handleSaveWallet} className="space-y-4 pt-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                  Loại nguồn tiền
+                  {t('wallets.fundingType', 'Loại nguồn tiền')}
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { type: 'CASH', label: 'Tiền mặt' },
-                    { type: 'BANK', label: 'Ngân hàng' },
-                    { type: 'CREDIT', label: 'Thẻ tín dụng' },
-                    { type: 'SAVINGS', label: 'Sổ tiết kiệm' },
+                    { type: 'CASH', label: t('wallets.cashGroup', 'Tiền mặt') },
+                    { type: 'BANK', label: t('wallets.bankGroup', 'Ngân hàng') },
+                    { type: 'CREDIT', label: t('wallets.creditGroup', 'Thẻ tín dụng') },
+                    { type: 'SAVINGS', label: t('wallets.savingsGroup', 'Sổ tiết kiệm') },
                   ].map((t) => (
                     <button
                       key={t.type}
@@ -841,21 +841,21 @@ export const WalletsView: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                  Tên hiển thị của Ví
+                  {t('wallets.walletNameLabel', 'Tên hiển thị của Ví')}
                 </label>
                 <input
                   type="text"
                   required
                   value={walletName}
                   onChange={(e) => setWalletName(e.target.value)}
-                  placeholder="Ví dụ: Techcombank Priority, Tiền mặt ví tay..."
+                  placeholder={t('wallets.walletNamePlaceholder', 'Ví dụ: Techcombank Priority, Tiền mặt ví tay...')}
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                  {walletType === 'CREDIT' ? 'Dư nợ hiện tại (VNĐ)' : 'Số dư hiện tại (VNĐ)'}
+                  {walletType === 'CREDIT' ? t('wallets.creditDebtLabel', 'Dư nợ hiện tại (VNĐ)') : t('wallets.balanceLabel', 'Số dư hiện tại (VNĐ)')}
                 </label>
                 <input
                   type="text"
@@ -881,7 +881,7 @@ export const WalletsView: React.FC = () => {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                      Ngân hàng
+                      {t('wallets.bankLabel', 'Ngân hàng')}
                     </label>
                     <select
                       value={walletBankName}
@@ -898,7 +898,7 @@ export const WalletsView: React.FC = () => {
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                      Số tài khoản / 4 số cuối
+                      {t('wallets.accountNumberLabel', 'Số tài khoản / 4 số cuối')}
                     </label>
                     <input
                       type="text"
@@ -931,7 +931,7 @@ export const WalletsView: React.FC = () => {
                         e.preventDefault();
                       }
                     }}
-                    placeholder="Ví dụ: 30000000"
+                    placeholder={t('wallets.creditLimitPlaceholder', 'Ví dụ: 30000000')}
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white"
                   />
                 </div>
@@ -940,21 +940,21 @@ export const WalletsView: React.FC = () => {
               {walletType === 'SAVINGS' && (
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                    Lãi suất gửi (%/năm)
+                    {t('wallets.interestRateLabel', 'Lãi suất gửi (%/năm)')}
                   </label>
                   <input
                     type="number"
                     step="0.1"
                     value={walletInterestRate}
                     onChange={(e) => setWalletInterestRate(e.target.value)}
-                    placeholder="Ví dụ: 6.2"
+                    placeholder={t('wallets.ratePlaceholder', 'Ví dụ: 6.2')}
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white"
                   />
                 </div>
               )}
 
               <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Màu sắc nhận diện</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">{t('wallets.colorLabel', 'Màu sắc nhận diện')}</label>
                 <div className="flex space-x-2">
                   {['#0ea5e9', '#10b981', '#ef4444', '#8b5cf6', '#007a33', '#f59e0b', '#3b82f6'].map((c) => (
                     <button
@@ -976,13 +976,13 @@ export const WalletsView: React.FC = () => {
                   onClick={() => setWalletModalOpen(false)}
                   className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer"
                 >
-                  Hủy
+                  {t('common.cancel', 'Hủy')}
                 </button>
                 <button
                   type="submit"
                   className="px-5 py-2 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm cursor-pointer"
                 >
-                  Lưu ví
+                  {t('wallets.saveWalletBtn', 'Lưu ví')}
                 </button>
               </div>
             </form>
@@ -1009,7 +1009,7 @@ export const WalletsView: React.FC = () => {
               <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
                 <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center space-x-2">
                   <ArrowRightLeft className="w-5 h-5 text-blue-600" />
-                  <span>Chuyển Khoản Giữa Các Ví</span>
+                  <span>{t('wallets.transferModalTitle', 'Chuyển Khoản Giữa Các Ví')}</span>
                 </h3>
                 <button
                   onClick={() => setTransferModalOpen(false)}
@@ -1022,9 +1022,9 @@ export const WalletsView: React.FC = () => {
               <form onSubmit={handleConfirmTransfer} className="space-y-4 pt-4">
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">Ví chuyển (Nguồn)</label>
+                    <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">{t('wallets.fromWalletLabel', 'Ví chuyển (Nguồn)')}</label>
                     <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-                      Khả dụng: {formatCurrency(fromAvailable)}
+                      {t('qa.availableBalance', 'Khả dụng')}: {formatCurrency(fromAvailable)}
                     </span>
                   </div>
                   <select
@@ -1034,14 +1034,14 @@ export const WalletsView: React.FC = () => {
                   >
                     {wallets.map((w) => (
                       <option key={w.id} value={w.id}>
-                        {w.name} (Số dư: {formatCurrency(w.balance)})
+                        {w.name} ({t('wallets.currentBalance', 'Số dư')}: {formatCurrency(w.balance)})
                       </option>
                     ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Ví nhận (Đích)</label>
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">{t('wallets.toWalletLabel', 'Ví nhận (Đích)')}</label>
                   <select
                     value={toWalletId}
                     onChange={(e) => setToWalletId(e.target.value)}
@@ -1051,7 +1051,7 @@ export const WalletsView: React.FC = () => {
                       .filter((w) => w.id !== fromWalletId)
                       .map((w) => (
                         <option key={w.id}>
-                          {w.name} (Số dư: {formatCurrency(w.balance)})
+                          {w.name} ({t('wallets.currentBalance', 'Số dư')}: {formatCurrency(w.balance)})
                         </option>
                       ))}
                   </select>
@@ -1088,7 +1088,7 @@ export const WalletsView: React.FC = () => {
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                    Phí chuyển (nếu có)
+                    {t('wallets.transferFeeLabel', 'Phí chuyển (nếu có)')}
                   </label>
                   <input
                     type="text"
@@ -1120,11 +1120,11 @@ export const WalletsView: React.FC = () => {
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2 text-slate-600 dark:text-slate-300 min-w-0">
-                      <span className="shrink-0">Tổng tiền trừ khỏi ví nguồn (Gồm phí):</span>
+                      <span className="shrink-0">{t('wallets.totalDeducted', 'Tổng tiền trừ khỏi ví nguồn (Gồm phí):')}</span>
                       <span className="font-bold min-w-0 text-right break-words break-all [overflow-wrap:anywhere]">{formatCurrency(totalRequired)}</span>
                     </div>
                     <div className="flex items-center justify-between gap-2 min-w-0">
-                      <span className="text-slate-600 dark:text-slate-300 shrink-0">Dự kiến số dư còn lại của ví nguồn:</span>
+                      <span className="text-slate-600 dark:text-slate-300 shrink-0">{t('wallets.estimatedRemaining', 'Dự kiến số dư còn lại của ví nguồn:')}</span>
                       <span
                         className={`font-bold min-w-0 text-right break-words break-all [overflow-wrap:anywhere] ${
                           isTransferOverdraft
@@ -1140,7 +1140,7 @@ export const WalletsView: React.FC = () => {
                       <div className="pt-2 mt-1 border-t border-rose-200 dark:border-rose-900/50 flex items-start gap-2 text-rose-700 dark:text-rose-300 font-semibold text-[11px] min-w-0">
                         <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
                         <span className="min-w-0 flex-1 leading-relaxed break-words break-all [overflow-wrap:anywhere]">
-                          Cảnh báo: Số tiền chuyển vượt quá số dư hiện có ({formatCurrency(fromAvailable)}). Hệ thống khóa chuyển tiền để chống âm quỹ!
+                          {t('wallets.overdraftAlert', 'Cảnh báo: Số tiền chuyển vượt quá số dư hiện có. Hệ thống khóa chuyển tiền để chống âm quỹ!')} ({formatCurrency(fromAvailable)})
                         </span>
                       </div>
                     )}
@@ -1148,12 +1148,12 @@ export const WalletsView: React.FC = () => {
                 )}
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Ghi chú</label>
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">{t('qa.note', 'Ghi chú')}</label>
                   <input
                     type="text"
                     value={transferNote}
                     onChange={(e) => setTransferNote(e.target.value)}
-                    placeholder="Ví dụ: Rút tiền mặt, chuyển tiền tiết kiệm..."
+                    placeholder={t('wallets.transferNotePlaceholder', 'Ví dụ: Rút tiền mặt, chuyển tiền tiết kiệm...')}
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white"
                   />
                 </div>
@@ -1164,7 +1164,7 @@ export const WalletsView: React.FC = () => {
                     onClick={() => setTransferModalOpen(false)}
                     className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer"
                   >
-                    Hủy
+                    {t('common.cancel', 'Hủy')}
                   </button>
                   <button
                     type="submit"
@@ -1175,7 +1175,7 @@ export const WalletsView: React.FC = () => {
                         : 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer active:scale-95'
                     }`}
                   >
-                    {isTransferOverdraft ? 'Số dư không đủ' : 'Thực hiện chuyển'}
+                    {isTransferOverdraft ? t('wallets.insufficientBalance', 'Số dư không đủ') : t('wallets.executeTransfer', 'Thực hiện chuyển')}
                   </button>
                 </div>
               </form>
@@ -1185,13 +1185,13 @@ export const WalletsView: React.FC = () => {
       })()}
 
       {/* ========================================================================= */}
-      {/* MODAL: XEM ẢNH HÓA ĐƠN                                                   */}
+      {/* MODAL: VIEW RECEIPT */}
       {/* ========================================================================= */}
       <ReceiptModal
         isOpen={Boolean(receiptModalImage)}
         imageUrl={receiptModalImage || undefined}
         onClose={() => setReceiptModalImage(null)}
-        title="Chứng từ / Hóa đơn giao dịch"
+        title={t('wallets.receiptModalTitle', 'Chứng từ / Hóa đơn giao dịch')}
       />
     </div>
   );

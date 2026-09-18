@@ -57,7 +57,7 @@ export const SettingsView: React.FC = () => {
       if (content) {
         const success = importDatabaseJSON(content);
         if (success) {
-          setImportStatus('Khôi phục dữ liệu từ file JSON thành công!');
+          setImportStatus(t('settings.restoreSuccess', 'Khôi phục dữ liệu từ file JSON thành công!'));
           setTimeout(() => setImportStatus(null), 4000);
         } else {
           alert('Lỗi: File JSON không đúng định dạng sao lưu của ứng dụng');
@@ -72,10 +72,10 @@ export const SettingsView: React.FC = () => {
       {/* 1. HEADER */}
       <div>
         <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">
-          Cài Đặt & Quản Lý Dữ Liệu
+          {t('settings.title', 'Cài Đặt & Quản Lý Dữ Liệu')}
         </h1>
         <p className="text-xs text-slate-500 dark:text-slate-400">
-          Sao lưu dự phòng, khôi phục dữ liệu, thiết lập hệ thống và tài liệu kiến trúc kỹ thuật
+          {t('settings.subtitle', 'Sao lưu dự phòng, khôi phục dữ liệu, thiết lập hệ thống và tài liệu kiến trúc kỹ thuật')}
         </p>
       </div>
 
@@ -135,7 +135,7 @@ export const SettingsView: React.FC = () => {
                   </p>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                     {item.code === 'vi'
-                      ? 'Giao diện tiếng Việt chuẩn hóa'
+                      ? t('settings.viDesc', 'Giao diện tiếng Việt chuẩn hóa')
                       : item.code === 'en'
                       ? 'English user interface'
                       : 'Interface utilisateur en français'}
@@ -153,16 +153,16 @@ export const SettingsView: React.FC = () => {
           <div className="flex items-center space-x-2">
             <Palette className="w-5 h-5 text-indigo-500" />
             <h3 className="text-base font-bold text-slate-800 dark:text-white">
-              Tùy Chỉnh Giao Diện & Chủ Đề (Appearance & Theme)
+              {t('settings.themeSection', 'Tùy Chỉnh Giao Diện & Chủ Đề (Appearance & Theme)')}
             </h3>
           </div>
           <span className="text-xs px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium self-start sm:self-auto">
-            Đang dùng: {theme === 'light' ? 'Chế độ Sáng' : theme === 'dark' ? 'Chế độ Tối' : 'Tự động (Hệ thống)'}
+            {t('settings.currentTheme', 'Đang dùng:')} {theme === 'light' ? t('settings.themeLight', 'Chế độ Sáng') : theme === 'dark' ? t('settings.themeDark', 'Chế độ Tối') : t('settings.themeAuto', 'Tự động (Hệ thống)')}
           </span>
         </div>
 
         <p className="text-xs text-slate-500 dark:text-slate-400">
-          Chọn chủ đề hiển thị theo sở thích của bạn hoặc chuyển đổi nhanh bằng nút Mặt trời/Mặt trăng trên thanh menu trên cùng. Thiết lập được tự động ghi nhớ.
+          {t('settings.themeDesc', 'Chọn chủ đề hiển thị theo sở thích của bạn hoặc chuyển đổi nhanh bằng nút Mặt trời/Mặt trăng trên thanh menu trên cùng. Thiết lập được tự động ghi nhớ.')}
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
@@ -187,9 +187,9 @@ export const SettingsView: React.FC = () => {
               )}
             </div>
             <div>
-              <p className="font-bold text-sm text-slate-900 dark:text-white">Giao diện Sáng (Light)</p>
+              <p className="font-bold text-sm text-slate-900 dark:text-white">{t('settings.lightName', 'Giao diện Sáng (Light)')}</p>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Tươi sáng, thanh lịch, độ tương phản cao cho ban ngày.
+                {t('settings.lightDesc', 'Tươi sáng, thanh lịch, độ tương phản cao cho ban ngày.')}
               </p>
             </div>
           </button>
@@ -215,9 +215,9 @@ export const SettingsView: React.FC = () => {
               )}
             </div>
             <div>
-              <p className="font-bold text-sm text-slate-900 dark:text-white">Giao diện Tối (Dark)</p>
+              <p className="font-bold text-sm text-slate-900 dark:text-white">{t('settings.darkName', 'Giao diện Tối (Dark)')}</p>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Tông xám than dịu mắt, chống mỏi mắt khi sử dụng ban đêm.
+                {t('settings.darkDesc', 'Tông xám than dịu mắt, chống mỏi mắt khi sử dụng ban đêm.')}
               </p>
             </div>
           </button>
@@ -243,9 +243,9 @@ export const SettingsView: React.FC = () => {
               )}
             </div>
             <div>
-              <p className="font-bold text-sm text-slate-900 dark:text-white">Theo Thiết Bị (Auto)</p>
+              <p className="font-bold text-sm text-slate-900 dark:text-white">{t('settings.autoName', 'Theo Thiết Bị (Auto)')}</p>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Tự động đồng bộ theo chế độ hiển thị hệ thống của máy.
+                {t('settings.autoDesc', 'Tự động đồng bộ theo chế độ hiển thị hệ thống của máy.')}
               </p>
             </div>
           </button>
@@ -258,7 +258,7 @@ export const SettingsView: React.FC = () => {
           <div className="flex items-center space-x-2 pb-3 border-b border-slate-100 dark:border-slate-800">
             <Database className="w-5 h-5 text-blue-500" />
             <h3 className="text-base font-bold text-slate-800 dark:text-white">
-              Sao Lưu & Khôi Phục Dữ Liệu
+              {t('settings.backupSection', 'Sao Lưu & Khôi Phục Dữ Liệu')}
             </h3>
           </div>
 
@@ -267,10 +267,10 @@ export const SettingsView: React.FC = () => {
             <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 mt-1 shrink-0 animate-pulse" />
             <div>
               <p className="font-bold text-emerald-900 dark:text-emerald-200">
-                Lưu trữ máy chủ: {serverSyncStatus === 'synced' ? 'Đã đồng bộ' : serverSyncStatus === 'syncing' ? 'Đang lưu...' : 'Ngoại tuyến (Offline)'}
+                {t('settings.serverStorage', 'Lưu trữ máy chủ:')} {serverSyncStatus === 'synced' ? t('settings.statusSynced', 'Đã đồng bộ') : serverSyncStatus === 'syncing' ? t('settings.statusSyncing', 'Đang lưu...') : t('settings.statusOffline', 'Ngoại tuyến (Offline)')}
               </p>
               <p className="text-emerald-700/80 dark:text-emerald-300/80 mt-0.5">
-                Dữ liệu được lưu trực tiếp vào tệp <code className="px-1 py-0.5 bg-white dark:bg-slate-800 rounded font-mono text-[11px]">data/database.json</code> trên ổ cứng. Tắt/bật lại server hoặc đổi trình duyệt dữ liệu vẫn bảo toàn nguyên vẹn.
+                {t('settings.storageExplain', 'Dữ liệu được lưu trực tiếp vào tệp data/database.json trên ổ cứng. Tắt/bật lại server hoặc đổi trình duyệt dữ liệu vẫn bảo toàn nguyên vẹn.')}
               </p>
             </div>
           </div>
@@ -279,9 +279,9 @@ export const SettingsView: React.FC = () => {
             {/* Export JSON */}
             <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 flex items-center justify-between">
               <div>
-                <h4 className="text-sm font-bold text-slate-800 dark:text-white">Xuất file JSON sao lưu</h4>
+                <h4 className="text-sm font-bold text-slate-800 dark:text-white">{t('settings.exportJsonTitle', 'Xuất file JSON sao lưu')}</h4>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Tải toàn bộ cơ sở dữ liệu ({wallets.length} ví, {transactions.length} giao dịch, {budgets.length} ngân sách)
+                  {t('settings.exportJsonDesc', 'Tải toàn bộ cơ sở dữ liệu (ví, giao dịch, ngân sách)')}
                 </p>
               </div>
               <button
@@ -289,16 +289,16 @@ export const SettingsView: React.FC = () => {
                 className="flex items-center space-x-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors"
               >
                 <Download className="w-4 h-4" />
-                <span>Xuất JSON</span>
+                <span>{t('settings.exportJsonBtn', 'Xuất JSON')}</span>
               </button>
             </div>
 
             {/* Import JSON */}
             <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 flex items-center justify-between">
               <div>
-                <h4 className="text-sm font-bold text-slate-800 dark:text-white">Khôi phục từ file JSON</h4>
+                <h4 className="text-sm font-bold text-slate-800 dark:text-white">{t('settings.importJsonTitle', 'Khôi phục từ file JSON')}</h4>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Tải lên tệp sao lưu .json đã lưu trước đó
+                  {t('settings.importJsonDesc', 'Tải lên tệp sao lưu .json đã lưu trước đó')}
                 </p>
               </div>
               <button
@@ -306,7 +306,7 @@ export const SettingsView: React.FC = () => {
                 className="flex items-center space-x-1.5 px-3.5 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold shadow-sm transition-colors"
               >
                 <Upload className="w-4 h-4" />
-                <span>Chọn file JSON</span>
+                <span>{t('settings.importJsonBtn', 'Chọn file JSON')}</span>
               </button>
               <input
                 type="file"
@@ -320,42 +320,42 @@ export const SettingsView: React.FC = () => {
             {/* Reset to Demo Data */}
             <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 flex items-center justify-between">
               <div>
-                <h4 className="text-sm font-bold text-slate-800 dark:text-white">Dữ liệu mẫu chuẩn (Demo Data)</h4>
+                <h4 className="text-sm font-bold text-slate-800 dark:text-white">{t('settings.demoDataTitle', 'Dữ liệu mẫu chuẩn (Demo Data)')}</h4>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Khôi phục đầy đủ dữ liệu thực tế mẫu: 5 ví, lịch sử giao dịch, ngân sách tháng 9, hóa đơn, hũ tích lũy
+                  {t('settings.demoDataDesc', 'Khôi phục đầy đủ dữ liệu thực tế mẫu: 5 ví, lịch sử giao dịch, ngân sách tháng 9, hóa đơn, hũ tích lũy')}
                 </p>
               </div>
               <button
                 onClick={() => {
-                  if (confirm('Khôi phục lại dữ liệu mẫu thực tế ban đầu?')) {
+                  if (confirm(t('settings.demoConfirm', 'Khôi phục lại dữ liệu mẫu thực tế ban đầu?'))) {
                     resetToDefaultData();
                   }
                 }}
                 className="flex items-center space-x-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors"
               >
                 <RotateCcw className="w-4 h-4" />
-                <span>Nạp Demo</span>
+                <span>{t('settings.loadDemoBtn', 'Nạp Demo')}</span>
               </button>
             </div>
 
             {/* Clear all data */}
             <div className="p-4 rounded-xl bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/40 flex items-center justify-between">
               <div>
-                <h4 className="text-sm font-bold text-rose-700 dark:text-rose-300">Xóa sạch dữ liệu (Reset trắng)</h4>
+                <h4 className="text-sm font-bold text-rose-700 dark:text-rose-300">{t('settings.resetDataTitle', 'Xóa sạch dữ liệu (Reset trắng)')}</h4>
                 <p className="text-xs text-rose-600/70 dark:text-rose-400/70 mt-0.5">
-                  Xóa toàn bộ giao dịch, hóa đơn, ngân sách để bắt đầu lại từ đầu
+                  {t('settings.resetDataDesc', 'Xóa toàn bộ giao dịch, hóa đơn, ngân sách để bắt đầu lại từ đầu')}
                 </p>
               </div>
               <button
                 onClick={() => {
-                  if (confirm('CẢNH BÁO: Thao tác này sẽ xóa sạch toàn bộ giao dịch và thiết lập. Bạn có chắc chắn?')) {
+                  if (confirm(t('settings.resetConfirm', 'CẢNH BÁO: Thao tác này sẽ xóa sạch toàn bộ giao dịch và thiết lập. Bạn có chắc chắn?'))) {
                     clearAllData();
                   }
                 }}
                 className="flex items-center space-x-1.5 px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors"
               >
                 <Trash2 className="w-4 h-4" />
-                <span>Xóa hết</span>
+                <span>{t('settings.resetBtn', 'Xóa hết')}</span>
               </button>
             </div>
           </div>
@@ -366,7 +366,7 @@ export const SettingsView: React.FC = () => {
           <div className="flex items-center space-x-2 pb-3 border-b border-slate-100 dark:border-slate-800">
             <KeyRound className="w-5 h-5 text-emerald-500" />
             <h3 className="text-base font-bold text-slate-800 dark:text-white">
-              Tài Khoản & Xác Thực (Authentication)
+              {t('settings.authTitle', 'Tài Khoản & Xác Thực (Authentication)')}
             </h3>
           </div>
 
@@ -382,7 +382,7 @@ export const SettingsView: React.FC = () => {
                   Clerk / NextAuth Google OAuth
                 </span>
                 <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 rounded text-[10px] font-bold">
-                  Bảo mật cao
+                  {t('settings.highSecurity', 'Bảo mật cao')}
                 </span>
               </div>
             </div>
@@ -390,10 +390,10 @@ export const SettingsView: React.FC = () => {
 
           <div className="space-y-2 text-xs text-slate-600 dark:text-slate-400">
             <p>
-              <strong>Tiêu chuẩn công nghệ:</strong> Hỗ trợ tích hợp Clerk Auth, NextAuth.js hoặc Supabase Auth với Single Sign-On (Google OAuth, Apple ID, Email OTP).
+              {t('settings.authStandards', 'Tiêu chuẩn công nghệ: Hỗ trợ tích hợp Clerk Auth, NextAuth.js hoặc Supabase Auth với Single Sign-On (Google OAuth, Apple ID, Email OTP).')}
             </p>
             <p>
-              <strong>Bảo mật dữ liệu:</strong> Mỗi người dùng có không gian lưu trữ riêng biệt (Multi-tenancy isolation), mã hóa các giao dịch nhạy cảm.
+              {t('settings.authIsolation', 'Bảo mật dữ liệu: Mỗi người dùng có không gian lưu trữ riêng biệt (Multi-tenancy isolation), mã hóa các giao dịch nhạy cảm.')}
             </p>
           </div>
         </div>
@@ -404,7 +404,7 @@ export const SettingsView: React.FC = () => {
         <div className="flex items-center space-x-2 pb-3 border-b border-slate-100 dark:border-slate-800">
           <Layers className="w-5 h-5 text-indigo-500" />
           <h3 className="text-base font-bold text-slate-800 dark:text-white">
-            Kiến Trúc Kỹ Thuật (Tech Stack Breakdown)
+            {t('settings.architectureTitle', 'Kiến Trúc Kỹ Thuật (Tech Stack Breakdown)')}
           </h3>
         </div>
 
@@ -430,9 +430,9 @@ export const SettingsView: React.FC = () => {
             </div>
             <ul className="space-y-1 text-slate-500 dark:text-slate-400">
               <li>• <strong>Node.js Server:</strong> REST API Routes (/api)</li>
-              <li>• <strong>Thuật toán tài chính:</strong> Tổng hợp khả dụng, Net Worth, 50/30/20 Budget planner</li>
-              <li>• <strong>Cảnh báo thông minh:</strong> Ngưỡng 80% (Warning) & 100% (Exceeded)</li>
-              <li>• <strong>Xử lý hóa đơn:</strong> Đối soát và tự động trừ ví</li>
+              <li>• {t('settings.archAlgo', 'Thuật toán tài chính: Tổng hợp khả dụng, Net Worth, 50/30/20 Budget planner')}</li>
+              <li>• {t('settings.archAlerts', 'Cảnh báo thông minh: Ngưỡng 80% (Warning) & 100% (Exceeded)')}</li>
+              <li>• {t('settings.archBills', 'Xử lý hóa đơn: Đối soát và tự động trừ ví')}</li>
             </ul>
           </div>
 
@@ -444,7 +444,7 @@ export const SettingsView: React.FC = () => {
             <ul className="space-y-1 text-slate-500 dark:text-slate-400">
               <li>• <strong>Database:</strong> PostgreSQL / Supabase Relational DB</li>
               <li>• <strong>Zero-config Mode:</strong> LocalStorage & JSON Backup Engine</li>
-              <li>• <strong>Toàn vẹn dữ liệu:</strong> Tự động hoàn tác số dư khi xóa / sửa giao dịch</li>
+              <li>• {t('settings.archIntegrity', 'Toàn vẹn dữ liệu: Tự động hoàn tác số dư khi xóa / sửa giao dịch')}</li>
               <li>• <strong>Receipt storage:</strong> Base64 / Cloud Bucket attachments</li>
             </ul>
           </div>

@@ -133,13 +133,13 @@ export const BudgetsView: React.FC = () => {
     if (editingBudget) {
       editBudget(editingBudget.id, {
         categoryId: budgetCategoryId,
-        categoryName: cat?.name || 'Khác',
+        categoryName: cat?.name || tCategory('Khác'),
         amount: amountNum,
       });
     } else {
       addBudget({
         categoryId: budgetCategoryId,
-        categoryName: cat?.name || 'Khác',
+        categoryName: cat?.name || tCategory('Khác'),
         amount: amountNum,
         month: currentMonth,
         alertThreshold80: true,
@@ -308,7 +308,7 @@ export const BudgetsView: React.FC = () => {
               <p className="text-2xl font-black text-slate-800 dark:text-white mt-1">
                 {formatCurrency(totalBudgetLimit)}
               </p>
-              <span className="text-[11px] text-slate-400">Áp dụng cho tháng 09/2026</span>
+              <span className="text-[11px] text-slate-400">{t('budget.forMonth', 'Áp dụng cho tháng')} 09/2026</span>
             </div>
 
             <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -377,7 +377,7 @@ export const BudgetsView: React.FC = () => {
                             </span>
                           )}
                         </div>
-                        <span className="text-[11px] text-slate-400">Tháng 09/2026</span>
+                        <span className="text-[11px] text-slate-400">{t('budget.monthLabel', 'Tháng')} 09/2026</span>
                       </div>
                     </div>
 
@@ -447,7 +447,7 @@ export const BudgetsView: React.FC = () => {
                   <div className="text-[11px] p-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl text-slate-500 dark:text-slate-400 flex items-center justify-between mb-3">
                     <span>{t('budget.dailyAdvice', 'Gợi ý chi mỗi ngày:')}</span>
                     <span className="font-bold text-slate-700 dark:text-slate-200">
-                      {remaining > 0 ? `~${formatCurrency(Math.round(remaining / 24))}/ngày` : '0 ₫/ngày (Đã hết)'}
+                      {remaining > 0 ? `~${formatCurrency(Math.round(remaining / 24))}/${t('budget.day', 'ngày')}` : `0 ₫/${t('budget.day', 'ngày')} (${t('budget.exhausted', 'Đã hết')})`}
                     </span>
                   </div>
 
@@ -456,7 +456,7 @@ export const BudgetsView: React.FC = () => {
                     <button
                       onClick={() => navigateToCategoryTransactions(budget.categoryId)}
                       className="px-2.5 py-1 text-[11px] font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-950/50 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg transition-colors flex items-center gap-1 border border-slate-200 dark:border-slate-700 shadow-2xs"
-                      title="Xem danh sách giao dịch đã chi của danh mục này"
+                      title={t('budget.viewTxTitle', 'Xem danh sách giao dịch đã chi của danh mục này')}
                     >
                       <ReceiptText className="w-3.5 h-3.5" />
                       <span>{t('notif.viewExpenses', 'Xem các khoản đã chi')}</span>
@@ -471,7 +471,7 @@ export const BudgetsView: React.FC = () => {
                           setBudgetModalOpen(true);
                         }}
                         className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg transition-colors"
-                        title="Sửa hạn mức"
+                        title={t('budget.editLimitTitle', 'Sửa hạn mức')}
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
@@ -482,7 +482,7 @@ export const BudgetsView: React.FC = () => {
                           }
                         }}
                         className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors"
-                        title="Xóa ngân sách"
+                        title={t('budget.deleteBudgetTitle', 'Xóa ngân sách')}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -496,7 +496,7 @@ export const BudgetsView: React.FC = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* SUB-TAB 2: THÊM THU NHẬP CÁ NHÂN → TẠO BUDGET KHẢ DỤNG ĐỂ TIÊU (50/30/20) */}
+      {/* SUB-TAB 2: 50/30/20 Budget Planner */}
       {/* ========================================================================= */}
       {activeSubTab === 'PLANNER' && (
         <div className="space-y-6">
@@ -560,7 +560,7 @@ export const BudgetsView: React.FC = () => {
                         : 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300'
                     }`}
                   >
-                    Tổng: {totalPercent}% {totalPercent === 100 ? '✓ Chuẩn' : `(${totalPercent > 100 ? 'Vượt' : 'Thiếu'} ${Math.abs(100 - totalPercent)}%)`}
+                    {t('tx.total', 'Tổng')}: {totalPercent}% {totalPercent === 100 ? '✓ ' + t('budget.standard', 'Chuẩn') : `(${totalPercent > 100 ? t('budget.over', 'Vượt') : t('budget.under', 'Thiếu')} ${Math.abs(100 - totalPercent)}%)`}
                   </span>
                 </div>
 
@@ -643,7 +643,7 @@ export const BudgetsView: React.FC = () => {
                   <span className="text-[11px] text-slate-400">{t('budget.savingsSub', 'Hũ tiết kiệm, đầu tư dài hạn')}</span>
                 </div>
 
-                {/* 4. Khoản dự phòng (Emergency / Contingency) */}
+                {/* 4. Emergency / Contingency Fund */}
                 <div>
                   <div className="flex justify-between text-xs font-semibold mb-1">
                     <span className="text-amber-600 dark:text-amber-400 font-bold flex items-center space-x-1">
@@ -719,7 +719,7 @@ export const BudgetsView: React.FC = () => {
                   <p className="text-lg font-black text-blue-900 dark:text-blue-100 mt-1">
                     {formatCurrency(needsBudget)}
                   </p>
-                  <span className="text-[10px] text-blue-600/80">Nhu cầu sinh hoạt chính</span>
+                  <span className="text-[10px] text-blue-600/80">{t('budget.needsPill', 'Nhu cầu sinh hoạt chính')}</span>
                 </div>
 
                 <div className="p-4 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-900/50">
@@ -729,7 +729,7 @@ export const BudgetsView: React.FC = () => {
                   <p className="text-lg font-black text-purple-900 dark:text-purple-100 mt-1">
                     {formatCurrency(wantsBudget)}
                   </p>
-                  <span className="text-[10px] text-purple-600/80">Hưởng thụ, sở thích</span>
+                  <span className="text-[10px] text-purple-600/80">{t('budget.wantsPill', 'Hưởng thụ, sở thích')}</span>
                 </div>
 
                 <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50">
@@ -739,7 +739,7 @@ export const BudgetsView: React.FC = () => {
                   <p className="text-lg font-black text-emerald-900 dark:text-emerald-100 mt-1">
                     {formatCurrency(savingsBudget)}
                   </p>
-                  <span className="text-[10px] text-emerald-600/80">Tích lũy & đầu tư</span>
+                  <span className="text-[10px] text-emerald-600/80">{t('budget.savingsPill', 'Tích lũy & đầu tư')}</span>
                 </div>
 
                 <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50">
@@ -750,7 +750,7 @@ export const BudgetsView: React.FC = () => {
                   <p className="text-lg font-black text-amber-900 dark:text-amber-100 mt-1">
                     {formatCurrency(emergencyBudget)}
                   </p>
-                  <span className="text-[10px] text-amber-600/80">Phòng rủi ro & phát sinh</span>
+                  <span className="text-[10px] text-amber-600/80">{t('budget.emergencyPill', 'Phòng rủi ro & phát sinh')}</span>
                 </div>
               </div>
 
@@ -792,7 +792,7 @@ export const BudgetsView: React.FC = () => {
                     </p>
                   </div>
                   <div className="text-right text-xs text-slate-300">
-                    <p className="font-bold">~{formatCurrency(Math.round(availableFlexibleBudget / 30))}/ngày</p>
+                    <p className="font-bold">~{formatCurrency(Math.round(availableFlexibleBudget / 30))}/{t('budget.day', 'ngày')}</p>
                     <span className="text-[10px] text-slate-400">{t('budget.safeSpending', 'Chi tiêu an toàn')}</span>
                   </div>
                 </div>
@@ -1016,7 +1016,7 @@ export const BudgetsView: React.FC = () => {
                       e.preventDefault();
                     }
                   }}
-                  placeholder="Ví dụ: 5.000.000"
+                  placeholder={t('budget.limitPlaceholder', 'Ví dụ: 5.000.000')}
                   className="w-full text-xl font-bold px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl dark:text-white"
                 />
               </div>
@@ -1031,7 +1031,7 @@ export const BudgetsView: React.FC = () => {
                   onClick={() => setBudgetModalOpen(false)}
                   className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl"
                 >
-                  Hủy
+                  {t('common.cancel', 'Hủy')}
                 </button>
                 <button
                   type="submit"
@@ -1073,7 +1073,7 @@ export const BudgetsView: React.FC = () => {
                   required
                   value={goalName}
                   onChange={(e) => setGoalName(e.target.value)}
-                  placeholder="Ví dụ: Mua laptop, Quỹ du lịch Hàn Quốc..."
+                  placeholder={t('budget.goalNamePlaceholder', 'Ví dụ: Mua laptop, Quỹ du lịch Hàn Quốc...')}
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm dark:text-white"
                 />
               </div>
@@ -1098,7 +1098,7 @@ export const BudgetsView: React.FC = () => {
                       e.preventDefault();
                     }
                   }}
-                  placeholder="Ví dụ: 30.000.000"
+                  placeholder={t('budget.goalTargetPlaceholder', 'Ví dụ: 30.000.000')}
                   className="w-full text-xl font-bold px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl dark:text-white"
                 />
               </div>
@@ -1138,13 +1138,13 @@ export const BudgetsView: React.FC = () => {
                   onClick={() => setGoalModalOpen(false)}
                   className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 rounded-xl"
                 >
-                  Hủy
+                  {t('common.cancel', 'Hủy')}
                 </button>
                 <button
                   type="submit"
                   className="px-5 py-2 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-sm"
                 >
-                  Tạo hũ
+                  {t('budget.createGoalBtn', 'Tạo hũ')}
                 </button>
               </div>
             </form>
@@ -1216,13 +1216,13 @@ export const BudgetsView: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-500 mb-1">
-                  Ghi chú
+                  {t('qa.note', 'Ghi chú')}
                 </label>
                 <input
                   type="text"
                   value={depositNote}
                   onChange={(e) => setDepositNote(e.target.value)}
-                  placeholder="Ví dụ: Trích từ tiền thưởng dự án..."
+                  placeholder={t('budget.depositNotePlaceholder', 'Ví dụ: Trích từ tiền thưởng dự án...')}
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm dark:text-white"
                 />
               </div>
@@ -1233,7 +1233,7 @@ export const BudgetsView: React.FC = () => {
                   onClick={() => setDepositModalOpen(false)}
                   className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 rounded-xl"
                 >
-                  Hủy
+                  {t('common.cancel', 'Hủy')}
                 </button>
                 <button
                   type="submit"

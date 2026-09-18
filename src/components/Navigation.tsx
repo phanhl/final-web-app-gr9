@@ -37,22 +37,22 @@ import { formatCurrency, calculateBudgetStatuses } from '@/lib/utils';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 const navItems = [
-  { id: 'dashboard', key: 'nav.dashboard', defaultLabel: 'Tổng quan', icon: LayoutDashboard },
-  { id: 'transactions', key: 'nav.transactions', defaultLabel: 'Sổ giao dịch', icon: ReceiptText },
-  { id: 'budgets', key: 'nav.budgets', defaultLabel: 'Ngân sách', icon: PieChart },
-  { id: 'whatif', key: 'nav.whatif', defaultLabel: 'Mô phỏng What-If', icon: Sparkles },
-  { id: 'bills', key: 'nav.bills', defaultLabel: 'Định kỳ', icon: CalendarCheck },
-  { id: 'reports', key: 'nav.reports', defaultLabel: 'Báo cáo', icon: BarChart3 },
-  { id: 'wallets', key: 'nav.wallets', defaultLabel: 'Ví & Tài khoản', icon: WalletCards },
-  { id: 'settings', key: 'nav.settings', defaultLabel: 'Cài đặt', icon: Settings },
+  { id: 'dashboard', key: 'nav.dashboard', defaultLabel: 'Dashboard', icon: LayoutDashboard },
+  { id: 'transactions', key: 'nav.transactions', defaultLabel: 'Transactions', icon: ReceiptText },
+  { id: 'budgets', key: 'nav.budgets', defaultLabel: 'Budgets', icon: PieChart },
+  { id: 'whatif', key: 'nav.whatif', defaultLabel: 'What-If Simulation', icon: Sparkles },
+  { id: 'bills', key: 'nav.bills', defaultLabel: 'Recurring', icon: CalendarCheck },
+  { id: 'reports', key: 'nav.reports', defaultLabel: 'Reports', icon: BarChart3 },
+  { id: 'wallets', key: 'nav.wallets', defaultLabel: 'Wallets & Accounts', icon: WalletCards },
+  { id: 'settings', key: 'nav.settings', defaultLabel: 'Settings', icon: Settings },
 ];
 
 const bottomNavItems = [
-  { id: 'dashboard', key: 'nav.dashboard', defaultLabel: 'Tổng quan', icon: LayoutDashboard },
-  { id: 'transactions', key: 'nav.shortTransactions', defaultLabel: 'Sổ GD', icon: ReceiptText },
-  { id: 'budgets', key: 'nav.budgets', defaultLabel: 'Ngân sách', icon: PieChart },
-  { id: 'reports', key: 'nav.reports', defaultLabel: 'Báo cáo', icon: BarChart3 },
-  { id: 'settings', key: 'nav.settings', defaultLabel: 'Cài đặt', icon: Settings },
+  { id: 'dashboard', key: 'nav.dashboard', defaultLabel: 'Dashboard', icon: LayoutDashboard },
+  { id: 'transactions', key: 'nav.shortTransactions', defaultLabel: 'Tx', icon: ReceiptText },
+  { id: 'budgets', key: 'nav.budgets', defaultLabel: 'Budgets', icon: PieChart },
+  { id: 'reports', key: 'nav.reports', defaultLabel: 'Reports', icon: BarChart3 },
+  { id: 'settings', key: 'nav.settings', defaultLabel: 'Settings', icon: Settings },
 ];
 
 export const Navigation: React.FC = () => {
@@ -79,6 +79,8 @@ export const Navigation: React.FC = () => {
     navigateToBill,
     language,
     t,
+    tCategory,
+    tWalletType,
   } = useApp();
 
   const [showNotificationModal, setShowNotificationModal] = useState(false);
@@ -135,7 +137,7 @@ export const Navigation: React.FC = () => {
             <button
               onClick={() => setShowNotificationModal(!showNotificationModal)}
               className="relative w-9 h-9 flex items-center justify-center rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-slate-200 dark:active:bg-slate-700 transition-colors"
-              aria-label="Thông báo"
+              aria-label={t('nav.notifications', 'Thông báo')}
             >
               <Bell className="w-5 h-5" />
               {alertCount > 0 && (
@@ -157,7 +159,7 @@ export const Navigation: React.FC = () => {
               }}
               className="w-8 h-8 rounded-xl text-white flex items-center justify-center font-bold text-xs shadow-sm ml-0.5 cursor-pointer transition-transform active:scale-95"
               style={{ backgroundColor: userProfile.avatarColor || '#10b981' }}
-              title="Thông tin cá nhân"
+              title={t('nav.personalInfo', 'Thông tin cá nhân')}
             >
               {userProfile.name ? userProfile.name.charAt(0).toUpperCase() : 'A'}
             </button>
@@ -237,7 +239,7 @@ export const Navigation: React.FC = () => {
               <button
                 onClick={() => setShowNotificationModal(!showNotificationModal)}
                 className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl relative transition-colors cursor-pointer"
-                aria-label="Thông báo cảnh báo"
+                aria-label={t('nav.notifications', 'Thông báo cảnh báo')}
               >
                 <Bell className="w-5 h-5" />
                 {alertCount > 0 && (
@@ -368,7 +370,7 @@ export const Navigation: React.FC = () => {
               </h4>
               <div className="flex items-center space-x-2">
                 <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-full">
-                  {alertCount} {language === 'en' ? 'alerts' : language === 'fr' ? 'alertes' : 'việc cần xử lý'}
+                  {alertCount} {t('notif.pendingTasks', 'việc cần xử lý')}
                 </span>
                 <button
                   onClick={() => setShowNotificationModal(false)}
@@ -397,10 +399,10 @@ export const Navigation: React.FC = () => {
                       </div>
                       <div className="text-xs">
                         <p className="font-bold text-rose-700 dark:text-rose-300 flex items-center gap-1">
-                          <span>Vượt ngân sách {b.budget.categoryName}</span>
+                          <span>{t('nav.alertOverBudget', 'Vượt ngân sách')} {tCategory(b.budget.categoryName)}</span>
                         </p>
                         <p className="text-rose-600/90 dark:text-rose-400/90 mt-0.5 font-medium">
-                          Đã chi {formatCurrency(b.spent)} / {formatCurrency(b.budget.amount)} ({b.percentage}%)
+                          {t('dashboard.spent', 'Đã chi')} {formatCurrency(b.spent)} / {formatCurrency(b.budget.amount)} ({b.percentage}%)
                         </p>
                       </div>
                     </div>
@@ -455,10 +457,10 @@ export const Navigation: React.FC = () => {
                       </div>
                       <div className="text-xs">
                         <p className="font-bold text-amber-700 dark:text-amber-300 flex items-center gap-1">
-                          <span>Cảnh báo 80%: {b.budget.categoryName}</span>
+                          <span>{t('nav.alertNearBudget', 'Cảnh báo 80%:')} {tCategory(b.budget.categoryName)}</span>
                         </p>
                         <p className="text-amber-600/90 dark:text-amber-400/90 mt-0.5 font-medium">
-                          Đã sử dụng {b.percentage}%. Còn {formatCurrency(b.remaining)}.
+                          {t('budget.usedBudget', 'Đã sử dụng')} {b.percentage}%. {t('budget.canSpend', 'Còn')} {formatCurrency(b.remaining)}.
                         </p>
                       </div>
                     </div>
@@ -564,7 +566,7 @@ export const Navigation: React.FC = () => {
 
             {/* Footer tip */}
             <div className="pt-2.5 mt-1 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-400 text-center shrink-0">
-              💡 Bấm trực tiếp vào cảnh báo để chuyển ngay đến mục tương ứng
+              {t('nav.alertHint', '💡 Bấm trực tiếp vào cảnh báo để chuyển ngay đến mục tương ứng')}
             </div>
           </div>
         </>
@@ -588,7 +590,7 @@ export const Navigation: React.FC = () => {
                   <User className="w-4 h-4" />
                 </div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                  {isEditingProfile ? 'Chỉnh sửa thông tin cá nhân' : 'Thông tin tài khoản'}
+                  {isEditingProfile ? t('nav.editProfile', 'Chỉnh sửa thông tin cá nhân') : t('nav.accountInfo', 'Thông tin tài khoản')}
                 </h3>
               </div>
               <button
@@ -649,16 +651,16 @@ export const Navigation: React.FC = () => {
                     <div className="flex items-center justify-between py-1 border-b border-slate-200/60 dark:border-slate-700/60">
                       <span className="text-slate-500 dark:text-slate-400 flex items-center gap-2">
                         <Phone className="w-3.5 h-3.5 text-slate-400" />
-                        Số điện thoại
+                        {t('nav.phone', 'Số điện thoại')}
                       </span>
                       <span className="font-semibold text-slate-800 dark:text-slate-200">
-                        {userProfile.phone || 'Chưa thiết lập'}
+                        {userProfile.phone || t('nav.notSet', 'Chưa thiết lập')}
                       </span>
                     </div>
                     <div className="flex items-center justify-between py-1">
                       <span className="text-slate-500 dark:text-slate-400 flex items-center gap-2">
                         <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                        Ngày tham gia
+                        {t('nav.joinedDate', 'Ngày tham gia')}
                       </span>
                       <span className="font-semibold text-slate-800 dark:text-slate-200">
                         {userProfile.joinedDate}
@@ -669,19 +671,19 @@ export const Navigation: React.FC = () => {
                   {/* Mini Stats */}
                   <div className="grid grid-cols-3 gap-2 text-center">
                     <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400">Ví hoạt động</div>
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400">{t('nav.activeWallets', 'Ví hoạt động')}</div>
                       <div className="text-base font-bold text-slate-900 dark:text-white mt-0.5">
                         {wallets.length}
                       </div>
                     </div>
                     <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400">Giao dịch</div>
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400">{t('nav.transactionsCount', 'Giao dịch')}</div>
                       <div className="text-base font-bold text-slate-900 dark:text-white mt-0.5">
                         {transactions.length}
                       </div>
                     </div>
                     <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400">Mục tiêu</div>
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400">{t('nav.goalsCount', 'Mục tiêu')}</div>
                       <div className="text-base font-bold text-slate-900 dark:text-white mt-0.5">
                         {goals.length}
                       </div>
@@ -695,7 +697,7 @@ export const Navigation: React.FC = () => {
                       className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 px-4 rounded-xl text-xs font-semibold shadow-sm shadow-emerald-600/20 transition-all cursor-pointer active:scale-95"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
-                      <span>Chỉnh sửa thông tin cá nhân</span>
+                      <span>{t('nav.editProfileBtn', 'Chỉnh sửa thông tin cá nhân')}</span>
                     </button>
 
                     <div className="grid grid-cols-2 gap-2">
@@ -706,7 +708,7 @@ export const Navigation: React.FC = () => {
                         className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium transition-colors cursor-pointer"
                       >
                         <Download className="w-3.5 h-3.5" />
-                        <span>Sao lưu dữ liệu</span>
+                        <span>{t('nav.backupDataBtn', 'Sao lưu dữ liệu')}</span>
                       </button>
                       <button
                         onClick={() => {
@@ -716,7 +718,7 @@ export const Navigation: React.FC = () => {
                         className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium transition-colors cursor-pointer"
                       >
                         <Settings className="w-3.5 h-3.5" />
-                        <span>Cài đặt chung</span>
+                        <span>{t('nav.generalSettingsBtn', 'Cài đặt chung')}</span>
                       </button>
                     </div>
                   </div>
@@ -738,7 +740,7 @@ export const Navigation: React.FC = () => {
                 >
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                      Họ và tên / Tên hiển thị
+                      {t('nav.fullNameLabel', 'Họ và tên / Tên hiển thị')}
                     </label>
                     <input
                       type="text"
@@ -746,13 +748,13 @@ export const Navigation: React.FC = () => {
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
                       className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
-                      placeholder="Ví dụ: Nguyễn Văn A"
+                      placeholder={t('nav.namePlaceholder', 'Ví dụ: Nguyễn Văn A')}
                     />
                   </div>
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                      Địa chỉ Email
+                      {t('nav.emailLabel', 'Địa chỉ Email')}
                     </label>
                     <input
                       type="email"
@@ -766,20 +768,20 @@ export const Navigation: React.FC = () => {
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                      Số điện thoại
+                      {t('nav.phoneLabel', 'Số điện thoại')}
                     </label>
                     <input
                       type="tel"
                       value={editPhone}
                       onChange={(e) => setEditPhone(e.target.value)}
                       className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
-                      placeholder="Ví dụ: 0912 345 678"
+                      placeholder={t('nav.phonePlaceholder', 'Ví dụ: 0912 345 678')}
                     />
                   </div>
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                      Màu đại diện
+                      {t('nav.avatarColorLabel', 'Màu đại diện')}
                     </label>
                     <div className="flex items-center gap-2.5">
                       {[
@@ -816,14 +818,14 @@ export const Navigation: React.FC = () => {
                       onClick={() => setIsEditingProfile(false)}
                       className="px-3.5 py-2 text-xs font-medium rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                     >
-                      Hủy
+                      {t('common.cancel', 'Hủy')}
                     </button>
                     <button
                       type="submit"
                       className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-600/20 transition-all cursor-pointer"
                     >
                       <Check className="w-3.5 h-3.5" />
-                      <span>Lưu thông tin</span>
+                      <span>{t('nav.saveProfileBtn', 'Lưu thông tin')}</span>
                     </button>
                   </div>
                 </form>

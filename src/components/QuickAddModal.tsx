@@ -21,6 +21,8 @@ export const QuickAddModal: React.FC = () => {
     addTransaction,
     language,
     t,
+    tCategory,
+    tWalletType,
   } = useApp();
 
   const [type, setType] = useState<TransactionType>('EXPENSE');
@@ -123,14 +125,14 @@ export const QuickAddModal: React.FC = () => {
       type,
       amount: numAmount,
       categoryId: type === 'TRANSFER' ? undefined : categoryId,
-      categoryName: type === 'TRANSFER' ? undefined : (selectedCategory?.name || 'Khác'),
+      categoryName: type === 'TRANSFER' ? undefined : (selectedCategory?.name || tCategory('Khác')),
       walletId,
       walletName: selectedWallet?.name,
       toWalletId: type === 'TRANSFER' ? toWalletId : undefined,
       toWalletName: type === 'TRANSFER' ? selectedToWallet?.name : undefined,
       fee: type === 'TRANSFER' ? Number(fee) : 0,
       date: txDate,
-      note: note || (type === 'TRANSFER' ? `Chuyển sang ${selectedToWallet?.name}` : selectedCategory?.name || 'Giao dịch'),
+      note: note || (type === 'TRANSFER' ? `${t('tx.transferTo', 'Chuyển sang')} ${selectedToWallet?.name}` : selectedCategory?.name || t('tx.transaction', 'Giao dịch')),
       tags,
       receiptImage,
     });
@@ -242,7 +244,7 @@ export const QuickAddModal: React.FC = () => {
             {/* Real-time Vietnamese Amount in Words */}
             {amount && Number(amount) > 0 && (
               <div className="mt-2 px-3 py-2 rounded-xl bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200/70 dark:border-blue-900/60 text-xs flex items-start gap-2 animate-in fade-in slide-in-from-top-1">
-                <span className="text-blue-600 dark:text-blue-400 font-bold shrink-0 mt-0.5">Bằng chữ:</span>
+                <span className="text-blue-600 dark:text-blue-400 font-bold shrink-0 mt-0.5">{t('qa.inWords', 'Bằng chữ:')}</span>
                 <span className="font-semibold text-blue-900 dark:text-blue-200 italic break-words break-all [overflow-wrap:anywhere] leading-relaxed">
                   {numberToVietnameseWords(amount)}
                 </span>
@@ -267,7 +269,7 @@ export const QuickAddModal: React.FC = () => {
                   onClick={() => setAmount('')}
                   className="px-2 py-1 text-xs text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors ml-auto"
                 >
-                  Xóa
+                  {t('qa.deleteReceipt', 'Xóa')}
                 </button>
               )}
             </div>
@@ -278,11 +280,11 @@ export const QuickAddModal: React.FC = () => {
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  {type === 'TRANSFER' ? 'Từ ví nguồn' : 'Ví thanh toán'} <span className="text-rose-500">*</span>
+                  {type === 'TRANSFER' ? t('qa.fromWallet', 'Từ ví nguồn') : t('qa.payWallet', 'Ví thanh toán')} <span className="text-rose-500">*</span>
                 </label>
                 {selectedWallet && (
                   <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                    Khả dụng: {formatCurrency(availableBalance)}
+                    {t('qa.availableBalance', 'Khả dụng')}: {formatCurrency(availableBalance)}
                   </span>
                 )}
               </div>
@@ -302,7 +304,7 @@ export const QuickAddModal: React.FC = () => {
             {type === 'TRANSFER' ? (
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                  Đến ví đích <span className="text-rose-500">*</span>
+                  {t('qa.toWallet', 'Đến ví đích')} <span className="text-rose-500">*</span>
                 </label>
                 <select
                   value={toWalletId}
@@ -321,7 +323,7 @@ export const QuickAddModal: React.FC = () => {
             ) : (
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                  Danh mục <span className="text-rose-500">*</span>
+                  {t('qa.category', 'Danh mục')} <span className="text-rose-500">*</span>
                 </label>
                 <select
                   value={categoryId}
@@ -342,7 +344,7 @@ export const QuickAddModal: React.FC = () => {
           {type === 'TRANSFER' && (
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                Phí chuyển tiền (nếu có)
+                {t('qa.transferFeeHint', 'Phí chuyển tiền (nếu có)')}
               </label>
               <input
                 type="text"
@@ -370,7 +372,7 @@ export const QuickAddModal: React.FC = () => {
             <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-xs text-rose-700 dark:text-rose-300 flex items-start gap-2.5 animate-in fade-in min-w-0 max-w-full overflow-hidden">
               <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
               <div className="min-w-0 flex-1">
-                <p className="font-bold">Số tiền vượt quá quỹ khả dụng!</p>
+                <p className="font-bold">{t('qa.exceedBalance', 'Số tiền vượt quá quỹ khả dụng!')}</p>
                 <p className="mt-1 leading-relaxed break-words break-all [overflow-wrap:anywhere]">{fundValidation.errorMessage}</p>
               </div>
             </div>
@@ -380,7 +382,7 @@ export const QuickAddModal: React.FC = () => {
           {type !== 'TRANSFER' && (
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                Chọn nhanh danh mục
+                {t('qa.quickSelectCategory', 'Chọn nhanh danh mục')}
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {filteredCategories.slice(0, 8).map((cat) => (
@@ -411,7 +413,7 @@ export const QuickAddModal: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                Ngày & Giờ
+                {t('qa.dateTime', 'Ngày & Giờ')}
               </label>
               <input
                 type="datetime-local"
@@ -423,13 +425,13 @@ export const QuickAddModal: React.FC = () => {
 
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                Ghi chú
+                {t('qa.note', 'Ghi chú')}
               </label>
               <input
                 type="text"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="Ví dụ: Ăn trưa Highlands, Tiền điện EVN..."
+                placeholder={t('qa.notePlaceholder', 'Ví dụ: Ăn trưa Highlands, Tiền điện EVN...')}
                 className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
               />
             </div>
@@ -438,7 +440,7 @@ export const QuickAddModal: React.FC = () => {
           {/* Tags */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-              Nhãn (Tags)
+              {t('qa.tags', 'Nhãn (Tags)')}
             </label>
             <div className="flex flex-wrap gap-1.5">
               {POPULAR_TAGS.map((tag) => (
@@ -461,12 +463,12 @@ export const QuickAddModal: React.FC = () => {
           {/* Receipt Image Attachment */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-              Đính kèm hóa đơn / Ảnh chụp chứng từ
+              {t('qa.attachReceiptTitle', 'Đính kèm hóa đơn / Ảnh chụp chứng từ')}
             </label>
             {receiptImage ? (
               <div className="relative inline-block border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden shadow-sm">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={receiptImage} alt="Hóa đơn" className="h-28 object-contain bg-slate-100 dark:bg-slate-800" />
+                <img src={receiptImage} alt={t('bills.receiptAlt', 'Hóa đơn')} className="h-28 object-contain bg-slate-100 dark:bg-slate-800" />
                 <button
                   type="button"
                   onClick={() => setReceiptImage(undefined)}
@@ -482,9 +484,9 @@ export const QuickAddModal: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                    Bấm để tải ảnh hóa đơn (JPG, PNG)
+                    {t('qa.uploadReceiptBtn', 'Bấm để tải ảnh hóa đơn (JPG, PNG)')}
                   </p>
-                  <p className="text-[11px] text-slate-400">Giúp đối soát chi tiêu chính xác và tiện lợi</p>
+                  <p className="text-[11px] text-slate-400">{t('qa.receiptHelp', 'Giúp đối soát chi tiêu chính xác và tiện lợi')}</p>
                 </div>
                 <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
               </label>

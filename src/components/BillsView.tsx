@@ -137,7 +137,7 @@ export const BillsView: React.FC = () => {
         name: billName,
         amount: amountNum,
         categoryId: billCategory,
-        categoryName: cat?.name || 'Hóa đơn',
+        categoryName: cat?.name || tCategory('Hóa đơn'),
         dueDay: dueDayNum,
         frequency: billFrequency,
         note: billNote,
@@ -150,7 +150,7 @@ export const BillsView: React.FC = () => {
         name: billName,
         amount: amountNum,
         categoryId: billCategory,
-        categoryName: cat?.name || 'Hóa đơn',
+        categoryName: cat?.name || tCategory('Hóa đơn'),
         dueDay: dueDayNum,
         frequency: billFrequency,
         status: billStatus,
@@ -177,10 +177,10 @@ export const BillsView: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">
-            Chi Phí Định Kỳ & Lịch Hóa Đơn
+            {t('bills.mainTitle', 'Chi Phí Định Kỳ & Lịch Hóa Đơn')}
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Quản lý và theo dõi ngày đến hạn các hóa đơn cố định (tiền nhà, điện nước, internet, dịch vụ đăng ký)
+            {t('bills.mainSubtitle', 'Quản lý và theo dõi ngày đến hạn các hóa đơn cố định (tiền nhà, điện nước, internet, dịch vụ đăng ký)')}
           </p>
         </div>
 
@@ -389,7 +389,7 @@ export const BillsView: React.FC = () => {
                         editBill(bill.id, { status: 'UNPAID', lastPaidDate: undefined });
                       }}
                       className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-medium transition-colors"
-                      title="Đặt lại chưa thanh toán"
+                      title={t('bills.resetUnpaid', 'Đặt lại chưa thanh toán')}
                     >
                       <RotateCcw className="w-3.5 h-3.5 inline mr-1" />
                       <span>{t('bill.resetUnpaid', 'Đặt lại')}</span>
@@ -462,7 +462,7 @@ export const BillsView: React.FC = () => {
                   required
                   value={billName}
                   onChange={(e) => setBillName(e.target.value)}
-                  placeholder="Ví dụ: Tiền điện EVN, Internet Viettel, Tiền thuê nhà..."
+                  placeholder={t('bills.namePlaceholder', 'Ví dụ: Tiền điện EVN, Internet Viettel, Tiền thuê nhà...')}
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm dark:text-white"
                 />
               </div>
@@ -605,7 +605,7 @@ export const BillsView: React.FC = () => {
                   type="text"
                   value={billNote}
                   onChange={(e) => setBillNote(e.target.value)}
-                  placeholder="Ví dụ: Mã KH: PD09887723..."
+                  placeholder={t('bills.codePlaceholder', 'Ví dụ: Mã KH: PD09887723...')}
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm dark:text-white"
                 />
               </div>
@@ -616,7 +616,7 @@ export const BillsView: React.FC = () => {
                   onClick={() => setBillModalOpen(false)}
                   className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 rounded-xl"
                 >
-                  Hủy
+                  {t('common.cancel', 'Hủy')}
                 </button>
                 <button
                   type="submit"
@@ -670,7 +670,7 @@ export const BillsView: React.FC = () => {
                 >
                   {wallets.map((w) => (
                     <option key={w.id} value={w.id}>
-                      {w.name} (Khả dụng: {formatCurrency(w.balance)})
+                      {w.name} ({t('qa.availableBalance', 'Khả dụng')}: {formatCurrency(w.balance)})
                     </option>
                   ))}
                 </select>
@@ -702,13 +702,13 @@ export const BillsView: React.FC = () => {
                 onClick={() => setPayModalOpen(false)}
                 className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 rounded-xl"
               >
-                Hủy
+                {t('common.cancel', 'Hủy')}
               </button>
               <button
                 onClick={handleConfirmPay}
                 className="px-5 py-2 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm"
               >
-                Xác nhận thanh toán
+                {t('bills.confirmPay', 'Xác nhận thanh toán')}
               </button>
             </div>
           </div>
