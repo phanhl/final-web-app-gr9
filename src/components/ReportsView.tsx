@@ -40,7 +40,12 @@ import { IconHelper } from './IconHelper';
 const pieChartColors = ['#f97316', '#ec4899', '#8b5cf6', '#0ea5e9', '#eab308', '#10b981', '#64748b', '#ef4444'];
 
 export const ReportsView: React.FC = () => {
-  const { transactions, budgets, wallets, financialSummary, currentMonth, categories } = useApp();
+  const { transactions, budgets, wallets, financialSummary, currentMonth, categories,
+    t,
+    tCategory,
+    tWalletType,
+    language,
+  } = useApp();
 
   const [period, setPeriod] = useState<'THIS_MONTH' | 'LAST_MONTH' | 'THIS_YEAR' | 'CUSTOM'>('THIS_MONTH');
   const [customStart, setCustomStart] = useState(`${currentMonth}-01`);
@@ -156,10 +161,10 @@ export const ReportsView: React.FC = () => {
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 print:hidden">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">
-            Báo Cáo & Phân Tích Chuyên Sâu
+            {t('rep.reportTitle', 'Báo Cáo & Phân Tích Chuyên Sâu')}
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Biểu đồ tròn cơ cấu chi tiêu, so sánh Thu - Chi theo thời gian, phân tích xu hướng dòng tiền & xuất báo cáo
+            {t('rep.reportSubtitle', 'Biểu đồ tròn cơ cấu chi tiêu, so sánh Thu - Chi theo thời gian, phân tích xu hướng dòng tiền & xuất báo cáo')}
           </p>
         </div>
 
@@ -170,7 +175,7 @@ export const ReportsView: React.FC = () => {
             className="flex items-center space-x-1.5 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold shadow-sm transition-colors"
           >
             <FileText className="w-4 h-4 text-emerald-600" />
-            <span>Xuất CSV</span>
+            <span>{t('rep.exportCSV', 'Xuất CSV')}</span>
           </button>
 
           <button
@@ -178,7 +183,7 @@ export const ReportsView: React.FC = () => {
             className="flex items-center space-x-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors"
           >
             <FileSpreadsheet className="w-4 h-4" />
-            <span>Xuất Excel (.xlsx)</span>
+            <span>{t('rep.exportExcel', 'Xuất Excel (.xlsx)')}</span>
           </button>
 
           <button
@@ -186,7 +191,7 @@ export const ReportsView: React.FC = () => {
             className="flex items-center space-x-1.5 px-3.5 py-2 bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors"
           >
             <Printer className="w-4 h-4" />
-            <span>In / Xuất PDF</span>
+            <span>{t('rep.printPDF', 'In / Xuất PDF')}</span>
           </button>
         </div>
       </div>
@@ -194,7 +199,7 @@ export const ReportsView: React.FC = () => {
       {/* 2. TIME PERIOD FILTER BUTTONS */}
       <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 print:hidden">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-bold text-slate-500 mr-2">Khoảng thời gian:</span>
+          <span className="text-xs font-bold text-slate-500 mr-2">{t('rep.timePeriod', 'Khoảng thời gian:')}</span>
           <button
             onClick={() => setPeriod('THIS_MONTH')}
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
@@ -203,7 +208,7 @@ export const ReportsView: React.FC = () => {
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
             }`}
           >
-            Tháng này (T9/2026)
+            {t('rep.thisMonthPeriod', 'Tháng này')} (09/2026)
           </button>
 
           <button
@@ -214,7 +219,7 @@ export const ReportsView: React.FC = () => {
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
             }`}
           >
-            Tháng trước (T8/2026)
+            {t('rep.lastMonthPeriod', 'Tháng trước')} (08/2026)
           </button>
 
           <button
@@ -225,7 +230,7 @@ export const ReportsView: React.FC = () => {
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
             }`}
           >
-            Cả năm 2026
+            {t('rep.thisYearPeriod', 'Cả năm')} 2026
           </button>
 
           <button
@@ -236,7 +241,7 @@ export const ReportsView: React.FC = () => {
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
             }`}
           >
-            Tùy chọn ngày
+            {t('rep.customPeriod', 'Tùy chọn ngày')}
           </button>
         </div>
 
@@ -248,7 +253,7 @@ export const ReportsView: React.FC = () => {
               onChange={(e) => setCustomStart(e.target.value)}
               className="px-2.5 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs"
             />
-            <span className="text-xs text-slate-400">đến</span>
+            <span className="text-xs text-slate-400">{t('rep.to', 'đến')}</span>
             <input
               type="date"
               value={customEnd}
@@ -262,31 +267,31 @@ export const ReportsView: React.FC = () => {
       {/* 3. EXECUTIVE SUMMARY BANNER (PRINT-FRIENDLY) */}
       <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm print:border-none print:shadow-none">
         <div className="hidden print:block pb-4 mb-4 border-b">
-          <h2 className="text-xl font-bold text-slate-900">BÁO CÁO TỔNG HỢP TÀI CHÍNH CHI TIÊU</h2>
+          <h2 className="text-xl font-bold text-slate-900">{t('rep.execSummary', 'BÁO CÁO TỔNG HỢP TÀI CHÍNH CHI TIÊU')}</h2>
           <p className="text-xs text-slate-500">
-            Kỳ báo cáo: {period === 'THIS_MONTH' ? 'Tháng 09/2026' : period === 'LAST_MONTH' ? 'Tháng 08/2026' : 'Năm 2026'} • Tạo ngày: {formatDate(new Date().toISOString(), 'full')}
+            {t('rep.reportPeriod', 'Kỳ báo cáo:')} {period === 'THIS_MONTH' ? 'Tháng 09/2026' : period === 'LAST_MONTH' ? 'Tháng 08/2026' : 'Năm 2026'} • {t('rep.createdAt', 'Tạo ngày:')} {formatDate(new Date().toISOString(), 'full')}
           </p>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div>
-            <span className="text-xs font-semibold text-slate-400 uppercase">Tổng thu nhập</span>
+            <span className="text-xs font-semibold text-slate-400 uppercase">{t('rep.totalIncome', 'Tổng thu nhập')}</span>
             <p className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
               +{formatCurrency(totalIncome)}
             </p>
-            <span className="text-[11px] text-slate-400">{filteredTxs.filter((t) => t.type === 'INCOME').length} khoản thu</span>
+            <span className="text-[11px] text-slate-400">{filteredTxs.filter((t) => t.type === 'INCOME').length} {t('rep.incomeCount', 'khoản thu')}</span>
           </div>
 
           <div>
-            <span className="text-xs font-semibold text-slate-400 uppercase">Tổng chi tiêu</span>
+            <span className="text-xs font-semibold text-slate-400 uppercase">{t('rep.totalExpense', 'Tổng chi tiêu')}</span>
             <p className="text-xl font-black text-rose-600 dark:text-rose-400 mt-1">
               -{formatCurrency(totalExpense)}
             </p>
-            <span className="text-[11px] text-slate-400">{filteredTxs.filter((t) => t.type === 'EXPENSE').length} khoản chi</span>
+            <span className="text-[11px] text-slate-400">{filteredTxs.filter((t) => t.type === 'EXPENSE').length} {t('rep.expenseCount', 'khoản chi')}</span>
           </div>
 
           <div>
-            <span className="text-xs font-semibold text-slate-400 uppercase">Thặng dư / Tích lũy</span>
+            <span className="text-xs font-semibold text-slate-400 uppercase">{t('rep.netSurplus', 'Thặng dư / Tích lũy')}</span>
             <p
               className={`text-xl font-black mt-1 ${
                 netSavings >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-rose-600 dark:text-rose-400'
@@ -295,15 +300,15 @@ export const ReportsView: React.FC = () => {
               {netSavings >= 0 ? '+' : ''}
               {formatCurrency(netSavings)}
             </p>
-            <span className="text-[11px] text-slate-400">Dòng tiền ròng</span>
+            <span className="text-[11px] text-slate-400">{t('rep.netCashflow', 'Dòng tiền ròng')}</span>
           </div>
 
           <div>
-            <span className="text-xs font-semibold text-slate-400 uppercase">Tỷ lệ tích lũy</span>
+            <span className="text-xs font-semibold text-slate-400 uppercase">{t('rep.savingsRate', 'Tỷ lệ tích lũy')}</span>
             <p className="text-xl font-black text-indigo-600 dark:text-indigo-400 mt-1">
               {savingsRate}%
             </p>
-            <span className="text-[11px] text-slate-400">Trên tổng thu nhập</span>
+            <span className="text-[11px] text-slate-400">{t('rep.ofTotalIncome', 'Trên tổng thu nhập')}</span>
           </div>
         </div>
       </div>
@@ -317,10 +322,10 @@ export const ReportsView: React.FC = () => {
               <div>
                 <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center space-x-2">
                   <PieChartIcon className="w-5 h-5 text-purple-500" />
-                  <span>Cơ cấu chi tiêu theo Danh mục</span>
+                  <span>{t('rep.structureByCategory', 'Cơ cấu chi tiêu theo Danh mục')}</span>
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Phân bổ tỷ trọng % các nhóm chi tiêu trong kỳ
+                  {t('rep.structureSubtitle', 'Phân bổ tỷ trọng % các nhóm chi tiêu trong kỳ')}
                 </p>
               </div>
               {totalExpense > 0 && (

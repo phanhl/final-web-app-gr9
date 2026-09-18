@@ -53,6 +53,10 @@ export const WhatIfSimulatorView: React.FC = () => {
     planner,
     simulatorConfig,
     updateSimulatorConfig,
+    t,
+    tCategory,
+    tWalletType,
+    language,
   } = useApp();
 
   // Khung thời gian mô phỏng
@@ -389,13 +393,13 @@ export const WhatIfSimulatorView: React.FC = () => {
         <div className="relative z-10 max-w-4xl">
           <div className="inline-flex items-center space-x-1.5 px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-extrabold uppercase tracking-wider mb-2.5">
             <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-            <span>Mô Phỏng Tài Chính &amp; Quản Trị Rủi Ro Chuyên Sâu</span>
+            <span>{t('sim.forecastHeading', 'Mô Phỏng Tài Chính & Quản Trị Rủi Ro Chuyên Sâu')}</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
-            Mô Phỏng &quot;What-If&quot; Đa Danh Mục, Đầu Tư &amp; Nghĩa Vụ Nợ
+            {t('sim.title', 'Mô Phỏng What-If')}
           </h1>
           <p className="text-xs sm:text-sm text-blue-100 mt-2 leading-relaxed">
-            Tùy biến cắt giảm nhiều danh mục chi tiêu độc lập, phân bổ đa kênh tích lũy, tính toán kịch bản <strong>thua lỗ đầu tư tài chính</strong> và áp lực <strong>trả nợ vay ngoài</strong>. Hệ thống phản ứng thời gian thực với bảng phân tích chi tiết từng tháng.
+            {t('sim.subtitle')}
           </p>
         </div>
       </div>
@@ -403,7 +407,7 @@ export const WhatIfSimulatorView: React.FC = () => {
       {/* 2. TOP IMPACT KPI SUMMARY CARDS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <span className="text-[11px] font-bold text-slate-400 uppercase">Tài sản hiện tại</span>
+          <span className="text-[11px] font-bold text-slate-400 uppercase">{language === 'en' ? 'Current Assets' : language === 'fr' ? 'Actif actuel' : 'Tài sản hiện tại'}</span>
           <p className="text-xl font-black text-slate-800 dark:text-white mt-1">
             {formatCurrency(startingNetWorth)}
           </p>
@@ -412,7 +416,7 @@ export const WhatIfSimulatorView: React.FC = () => {
 
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
           <span className="text-[11px] font-bold text-slate-400 uppercase">
-            Tiết kiệm nhờ cắt giảm
+            {t('sim.colCutSavings', 'Tiết kiệm nhờ cắt giảm')}
           </span>
           <p className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
             +{formatCurrency(totalCutSavings)}/tháng
@@ -424,7 +428,7 @@ export const WhatIfSimulatorView: React.FC = () => {
 
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
           <span className="text-[11px] font-bold text-slate-400 uppercase">
-            Trả nợ vay hàng tháng
+            {t('sim.colDebtPay', 'Trả nợ vay hàng tháng')}
           </span>
           <p
             className={`text-xl font-black mt-1 ${
@@ -440,7 +444,7 @@ export const WhatIfSimulatorView: React.FC = () => {
 
         <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-900 to-slate-900 text-white shadow-lg border border-indigo-500/30">
           <span className="text-[11px] font-bold text-indigo-300 uppercase">
-            DỰ BÁO SAU {projectionMonths} THÁNG
+            {language === 'en' ? `FORECAST AFTER ${projectionMonths} MONTHS` : language === 'fr' ? `PRÉVISION APRÈS ${projectionMonths} MOIS` : `DỰ BÁO SAU ${projectionMonths} THÁNG`}
           </span>
           <p className="text-xl font-black text-emerald-400 mt-1">
             {formatCurrency(finalRow.whatIfTotal)}
@@ -459,7 +463,7 @@ export const WhatIfSimulatorView: React.FC = () => {
         >
           <span className="text-[11px] font-extrabold uppercase flex items-center space-x-1">
             <Zap className="w-3.5 h-3.5 fill-current" />
-            <span>Chênh lệch Net Gain</span>
+            <span>{language === 'en' ? 'Net Gain Delta' : language === 'fr' ? 'Gain net différentiel' : 'Chênh lệch Net Gain'}</span>
           </span>
           <p className="text-xl font-black mt-1">
             {finalDelta >= 0 ? '+' : ''}
@@ -486,7 +490,7 @@ export const WhatIfSimulatorView: React.FC = () => {
                 </div>
                 <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center space-x-2">
                   <Wallet className="w-5 h-5 text-blue-600" />
-                  <span>1. Mức Tiêu Dùng Chi Tiêu Cá Nhân Hiện Tại ({spendingCategories.length} khoản)</span>
+                  <span>{t('sim.spendingOptTitle', '1. Mức Tiêu Dùng Chi Tiêu Cá Nhân Hiện Tại')} ({spendingCategories.length})</span>
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
                   Xem trước mức chi tiêu hàng tháng theo từng khoản của bạn. Bấm <strong>&quot;Chọn cắt giảm&quot;</strong> để đưa mục đó xuống bảng tối ưu.
@@ -531,10 +535,10 @@ export const WhatIfSimulatorView: React.FC = () => {
                       </div>
                       <div className="min-w-0">
                         <h4 className="text-xs font-bold text-slate-800 dark:text-white truncate">
-                          {item.categoryName}
+                          {tCategory(item.categoryName)}
                         </h4>
                         <span className="text-[10px] text-slate-400 block">
-                          Chi tiêu cá nhân
+                          {language === 'en' ? 'Personal Expense' : language === 'fr' ? 'Dépense personnelle' : 'Chi tiêu cá nhân'}
                         </span>
                       </div>
                     </div>
@@ -593,12 +597,12 @@ export const WhatIfSimulatorView: React.FC = () => {
                     {item.isSelected ? (
                       <>
                         <CheckCircle2 className="w-3.5 h-3.5 text-white" />
-                        <span>Đang chọn cắt giảm (Bấm để hủy)</span>
+                        <span>{language === 'en' ? 'Selected for cuts (Click to cancel)' : language === 'fr' ? 'Sélectionné pour réduction (Cliquer pour annuler)' : 'Đang chọn cắt giảm (Bấm để hủy)'}</span>
                       </>
                     ) : (
                       <>
                         <Plus className="w-3.5 h-3.5 text-rose-500" />
-                        <span>Chọn để cắt giảm</span>
+                        <span>{language === 'en' ? 'Select to cut' : language === 'fr' ? 'Sélectionner pour réduire' : 'Chọn để cắt giảm'}</span>
                       </>
                     )}
                   </button>
@@ -618,7 +622,7 @@ export const WhatIfSimulatorView: React.FC = () => {
                 </div>
                 <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center space-x-2">
                   <Sliders className="w-5 h-5 text-rose-500" />
-                  <span>2. Các Khoản Đã Chọn Để Cắt Giảm Chi Tiêu ({selectedCuts.length} mục)</span>
+                  <span>{language === 'en' ? '2. Selected Cuts' : language === 'fr' ? '2. Réductions sélectionnées' : '2. Các Khoản Đã Chọn Để Cắt Giảm'} ({selectedCuts.length})</span>
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
                   Kéo thanh trượt hoặc chọn nhanh tỷ lệ cắt giảm (0% - 50%) cho từng khoản bạn đã chọn ở trên
@@ -667,7 +671,7 @@ export const WhatIfSimulatorView: React.FC = () => {
                             </div>
                             <div>
                               <h4 className="text-xs font-bold text-slate-800 dark:text-white">
-                                {cut.categoryName}
+                                {tCategory(cut.categoryName)}
                               </h4>
                               <span className="text-[10px] text-slate-400">
                                 Mức tiêu dùng gốc: {formatCurrency(cut.monthlyExpense)}/tháng

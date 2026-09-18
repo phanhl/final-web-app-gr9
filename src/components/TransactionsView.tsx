@@ -54,6 +54,10 @@ export const TransactionsView: React.FC = () => {
     deleteTransaction,
     navTargetCategoryId,
     setNavTargetCategoryId,
+    language,
+    t,
+    tCategory,
+    tWalletType,
   } = useApp();
 
   const [showCharts, setShowCharts] = useState(true);
@@ -254,47 +258,47 @@ export const TransactionsView: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">
-            Sổ Giao Dịch
+            {t('tx.title', 'Sổ Giao Dịch')}
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Theo dõi dòng tiền thu chi theo dòng thời gian (Timeline) với bộ lọc chuyên sâu
+            {t('tx.subtitle', 'Theo dõi dòng tiền thu chi theo dòng thời gian (Timeline) với bộ lọc chuyên sâu')}
           </p>
         </div>
 
         <div className="flex items-center space-x-2.5">
           <button
             onClick={() => setShowCharts((s) => !s)}
-            className="flex items-center space-x-1.5 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold shadow-sm transition-colors"
-            title="Ẩn hoặc hiện biểu đồ phân tích dòng tiền"
+            className="flex items-center space-x-1.5 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold shadow-sm transition-colors cursor-pointer"
+            title={showCharts ? t('tx.hideCharts', 'Ẩn biểu đồ') : t('tx.showCharts', 'Xem biểu đồ')}
           >
             <BarChart3 className="w-4 h-4 text-indigo-500" />
-            <span>{showCharts ? 'Ẩn biểu đồ' : 'Xem biểu đồ'}</span>
+            <span>{showCharts ? t('tx.hideCharts', 'Ẩn biểu đồ') : t('tx.showCharts', 'Xem biểu đồ')}</span>
           </button>
 
           <button
             onClick={() => exportToCSV(filteredTransactions)}
-            className="flex items-center space-x-1.5 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold shadow-sm transition-colors"
-            title="Xuất danh sách sang file CSV UTF-8"
+            className="flex items-center space-x-1.5 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold shadow-sm transition-colors cursor-pointer"
+            title="CSV"
           >
             <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-            <span>Xuất CSV</span>
+            <span>{t('tx.exportCSV', 'Xuất CSV')}</span>
           </button>
 
           <button
             onClick={() => exportToExcel(filteredTransactions, budgets, wallets, financialSummary)}
-            className="flex items-center space-x-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors"
-            title="Tải file Excel .xlsx đầy đủ dữ liệu"
+            className="flex items-center space-x-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors cursor-pointer"
+            title="Excel"
           >
             <FileSpreadsheet className="w-4 h-4" />
-            <span>Xuất Excel (.xlsx)</span>
+            <span>{t('tx.exportExcel', 'Xuất Excel (.xlsx)')}</span>
           </button>
 
           <button
             onClick={() => openQuickAdd('EXPENSE')}
-            className="flex items-center space-x-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors"
+            className="flex items-center space-x-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>Giao dịch mới</span>
+            <span>{t('tx.newTx', 'Giao dịch mới')}</span>
           </button>
         </div>
       </div>
@@ -302,23 +306,33 @@ export const TransactionsView: React.FC = () => {
       {/* 2. STATS SUMMARY BAR OF FILTERED TRANSACTIONS */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <div>
-          <span className="text-[11px] font-semibold text-slate-400 uppercase">Số giao dịch</span>
-          <p className="text-lg font-black text-slate-800 dark:text-white">{stats.count} GD</p>
+          <span className="text-[11px] font-semibold text-slate-400 uppercase">
+            {t('tx.txCount', 'Số giao dịch')}
+          </span>
+          <p className="text-lg font-black text-slate-800 dark:text-white">
+            {stats.count} {language === 'en' ? 'txs' : language === 'fr' ? 'op.' : 'GD'}
+          </p>
         </div>
         <div>
-          <span className="text-[11px] font-semibold text-slate-400 uppercase">Tổng khoản thu</span>
+          <span className="text-[11px] font-semibold text-slate-400 uppercase">
+            {t('tx.totalIncome', 'Tổng khoản thu')}
+          </span>
           <p className="text-lg font-black text-emerald-600 dark:text-emerald-400">
             +{formatCurrency(stats.income)}
           </p>
         </div>
         <div>
-          <span className="text-[11px] font-semibold text-slate-400 uppercase">Tổng khoản chi</span>
+          <span className="text-[11px] font-semibold text-slate-400 uppercase">
+            {t('tx.totalExpense', 'Tổng khoản chi')}
+          </span>
           <p className="text-lg font-black text-rose-600 dark:text-rose-400">
             -{formatCurrency(stats.expense)}
           </p>
         </div>
         <div>
-          <span className="text-[11px] font-semibold text-slate-400 uppercase">Dòng tiền chênh lệch</span>
+          <span className="text-[11px] font-semibold text-slate-400 uppercase">
+            {t('tx.netCashflow', 'Chênh lệch thu - chi')}
+          </span>
           <p
             className={`text-lg font-black ${
               stats.net >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-rose-600 dark:text-rose-400'
@@ -373,8 +387,12 @@ export const TransactionsView: React.FC = () => {
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
             <div className="flex items-center justify-between mb-1">
               <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Chi tiêu theo danh mục</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Phân bổ tỷ trọng chi tiêu</p>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  {t('tx.expenseStructure', 'Cơ cấu chi tiêu')}
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {language === 'en' ? 'Spending distribution' : language === 'fr' ? 'Répartition des dépenses' : 'Phân bổ tỷ trọng chi tiêu'}
+                </p>
               </div>
               {totalPieExpense > 0 && (
                 <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40">
@@ -385,29 +403,29 @@ export const TransactionsView: React.FC = () => {
 
             {/* Quick Scope Toggle: Tháng này vs Tất cả */}
             <div className="flex items-center justify-between my-2 pb-1.5 border-b border-slate-100 dark:border-slate-800">
-              <span className="text-[11px] text-slate-400 font-medium">Kỳ thống kê:</span>
+              <span className="text-[11px] text-slate-400 font-medium">{t('tx.statPeriod', 'Kỳ thống kê:')}</span>
               <div className="flex items-center p-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-[11px] font-semibold">
                 <button
                   type="button"
                   onClick={() => setPieTimeScope('THIS_MONTH')}
-                  className={`px-2.5 py-1 rounded-md transition-all ${
+                  className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
                     pieTimeScope === 'THIS_MONTH'
                       ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs'
                       : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                   }`}
                 >
-                  Tháng này ({currentMonth.slice(5)}/{currentMonth.slice(0, 4)})
+                  {t('tx.quickMonth', 'Tháng này')} ({currentMonth.slice(5)}/{currentMonth.slice(0, 4)})
                 </button>
                 <button
                   type="button"
                   onClick={() => setPieTimeScope('ALL')}
-                  className={`px-2.5 py-1 rounded-md transition-all ${
+                  className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
                     pieTimeScope === 'ALL'
                       ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs'
                       : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                   }`}
                 >
-                  Tất cả
+                  {t('tx.quickAllTime', 'Tất cả')}
                 </button>
               </div>
             </div>
@@ -475,7 +493,7 @@ export const TransactionsView: React.FC = () => {
                     {hoveredPieIndex !== null && pieChartData[hoveredPieIndex] ? (
                       <div className="animate-in fade-in zoom-in-90 duration-150">
                         <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 truncate max-w-[85px] mx-auto">
-                          {pieChartData[hoveredPieIndex].name}
+                          {tCategory(pieChartData[hoveredPieIndex].name)}
                         </p>
                         <p className="text-base font-black text-slate-900 dark:text-white leading-tight">
                           {totalPieExpense > 0
@@ -489,13 +507,13 @@ export const TransactionsView: React.FC = () => {
                     ) : (
                       <div>
                         <p className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider">
-                          Tổng chi
+                          {t('dash.expense', 'Tổng chi')}
                         </p>
                         <p className="text-sm font-black text-slate-900 dark:text-white leading-tight mt-0.5">
                           {formatCurrency(totalPieExpense)}
                         </p>
                         <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
-                          {pieChartData.length} danh mục
+                          {pieChartData.length} {language === 'en' ? 'categories' : language === 'fr' ? 'catégories' : 'danh mục'}
                         </p>
                       </div>
                     )}
@@ -525,7 +543,7 @@ export const TransactionsView: React.FC = () => {
                               style={{ backgroundColor: entry.color }}
                             />
                             <span className="text-slate-700 dark:text-slate-300 font-medium truncate">
-                              {entry.name}
+                              {tCategory(entry.name)}
                             </span>
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
@@ -555,7 +573,7 @@ export const TransactionsView: React.FC = () => {
             ) : (
               <div className="flex flex-col items-center justify-center py-10 text-xs text-slate-400">
                 <BarChart3 className="w-8 h-8 text-slate-300 dark:text-slate-700 mb-2 stroke-[1.5]" />
-                <p>Không có dữ liệu chi tiêu phù hợp</p>
+                <p>{t('tx.noTx', 'Không có dữ liệu chi tiêu phù hợp')}</p>
               </div>
             )}
           </div>
@@ -571,10 +589,14 @@ export const TransactionsView: React.FC = () => {
             </div>
             <div>
               <p className="font-bold text-sm text-rose-800 dark:text-rose-200">
-                Đang xem chi tiết chi tiêu: {categories.find((c) => c.id === navTargetCategoryId)?.name || 'Cảnh báo'}
+                {language === 'en' ? 'Viewing spending details:' : language === 'fr' ? 'Consultation des détails de dépenses :' : 'Đang xem chi tiết chi tiêu:'} {tCategory(categories.find((c) => c.id === navTargetCategoryId)?.name || 'Cảnh báo')}
               </p>
               <p className="text-rose-600/90 dark:text-rose-400/90 mt-0.5">
-                Danh sách giao dịch bên dưới đã được tự động lọc theo danh mục này từ <b>Trung tâm Cảnh báo</b>.
+                {language === 'en'
+                  ? 'Transactions below are filtered by this category from Alerts Center.'
+                  : language === 'fr'
+                  ? 'Les transactions ci-dessous sont filtrées par cette catégorie depuis le Centre d alertes.'
+                  : 'Danh sách giao dịch bên dưới đã được tự động lọc theo danh mục này từ Trung tâm Cảnh báo.'}
               </p>
             </div>
           </div>
@@ -585,7 +607,7 @@ export const TransactionsView: React.FC = () => {
             }}
             className="px-3.5 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl font-bold shadow-xs text-xs border border-slate-200 dark:border-slate-700 cursor-pointer self-start sm:self-auto shrink-0 transition-colors"
           >
-            Xem tất cả giao dịch
+            {t('dash.viewAll', 'Xem tất cả giao dịch')}
           </button>
         </div>
       )}
@@ -595,15 +617,15 @@ export const TransactionsView: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2 text-xs font-bold text-slate-700 dark:text-slate-300">
             <Filter className="w-4 h-4 text-blue-500" />
-            <span>Bộ lọc nâng cao</span>
+            <span>{t('tx.filterTitle', 'Bộ lọc tìm kiếm & Khoảng thời gian')}</span>
           </div>
           {hasActiveFilters && (
             <button
               onClick={clearFilters}
-              className="text-xs font-semibold text-rose-600 hover:text-rose-700 flex items-center space-x-1"
+              className="text-xs font-semibold text-rose-600 hover:text-rose-700 flex items-center space-x-1 cursor-pointer"
             >
               <X className="w-3.5 h-3.5" />
-              <span>Xóa bộ lọc</span>
+              <span>{t('tx.clearFilters', 'Xóa bộ lọc')}</span>
             </button>
           )}
         </div>
@@ -616,7 +638,7 @@ export const TransactionsView: React.FC = () => {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Tìm theo ghi chú..."
+              placeholder={t('tx.searchPlaceholder', 'Tìm theo ghi chú, tên danh mục, ví...')}
               className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
@@ -628,10 +650,10 @@ export const TransactionsView: React.FC = () => {
               onChange={(e) => setSelectedType(e.target.value)}
               className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
-              <option value="ALL">Tất cả loại giao dịch</option>
-              <option value="EXPENSE">Khoản chi</option>
-              <option value="INCOME">Khoản thu</option>
-              <option value="TRANSFER">Chuyển khoản</option>
+              <option value="ALL">{t('tx.allTypes', 'Tất cả loại giao dịch')}</option>
+              <option value="EXPENSE">{t('qa.expense', 'Khoản chi')}</option>
+              <option value="INCOME">{t('qa.income', 'Khoản thu')}</option>
+              <option value="TRANSFER">{t('qa.transfer', 'Chuyển khoản')}</option>
             </select>
           </div>
 
@@ -642,10 +664,10 @@ export const TransactionsView: React.FC = () => {
               onChange={(e) => setSelectedWallet(e.target.value)}
               className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
-              <option value="ALL">Tất cả ví & tài khoản</option>
+              <option value="ALL">{t('tx.allWallets', 'Tất cả ví & tài khoản')}</option>
               {wallets.map((w) => (
                 <option key={w.id} value={w.id}>
-                  {w.name}
+                  {w.name} ({tWalletType(w.type)})
                 </option>
               ))}
             </select>
@@ -658,10 +680,10 @@ export const TransactionsView: React.FC = () => {
               onChange={(e) => setSelectedCategory(e.target.value)}
               className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
-              <option value="ALL">Tất cả danh mục</option>
+              <option value="ALL">{t('tx.allCategories', 'Tất cả danh mục')}</option>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name} ({c.type === 'INCOME' ? 'Thu' : 'Chi'})
+                  {tCategory(c.name)} ({c.type === 'INCOME' ? t('qa.income', 'Thu') : t('qa.expense', 'Chi')})
                 </option>
               ))}
             </select>
@@ -727,16 +749,16 @@ export const TransactionsView: React.FC = () => {
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-12 text-center">
             <Calendar className="w-12 h-12 mx-auto text-slate-300 dark:text-slate-700 mb-3" />
             <h3 className="text-base font-bold text-slate-700 dark:text-slate-300 mb-1">
-              Không tìm thấy giao dịch nào
+              {t('tx.noTx', 'Không tìm thấy giao dịch nào')}
             </h3>
             <p className="text-xs text-slate-400 mb-4">
-              Thử thay đổi bộ lọc hoặc thêm một giao dịch thu chi mới
+              {t('tx.noTxSub', 'Thử thay đổi bộ lọc hoặc thêm một giao dịch thu chi mới')}
             </p>
             <button
               onClick={() => openQuickAdd('EXPENSE')}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl cursor-pointer"
             >
-              + Ghi nhận giao dịch ngay
+              + {t('tx.newTx', 'Giao dịch mới')}
             </button>
           </div>
         ) : (
@@ -752,7 +774,7 @@ export const TransactionsView: React.FC = () => {
                     {formatDate(group.dateKey, 'dateOnly')}
                   </span>
                   <span className="text-xs text-slate-400 font-medium">
-                    ({group.transactions.length} giao dịch)
+                    ({group.transactions.length} {language === 'en' ? 'txs' : language === 'fr' ? 'op.' : 'giao dịch'})
                   </span>
                 </div>
                 <div className="flex items-center space-x-3 text-xs">
@@ -800,19 +822,19 @@ export const TransactionsView: React.FC = () => {
                         <div className="flex items-center space-x-2">
                           <span className="font-bold text-sm text-slate-900 dark:text-white truncate">
                             {tx.type === 'TRANSFER'
-                              ? `Chuyển sang: ${tx.toWalletName || 'Ví'}`
-                              : tx.categoryName || 'Khác'}
+                              ? `${language === 'en' ? 'Transfer to:' : language === 'fr' ? 'Virement vers :' : 'Chuyển sang:'} ${tx.toWalletName || 'Ví'}`
+                              : tCategory(tx.categoryName || 'Khác')}
                           </span>
 
                           {/* Receipt Badge */}
                           {tx.receiptImage && (
                             <button
                               onClick={() => setReceiptToView(tx.receiptImage || null)}
-                              className="flex items-center space-x-1 px-1.5 py-0.5 bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 rounded text-[10px] font-bold hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors"
-                              title="Bấm để xem ảnh hóa đơn"
+                              className="flex items-center space-x-1 px-1.5 py-0.5 bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 rounded text-[10px] font-bold hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors cursor-pointer"
+                              title="Receipt"
                             >
                               <FileCheck className="w-3 h-3" />
-                              <span>Hóa đơn</span>
+                              <span>{t('qa.receiptImage', 'Hóa đơn')}</span>
                             </button>
                           )}
                         </div>
@@ -865,7 +887,7 @@ export const TransactionsView: React.FC = () => {
                           {formatCurrency(tx.amount)}
                         </span>
                         {tx.type === 'TRANSFER' && tx.fee && tx.fee > 0 && (
-                          <p className="text-[10px] text-slate-400">Phí: {formatCurrency(tx.fee)}</p>
+                          <p className="text-[10px] text-slate-400">{t('qa.fee', 'Phí')}: {formatCurrency(tx.fee)}</p>
                         )}
                       </div>
 
@@ -873,19 +895,19 @@ export const TransactionsView: React.FC = () => {
                       <div className="flex items-center space-x-1 opacity-80 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => setTransactionToEdit(tx)}
-                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg transition-colors"
-                          title="Chỉnh sửa giao dịch"
+                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg transition-colors cursor-pointer"
+                          title={t('tx.edit', 'Sửa')}
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => {
-                            if (confirm('Xác nhận xóa giao dịch này? Số dư ví sẽ được tự động hoàn lại.')) {
+                            if (confirm(t('tx.confirmDelete', 'Bạn có chắc chắn muốn xóa giao dịch này không? Số dư ví sẽ được hoàn tác an toàn.'))) {
                               deleteTransaction(tx.id);
                             }
                           }}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors"
-                          title="Xóa giao dịch"
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer"
+                          title={t('tx.delete', 'Xóa')}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -904,7 +926,7 @@ export const TransactionsView: React.FC = () => {
         isOpen={Boolean(receiptToView)}
         onClose={() => setReceiptToView(null)}
         imageUrl={receiptToView || undefined}
-        title="Chi tiết ảnh hóa đơn đính kèm"
+        title={t('receipt.title', 'Chi tiết ảnh hóa đơn đính kèm')}
       />
 
       <EditTransactionModal
@@ -927,7 +949,7 @@ const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
   onClose,
   transaction,
 }) => {
-  const { wallets, categories, editTransaction, deleteTransaction } = useApp();
+  const { wallets, categories, editTransaction, deleteTransaction, t, tCategory, tWalletType } = useApp();
 
   const [type, setType] = useState<TransactionType>('EXPENSE');
   const [amount, setAmount] = useState<number>(0);
@@ -978,7 +1000,7 @@ const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
 
   const handleSave = () => {
     if (!amount || amount <= 0) {
-      alert('Vui lòng nhập số tiền hợp lệ');
+      alert(t('qa.invalidAmount', 'Vui lòng nhập số tiền hợp lệ'));
       return;
     }
 
@@ -1008,7 +1030,7 @@ const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
   };
 
   const handleDelete = () => {
-    if (confirm('Bạn có chắc chắn muốn xóa giao dịch này? Số dư ví sẽ được tự động hoàn tác.')) {
+    if (confirm(t('tx.confirmDelete', 'Bạn có chắc chắn muốn xóa giao dịch này? Số dư ví sẽ được tự động hoàn tác.'))) {
       deleteTransaction(transaction.id);
       onClose();
     }
@@ -1021,10 +1043,12 @@ const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
       <div className="relative max-w-xl w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden my-8">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
-          <h2 className="text-xl font-bold text-slate-800 dark:text-white">Chỉnh sửa Giao dịch</h2>
+          <h2 className="text-xl font-bold text-slate-800 dark:text-white">
+            {t('tx.editTitle', 'Chỉnh sửa Giao dịch')}
+          </h2>
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-lg transition-colors"
+            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-lg transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -1036,42 +1060,42 @@ const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
             <button
               type="button"
               onClick={() => setType('EXPENSE')}
-              className={`py-2 text-sm font-semibold rounded-lg transition-all ${
+              className={`py-2 text-sm font-semibold rounded-lg transition-all cursor-pointer ${
                 type === 'EXPENSE'
                   ? 'bg-rose-500 text-white shadow-sm'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              Khoản chi
+              {t('qa.expense', 'Khoản chi')}
             </button>
             <button
               type="button"
               onClick={() => setType('INCOME')}
-              className={`py-2 text-sm font-semibold rounded-lg transition-all ${
+              className={`py-2 text-sm font-semibold rounded-lg transition-all cursor-pointer ${
                 type === 'INCOME'
                   ? 'bg-emerald-500 text-white shadow-sm'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              Khoản thu
+              {t('qa.income', 'Khoản thu')}
             </button>
             <button
               type="button"
               onClick={() => setType('TRANSFER')}
-              className={`py-2 text-sm font-semibold rounded-lg transition-all ${
+              className={`py-2 text-sm font-semibold rounded-lg transition-all cursor-pointer ${
                 type === 'TRANSFER'
                   ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              Chuyển khoản
+              {t('qa.transfer', 'Chuyển khoản')}
             </button>
           </div>
 
           {/* Amount */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-              Số tiền (VNĐ)
+              {t('qa.amount', 'Số tiền (VNĐ)')}
             </label>
             <div className="relative">
               <input
@@ -1100,7 +1124,7 @@ const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                {type === 'TRANSFER' ? 'Từ ví / tài khoản' : 'Ví thanh toán'}
+                {type === 'TRANSFER' ? t('qa.fromWallet', 'Từ ví / tài khoản') : t('qa.wallet', 'Ví thanh toán')}
               </label>
               <select
                 value={walletId}
@@ -1109,7 +1133,7 @@ const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
               >
                 {wallets.map((w) => (
                   <option key={w.id} value={w.id}>
-                    {w.name} ({new Intl.NumberFormat('vi-VN').format(w.balance)} ₫)
+                    {w.name} ({tWalletType(w.type)})
                   </option>
                 ))}
               </select>
@@ -1118,19 +1142,19 @@ const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
             {type === 'TRANSFER' ? (
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                  Đến ví / tài khoản
+                  {t('qa.toWallet', 'Đến ví / tài khoản')}
                 </label>
                 <select
                   value={toWalletId}
                   onChange={(e) => setToWalletId(e.target.value)}
                   className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
                 >
-                  <option value="">-- Chọn ví đích --</option>
+                  <option value="">-- {t('qa.selectToWallet', 'Chọn ví đích')} --</option>
                   {wallets
                     .filter((w) => w.id !== walletId)
                     .map((w) => (
                       <option key={w.id} value={w.id}>
-                        {w.name}
+                        {w.name} ({tWalletType(w.type)})
                       </option>
                     ))}
                 </select>
@@ -1138,17 +1162,17 @@ const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
             ) : (
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                  Danh mục
+                  {t('qa.category', 'Danh mục')}
                 </label>
                 <select
                   value={categoryId}
                   onChange={(e) => setCategoryId(e.target.value)}
                   className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
                 >
-                  <option value="">-- Chọn danh mục --</option>
+                  <option value="">-- {t('qa.selectCategory', 'Chọn danh mục')} --</option>
                   {filteredCategories.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.name}
+                      {tCategory(c.name)}
                     </option>
                   ))}
                 </select>
@@ -1159,7 +1183,7 @@ const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
           {/* Date & Time */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-              Thời gian giao dịch
+              {t('qa.date', 'Thời gian giao dịch')}
             </label>
             <input
               type="datetime-local"
@@ -1172,13 +1196,13 @@ const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
           {/* Note */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-              Ghi chú
+              {t('qa.note', 'Ghi chú')}
             </label>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={2}
-              placeholder="Nhập ghi chú chi tiết..."
+              placeholder={t('qa.notePlaceholder', 'Nhập ghi chú chi tiết...')}
               className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
             />
           </div>
@@ -1186,7 +1210,7 @@ const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
           {/* Tags */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-              Nhãn (Tags)
+              {t('qa.tags', 'Nhãn (Tags)')}
             </label>
             <div className="flex flex-wrap gap-1.5">
               {POPULAR_TAGS.map((tag) => (
@@ -1194,7 +1218,7 @@ const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
                   key={tag}
                   type="button"
                   onClick={() => handleTagToggle(tag)}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-all cursor-pointer ${
                     tags.includes(tag)
                       ? 'bg-blue-600 text-white'
                       : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
@@ -1209,7 +1233,7 @@ const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
           {/* Receipt Image */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-              Ảnh hóa đơn / chứng từ
+              {t('qa.receiptImage', 'Ảnh hóa đơn / chứng từ')}
             </label>
             {receiptImage ? (
               <div className="relative inline-block border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
@@ -1218,7 +1242,7 @@ const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setReceiptImage(undefined)}
-                  className="absolute top-2 right-2 p-1.5 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors shadow"
+                  className="absolute top-2 right-2 p-1.5 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors shadow cursor-pointer"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -1226,7 +1250,9 @@ const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
             ) : (
               <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl cursor-pointer hover:border-blue-500 transition-colors">
                 <Upload className="w-6 h-6 text-slate-400 mb-1" />
-                <span className="text-xs text-slate-500 dark:text-slate-400">Tải ảnh hóa đơn lên</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  {t('qa.uploadReceipt', 'Tải ảnh hóa đơn lên')}
+                </span>
                 <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
               </label>
             )}
@@ -1238,26 +1264,26 @@ const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
           <button
             type="button"
             onClick={handleDelete}
-            className="flex items-center space-x-1.5 px-4 py-2.5 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl font-medium text-sm transition-colors"
+            className="flex items-center space-x-1.5 px-4 py-2.5 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl font-medium text-sm transition-colors cursor-pointer"
           >
             <Trash2 className="w-4 h-4" />
-            <span>Xóa giao dịch</span>
+            <span>{t('tx.delete', 'Xóa giao dịch')}</span>
           </button>
 
           <div className="flex items-center space-x-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl font-medium text-sm transition-colors"
+              className="px-4 py-2.5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl font-medium text-sm transition-colors cursor-pointer"
             >
-              Hủy
+              {t('common.cancel', 'Hủy')}
             </button>
             <button
               type="button"
               onClick={handleSave}
-              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl text-sm transition-colors shadow-sm"
+              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl text-sm transition-colors shadow-sm cursor-pointer"
             >
-              Lưu thay đổi
+              {t('common.save', 'Lưu thay đổi')}
             </button>
           </div>
         </div>

@@ -54,6 +54,10 @@ export const BudgetsView: React.FC = () => {
     navigateToCategoryTransactions,
     saveDataNow,
     serverSyncStatus,
+    t,
+    tCategory,
+    tWalletType,
+    language,
   } = useApp();
 
   const [activeSubTab, setActiveSubTab] = useState<'CATEGORY_BUDGETS' | 'PLANNER' | 'SAVINGS_GOALS'>(
@@ -121,7 +125,7 @@ export const BudgetsView: React.FC = () => {
     e.preventDefault();
     const amountNum = Number(budgetAmount);
     if (!budgetCategoryId || !amountNum || amountNum <= 0) {
-      alert('Vui lòng chọn danh mục và nhập hạn mức ngân sách');
+      alert(t('qa.selectCategory', 'Vui lòng chọn danh mục và nhập hạn mức ngân sách'));
       return;
     }
     const cat = categories.find((c) => c.id === budgetCategoryId);
@@ -215,10 +219,10 @@ export const BudgetsView: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">
-            Ngân Sách & Hũ Tiết Kiệm
+            {t('budget.title', 'Ngân Sách & Hũ Tiết Kiệm')}
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Cài đặt hạn mức chi tiêu, cảnh báo 80%/100%, tạo budget từ thu nhập cá nhân & theo dõi hũ tích lũy
+            {t('budget.subtitle', 'Cài đặt hạn mức chi tiêu, cảnh báo 80%/100%, tạo budget từ thu nhập cá nhân & theo dõi hũ tích lũy')}
           </p>
         </div>
 
@@ -234,7 +238,7 @@ export const BudgetsView: React.FC = () => {
               className="flex items-center space-x-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors"
             >
               <Plus className="w-4 h-4" />
-              <span>Thêm hạn mức danh mục</span>
+              <span>{t('budget.addLimit', 'Thêm hạn mức danh mục')}</span>
             </button>
           )}
 
@@ -250,7 +254,7 @@ export const BudgetsView: React.FC = () => {
               className="flex items-center space-x-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors"
             >
               <Plus className="w-4 h-4" />
-              <span>Tạo hũ tiết kiệm mới</span>
+              <span>{t('budget.newGoal', 'Tạo hũ tiết kiệm mới')}</span>
             </button>
           )}
         </div>
@@ -266,7 +270,7 @@ export const BudgetsView: React.FC = () => {
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
           }`}
         >
-          Hạn mức theo Danh mục ({budgets.length})
+          {t('budget.tabLimits', 'Hạn mức theo Danh mục')} ({budgets.length})
         </button>
 
         <button
@@ -277,7 +281,7 @@ export const BudgetsView: React.FC = () => {
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
           }`}
         >
-          Tạo Budget từ Thu nhập (50/30/20)
+          {t('budget.tabAllocation', 'Tạo Budget từ Thu nhập (50/30/20)')}
         </button>
 
         <button
@@ -288,7 +292,7 @@ export const BudgetsView: React.FC = () => {
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
           }`}
         >
-          Hũ Tiết Kiệm & Mục tiêu ({goals.length})
+          {t('budget.tabGoals', 'Hũ Tiết Kiệm & Mục tiêu')} ({goals.length})
         </button>
       </div>
 
@@ -300,7 +304,7 @@ export const BudgetsView: React.FC = () => {
           {/* Summary KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-              <span className="text-xs font-semibold text-slate-400 uppercase">Tổng ngân sách thiết lập</span>
+              <span className="text-xs font-semibold text-slate-400 uppercase">{t('budget.totalBudget', 'Tổng ngân sách thiết lập')}</span>
               <p className="text-2xl font-black text-slate-800 dark:text-white mt-1">
                 {formatCurrency(totalBudgetLimit)}
               </p>
@@ -308,17 +312,17 @@ export const BudgetsView: React.FC = () => {
             </div>
 
             <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-              <span className="text-xs font-semibold text-slate-400 uppercase">Đã chi tiêu thực tế</span>
+              <span className="text-xs font-semibold text-slate-400 uppercase">{t('budget.actualSpent', 'Đã chi tiêu thực tế')}</span>
               <p className="text-2xl font-black text-rose-600 dark:text-rose-400 mt-1">
                 {formatCurrency(totalBudgetSpent)}
               </p>
               <span className="text-[11px] text-slate-400">
-                Đã dùng {totalBudgetLimit > 0 ? Math.round((totalBudgetSpent / totalBudgetLimit) * 100) : 0}% tổng ngân sách
+                {t('budget.usedBudget', 'Đã dùng')} {totalBudgetLimit > 0 ? Math.round((totalBudgetSpent / totalBudgetLimit) * 100) : 0}% {t('budget.totalBudget', 'tổng ngân sách')}
               </span>
             </div>
 
             <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-              <span className="text-xs font-semibold text-slate-400 uppercase">Ngân sách còn lại</span>
+              <span className="text-xs font-semibold text-slate-400 uppercase">{t('budget.remaining', 'Ngân sách còn lại')}</span>
               <p
                 className={`text-2xl font-black mt-1 ${
                   totalBudgetRemaining >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
@@ -327,7 +331,7 @@ export const BudgetsView: React.FC = () => {
                 {formatCurrency(totalBudgetRemaining)}
               </p>
               <span className="text-[11px] text-slate-400">
-                {totalBudgetRemaining >= 0 ? 'Có thể chi tiêu tiếp tục' : 'Đã chi vượt hạn mức'}
+                {totalBudgetRemaining >= 0 ? t('budget.canSpend', 'Có thể chi tiêu tiếp tục') : t('budget.overLimit', 'Đã chi vượt hạn mức')}
               </span>
             </div>
           </div>
@@ -365,11 +369,11 @@ export const BudgetsView: React.FC = () => {
                       <div>
                         <div className="flex items-center space-x-1.5">
                           <h3 className="text-sm font-bold text-slate-800 dark:text-white">
-                            {budget.categoryName}
+                            {tCategory(budget.categoryName)}
                           </h3>
                           {isHighlighted && (
                             <span className="px-1.5 py-0.5 rounded-full text-[9px] font-black bg-rose-600 text-white animate-pulse">
-                              Đang xem cảnh báo
+                              {t('notif.activeAlert', 'Đang xem cảnh báo')}
                             </span>
                           )}
                         </div>
@@ -381,20 +385,20 @@ export const BudgetsView: React.FC = () => {
                     {status === 'EXCEEDED' && (
                       <span className="flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border border-rose-300 animate-pulse">
                         <ShieldAlert className="w-3 h-3" />
-                        <span>VƯỢT {percentage}%</span>
+                        <span>{t('budget.overLimit', 'VƯỢT')} {percentage}%</span>
                       </span>
                     )}
 
                     {status === 'WARNING' && (
                       <span className="flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300">
                         <AlertTriangle className="w-3 h-3" />
-                        <span>CẢNH BÁO 80%</span>
+                        <span>{t('budget.warning80', 'CẢNH BÁO 80%')}</span>
                       </span>
                     )}
 
                     {status === 'SAFE' && (
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
-                        An toàn ({percentage}%)
+                        {t('budget.safe', 'An toàn')} ({percentage}%)
                       </span>
                     )}
                   </div>
@@ -402,19 +406,19 @@ export const BudgetsView: React.FC = () => {
                   {/* Amounts Info */}
                   <div className="space-y-1.5 my-3">
                     <div className="flex justify-between text-xs">
-                      <span className="text-slate-500 dark:text-slate-400">Đã chi:</span>
+                      <span className="text-slate-500 dark:text-slate-400">{t('budget.spent', 'Đã chi')}:</span>
                       <span className="font-extrabold text-slate-800 dark:text-white">
                         {formatCurrency(spent)}
                       </span>
                     </div>
                     <div className="flex justify-between text-xs">
-                      <span className="text-slate-500 dark:text-slate-400">Hạn mức tháng:</span>
+                      <span className="text-slate-500 dark:text-slate-400">{t('budget.monthlyLimit', 'Hạn mức tháng:')}</span>
                       <span className="font-semibold text-slate-600 dark:text-slate-300">
                         {formatCurrency(budget.amount)}
                       </span>
                     </div>
                     <div className="flex justify-between text-xs">
-                      <span className="text-slate-500 dark:text-slate-400">Còn lại:</span>
+                      <span className="text-slate-500 dark:text-slate-400">{t('budget.remaining', 'Còn lại')}:</span>
                       <span
                         className={`font-black ${
                           remaining >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
@@ -441,7 +445,7 @@ export const BudgetsView: React.FC = () => {
 
                   {/* Spending Advice */}
                   <div className="text-[11px] p-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl text-slate-500 dark:text-slate-400 flex items-center justify-between mb-3">
-                    <span>Gợi ý chi mỗi ngày:</span>
+                    <span>{t('budget.dailyAdvice', 'Gợi ý chi mỗi ngày:')}</span>
                     <span className="font-bold text-slate-700 dark:text-slate-200">
                       {remaining > 0 ? `~${formatCurrency(Math.round(remaining / 24))}/ngày` : '0 ₫/ngày (Đã hết)'}
                     </span>
@@ -455,7 +459,7 @@ export const BudgetsView: React.FC = () => {
                       title="Xem danh sách giao dịch đã chi của danh mục này"
                     >
                       <ReceiptText className="w-3.5 h-3.5" />
-                      <span>Xem các khoản đã chi</span>
+                      <span>{t('notif.viewExpenses', 'Xem các khoản đã chi')}</span>
                     </button>
 
                     <div className="flex items-center space-x-1">
@@ -473,7 +477,7 @@ export const BudgetsView: React.FC = () => {
                       </button>
                       <button
                         onClick={() => {
-                          if (confirm(`Xác nhận xóa ngân sách danh mục ${budget.categoryName}?`)) {
+                          if (confirm(t('budget.deleteBudgetConfirm', 'Xác nhận xóa ngân sách danh mục này?'))) {
                             deleteBudget(budget.id);
                           }
                         }}
@@ -501,11 +505,9 @@ export const BudgetsView: React.FC = () => {
             <div className="flex items-start space-x-3">
               <Sparkles className="w-6 h-6 text-yellow-300 shrink-0 mt-1" />
               <div>
-                <h3 className="text-lg font-bold">Thêm thu nhập cá nhân → Tạo Budget khả dụng để tiêu</h3>
+                <h3 className="text-lg font-bold">{t('budget.plannerHeading', 'Thêm thu nhập cá nhân → Tạo Budget khả dụng để tiêu')}</h3>
                 <p className="text-xs text-blue-100 mt-1 leading-relaxed">
-                  Thiết lập tổng thu nhập hàng tháng và áp dụng công thức phân bổ ngân sách thông minh (Quy tắc 50/30/20 hoặc Mô hình 4 quỹ có Khoản dự phòng phát sinh).
-                  Hệ thống tự động khấu trừ các hóa đơn cố định, mục tiêu tích lũy dài hạn và quỹ dự phòng khẩn cấp để tính chính xác số tiền bạn được phép
-                  tiêu linh hoạt mà không lo thiếu hụt.
+                  {t('budget.plannerDesc')}
                 </p>
               </div>
             </div>
@@ -516,12 +518,12 @@ export const BudgetsView: React.FC = () => {
             <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
               <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center space-x-2">
                 <DollarSign className="w-5 h-5 text-emerald-500" />
-                <span>Thu nhập & Tỷ lệ phân bổ</span>
+                <span>{t('budget.incomeAndRatios', 'Thu nhập & Tỷ lệ phân bổ')}</span>
               </h3>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                  Thu nhập hàng tháng (VNĐ)
+                  {t('budget.monthlyIncome', 'Thu nhập hàng tháng (VNĐ)')}
                 </label>
                 <div className="relative">
                   <input
@@ -550,7 +552,7 @@ export const BudgetsView: React.FC = () => {
               <div className="space-y-3.5 pt-2">
                 {/* Header with total percent indicator */}
                 <div className="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-800">
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Tỷ lệ phân bổ 4 quỹ:</span>
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{t('budget.allocationRatios', 'Tỷ lệ phân bổ 4 quỹ:')}</span>
                   <span
                     className={`text-[11px] px-2.5 py-0.5 rounded-full font-extrabold ${
                       totalPercent === 100
@@ -564,7 +566,7 @@ export const BudgetsView: React.FC = () => {
 
                 {/* Preset quick buttons */}
                 <div className="space-y-1.5">
-                  <span className="text-[11px] font-semibold text-slate-400">Gợi ý phân bổ nhanh:</span>
+                  <span className="text-[11px] font-semibold text-slate-400">{t('budget.quickPresets', 'Gợi ý phân bổ nhanh:')}</span>
                   <div className="grid grid-cols-3 gap-1.5 text-[11px]">
                     <button
                       type="button"
@@ -572,7 +574,7 @@ export const BudgetsView: React.FC = () => {
                       className="px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-blue-500 text-slate-700 dark:text-slate-200 font-medium text-center transition-all"
                     >
                       50/25/15/10
-                      <span className="block text-[9px] text-slate-400">Khuyên dùng</span>
+                      <span className="block text-[9px] text-slate-400">{t('budget.recommended', 'Khuyên dùng')}</span>
                     </button>
                     <button
                       type="button"
@@ -580,7 +582,7 @@ export const BudgetsView: React.FC = () => {
                       className="px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-blue-500 text-slate-700 dark:text-slate-200 font-medium text-center transition-all"
                     >
                       50/20/20/10
-                      <span className="block text-[9px] text-slate-400">Vững chắc</span>
+                      <span className="block text-[9px] text-slate-400">{t('budget.solid', 'Vững chắc')}</span>
                     </button>
                     <button
                       type="button"
@@ -588,14 +590,14 @@ export const BudgetsView: React.FC = () => {
                       className="px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-blue-500 text-slate-700 dark:text-slate-200 font-medium text-center transition-all"
                     >
                       50/30/15/5
-                      <span className="block text-[9px] text-slate-400">Linh hoạt</span>
+                      <span className="block text-[9px] text-slate-400">{t('budget.flexible', 'Linh hoạt')}</span>
                     </button>
                   </div>
                 </div>
 
                 <div>
                   <div className="flex justify-between text-xs font-semibold mb-1">
-                    <span className="text-blue-600 dark:text-blue-400">1. Thiết yếu (Needs)</span>
+                    <span className="text-blue-600 dark:text-blue-400">1. {t('budget.needs', 'Thiết yếu')} (Needs)</span>
                     <span className="font-bold text-slate-800 dark:text-white">{planner.needsPercent}%</span>
                   </div>
                   <input
@@ -606,12 +608,12 @@ export const BudgetsView: React.FC = () => {
                     onChange={(e) => updatePlanner({ ...planner, needsPercent: Number(e.target.value) })}
                     className="w-full accent-blue-600"
                   />
-                  <span className="text-[11px] text-slate-400">Ăn uống, thuê nhà, xăng xe, hóa đơn</span>
+                  <span className="text-[11px] text-slate-400">{t('budget.needsSub', 'Ăn uống, thuê nhà, xăng xe, hóa đơn')}</span>
                 </div>
 
                 <div>
                   <div className="flex justify-between text-xs font-semibold mb-1">
-                    <span className="text-purple-600 dark:text-purple-400">2. Mong muốn (Wants)</span>
+                    <span className="text-purple-600 dark:text-purple-400">2. {t('budget.wants', 'Mong muốn')} (Wants)</span>
                     <span className="font-bold text-slate-800 dark:text-white">{planner.wantsPercent}%</span>
                   </div>
                   <input
@@ -622,12 +624,12 @@ export const BudgetsView: React.FC = () => {
                     onChange={(e) => updatePlanner({ ...planner, wantsPercent: Number(e.target.value) })}
                     className="w-full accent-purple-600"
                   />
-                  <span className="text-[11px] text-slate-400">Mua sắm, cafe, giải trí, du lịch</span>
+                  <span className="text-[11px] text-slate-400">{t('budget.wantsSub', 'Mua sắm, cafe, giải trí, du lịch')}</span>
                 </div>
 
                 <div>
                   <div className="flex justify-between text-xs font-semibold mb-1">
-                    <span className="text-emerald-600 dark:text-emerald-400">3. Tích lũy (Savings)</span>
+                    <span className="text-emerald-600 dark:text-emerald-400">3. {t('budget.savingsPillar', 'Tích lũy')} (Savings)</span>
                     <span className="font-bold text-slate-800 dark:text-white">{planner.savingsPercent}%</span>
                   </div>
                   <input
@@ -638,7 +640,7 @@ export const BudgetsView: React.FC = () => {
                     onChange={(e) => updatePlanner({ ...planner, savingsPercent: Number(e.target.value) })}
                     className="w-full accent-emerald-600"
                   />
-                  <span className="text-[11px] text-slate-400">Hũ tiết kiệm, đầu tư dài hạn</span>
+                  <span className="text-[11px] text-slate-400">{t('budget.savingsSub', 'Hũ tiết kiệm, đầu tư dài hạn')}</span>
                 </div>
 
                 {/* 4. Khoản dự phòng (Emergency / Contingency) */}
@@ -646,7 +648,7 @@ export const BudgetsView: React.FC = () => {
                   <div className="flex justify-between text-xs font-semibold mb-1">
                     <span className="text-amber-600 dark:text-amber-400 font-bold flex items-center space-x-1">
                       <ShieldAlert className="w-3.5 h-3.5 text-amber-500 inline mr-0.5" />
-                      <span>4. Dự phòng (Emergency)</span>
+                      <span>4. {t('budget.emergency', 'Dự phòng')} (Emergency)</span>
                     </span>
                     <span className="font-bold text-slate-800 dark:text-white">{emergencyPercent}%</span>
                   </div>
@@ -658,7 +660,7 @@ export const BudgetsView: React.FC = () => {
                     onChange={(e) => updatePlanner({ ...planner, emergencyPercent: Number(e.target.value) })}
                     className="w-full accent-amber-500"
                   />
-                  <span className="text-[11px] text-slate-400">Quỹ khẩn cấp, y tế, sửa xe, rủi ro phát sinh</span>
+                  <span className="text-[11px] text-slate-400">{t('budget.emergencySub', 'Quỹ khẩn cấp, y tế, sửa xe, rủi ro phát sinh')}</span>
                 </div>
 
                 {/* Save Button & Status feedback */}
@@ -684,23 +686,23 @@ export const BudgetsView: React.FC = () => {
                     {plannerSavedToast ? (
                       <>
                         <Check className="w-4 h-4 text-white" />
-                        <span>Đã lưu thành công vào hệ thống!</span>
+                        <span>{t('budget.planSaved', 'Đã lưu thành công vào hệ thống!')}</span>
                       </>
                     ) : isSavingPlanner ? (
-                      <span>Đang lưu dữ liệu...</span>
+                      <span>{t('budget.saving', 'Đang lưu dữ liệu...')}</span>
                     ) : (
                       <>
                         <Save className="w-4 h-4" />
-                        <span>Lưu kế hoạch ngân sách</span>
+                        <span>{t('budget.savePlan', 'Lưu kế hoạch ngân sách')}</span>
                       </>
                     )}
                   </button>
 
                   <div className="flex items-center justify-between text-[11px] text-slate-400 px-1">
-                    <span>Trạng thái lưu trữ:</span>
+                    <span>{t('budget.savingStatus', 'Trạng thái lưu trữ:')}</span>
                     <span className="flex items-center space-x-1 font-semibold text-emerald-600 dark:text-emerald-400">
                       <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-                      <span>{serverSyncStatus === 'synced' ? 'Đã đồng bộ lên ổ đĩa' : serverSyncStatus === 'syncing' ? 'Đang đồng bộ...' : 'Đã lưu cục bộ'}</span>
+                      <span>{serverSyncStatus === 'synced' ? t('budget.synced', 'Đã đồng bộ lên ổ đĩa') : serverSyncStatus === 'syncing' ? t('budget.syncing', 'Đang đồng bộ...') : t('budget.localSaved', 'Đã lưu cục bộ')}</span>
                     </span>
                   </div>
                 </div>
@@ -712,7 +714,7 @@ export const BudgetsView: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
                 <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/50">
                   <span className="text-xs font-bold text-blue-700 dark:text-blue-300">
-                    Ngân sách Thiết yếu ({planner.needsPercent}%)
+                    {t('budget.needsBudget', 'Ngân sách Thiết yếu')} ({planner.needsPercent}%)
                   </span>
                   <p className="text-lg font-black text-blue-900 dark:text-blue-100 mt-1">
                     {formatCurrency(needsBudget)}
@@ -722,7 +724,7 @@ export const BudgetsView: React.FC = () => {
 
                 <div className="p-4 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-900/50">
                   <span className="text-xs font-bold text-purple-700 dark:text-purple-300">
-                    Ngân sách Mong muốn ({planner.wantsPercent}%)
+                    {t('budget.wantsBudget', 'Ngân sách Mong muốn')} ({planner.wantsPercent}%)
                   </span>
                   <p className="text-lg font-black text-purple-900 dark:text-purple-100 mt-1">
                     {formatCurrency(wantsBudget)}
@@ -732,7 +734,7 @@ export const BudgetsView: React.FC = () => {
 
                 <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50">
                   <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">
-                    Mục tiêu Tích lũy ({planner.savingsPercent}%)
+                    {t('budget.savingsBudget', 'Mục tiêu Tích lũy')} ({planner.savingsPercent}%)
                   </span>
                   <p className="text-lg font-black text-emerald-900 dark:text-emerald-100 mt-1">
                     {formatCurrency(savingsBudget)}
@@ -743,7 +745,7 @@ export const BudgetsView: React.FC = () => {
                 <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50">
                   <span className="text-xs font-bold text-amber-700 dark:text-amber-300 flex items-center space-x-1">
                     <ShieldAlert className="w-3.5 h-3.5 text-amber-600 inline mr-0.5" />
-                    <span>Khoản Dự phòng ({emergencyPercent}%)</span>
+                    <span>{t('budget.emergencyBudget', 'Khoản Dự phòng')} ({emergencyPercent}%)</span>
                   </span>
                   <p className="text-lg font-black text-amber-900 dark:text-amber-100 mt-1">
                     {formatCurrency(emergencyBudget)}
@@ -755,26 +757,26 @@ export const BudgetsView: React.FC = () => {
               {/* Formula & Final Available Budget Calculation */}
               <div className="p-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
                 <h4 className="text-sm font-bold text-slate-800 dark:text-white">
-                  Dòng tiền Khả dụng Thực tế để Tiêu
+                  {t('budget.availableTitle', 'Dòng tiền Khả dụng Thực tế để Tiêu')}
                 </h4>
 
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
-                    <span className="text-slate-500">Tổng thu nhập tháng:</span>
+                    <span className="text-slate-500">{t('budget.totalIncomeMonth', 'Tổng thu nhập tháng:')}</span>
                     <span className="font-bold text-slate-800 dark:text-white">+{formatCurrency(monthlyIncome)}</span>
                   </div>
                   <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
-                    <span className="text-slate-500">Trừ Hóa đơn cố định tháng (tiền nhà, điện nước, internet):</span>
+                    <span className="text-slate-500">{t('budget.minusBills', 'Trừ Hóa đơn cố định tháng (tiền nhà, điện nước, internet):')}</span>
                     <span className="font-bold text-rose-600">-{formatCurrency(totalMonthlyBills)}</span>
                   </div>
                   <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
-                    <span className="text-slate-500">Trừ Mục tiêu tích lũy ({planner.savingsPercent}%):</span>
+                    <span className="text-slate-500">{t('budget.minusSavings', 'Trừ Mục tiêu tích lũy:')} ({planner.savingsPercent}%):</span>
                     <span className="font-bold text-blue-600">-{formatCurrency(savingsBudget)}</span>
                   </div>
                   <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
                     <span className="text-slate-500 flex items-center space-x-1">
                       <ShieldAlert className="w-3.5 h-3.5 text-amber-500 inline" />
-                      <span>Trừ Khoản trích lập dự phòng khẩn cấp & rủi ro ({emergencyPercent}%):</span>
+                      <span>{t('budget.minusEmergency', 'Trừ Khoản trích lập dự phòng khẩn cấp & rủi ro:')} ({emergencyPercent}%):</span>
                     </span>
                     <span className="font-bold text-amber-600">-{formatCurrency(emergencyBudget)}</span>
                   </div>
@@ -783,7 +785,7 @@ export const BudgetsView: React.FC = () => {
                 <div className="p-4 rounded-xl bg-slate-900 text-white flex items-center justify-between">
                   <div>
                     <span className="text-xs text-slate-400 font-semibold uppercase">
-                      NGÂN SÁCH KHẢ DỤNG CHI TIÊU LINH HOẠT
+                      {t('budget.flexibleAvailable', 'NGÂN SÁCH KHẢ DỤNG CHI TIÊU LINH HOẠT')}
                     </span>
                     <p className="text-2xl font-black text-emerald-400 mt-0.5">
                       {formatCurrency(availableFlexibleBudget)}
@@ -791,7 +793,7 @@ export const BudgetsView: React.FC = () => {
                   </div>
                   <div className="text-right text-xs text-slate-300">
                     <p className="font-bold">~{formatCurrency(Math.round(availableFlexibleBudget / 30))}/ngày</p>
-                    <span className="text-[10px] text-slate-400">Chi tiêu an toàn</span>
+                    <span className="text-[10px] text-slate-400">{t('budget.safeSpending', 'Chi tiêu an toàn')}</span>
                   </div>
                 </div>
 
@@ -803,10 +805,10 @@ export const BudgetsView: React.FC = () => {
                     </div>
                     <div>
                       <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                        Quỹ dự phòng an toàn: {formatCurrency(emergencyBudget)}/tháng
+                        {t('budget.emergencySafeFund', 'Quỹ dự phòng an toàn:')} {formatCurrency(emergencyBudget)}/tháng
                       </p>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                        Nên chuyển đều đặn vào hũ dự phòng khẩn cấp để đảm bảo chi tiêu sinh hoạt 3-6 tháng khi có biến cố.
+                        {t('budget.emergencyAdvice')}
                       </p>
                     </div>
                   </div>
@@ -815,7 +817,7 @@ export const BudgetsView: React.FC = () => {
                     onClick={() => setActiveSubTab('SAVINGS_GOALS')}
                     className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 text-xs font-semibold rounded-lg hover:bg-amber-50 dark:hover:bg-slate-700 transition-all shrink-0 whitespace-nowrap shadow-sm"
                   >
-                    Xem Hũ dự phòng →
+                    {t('budget.viewEmergencyGoal', 'Xem Hũ dự phòng →')}
                   </button>
                 </div>
               </div>
@@ -856,7 +858,7 @@ export const BudgetsView: React.FC = () => {
                         <h3 className="text-base font-bold text-slate-800 dark:text-white">{g.name}</h3>
                         <div className="flex items-center space-x-2 text-xs text-slate-400 mt-0.5">
                           <Calendar className="w-3.5 h-3.5" />
-                          <span>Hạn mục tiêu: {g.deadline}</span>
+                          <span>{t('budget.goalDeadline', 'Hạn mục tiêu:')} {g.deadline}</span>
                         </div>
                       </div>
                     </div>
@@ -864,7 +866,7 @@ export const BudgetsView: React.FC = () => {
                     {isCompleted ? (
                       <span className="flex items-center space-x-1 px-3 py-1 bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-extrabold text-xs rounded-full">
                         <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>HOÀN THÀNH 100% 🎉</span>
+                        <span>{t('budget.goalCompleted', 'HOÀN THÀNH 100% 🎉')}</span>
                       </span>
                     ) : (
                       <span className="px-3 py-1 bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 font-bold text-xs rounded-full">
@@ -876,20 +878,20 @@ export const BudgetsView: React.FC = () => {
                   {/* Amounts */}
                   <div className="space-y-1.5 my-4">
                     <div className="flex justify-between text-xs">
-                      <span className="text-slate-500">Đã tích lũy được:</span>
+                      <span className="text-slate-500">{t('budget.accumulated', 'Đã tích lũy được:')}</span>
                       <span className="font-extrabold text-slate-900 dark:text-white text-sm">
                         {formatCurrency(g.currentAmount)}
                       </span>
                     </div>
                     <div className="flex justify-between text-xs">
-                      <span className="text-slate-500">Mục tiêu:</span>
+                      <span className="text-slate-500">{t('budget.goalTarget', 'Mục tiêu:')}</span>
                       <span className="font-semibold text-slate-700 dark:text-slate-300">
                         {formatCurrency(g.targetAmount)}
                       </span>
                     </div>
                     {!isCompleted && (
                       <div className="flex justify-between text-xs">
-                        <span className="text-slate-500">Còn thiếu:</span>
+                        <span className="text-slate-500">{t('budget.goalRemaining', 'Còn thiếu:')}</span>
                         <span className="font-bold text-rose-600 dark:text-rose-400">
                           {formatCurrency(remaining)}
                         </span>
@@ -921,7 +923,7 @@ export const BudgetsView: React.FC = () => {
                       className="flex-1 flex items-center justify-center space-x-1.5 py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl transition-colors shadow-sm"
                     >
                       <ArrowDownLeft className="w-3.5 h-3.5" />
-                      <span>Nạp tiền vào hũ</span>
+                      <span>{t('budget.depositToGoal', 'Nạp tiền vào hũ')}</span>
                     </button>
 
                     <button
@@ -935,12 +937,12 @@ export const BudgetsView: React.FC = () => {
                       className="flex-1 flex items-center justify-center space-x-1.5 py-2 px-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs rounded-xl transition-colors"
                     >
                       <ArrowUpRight className="w-3.5 h-3.5" />
-                      <span>Rút tiền</span>
+                      <span>{t('budget.withdrawFromGoal', 'Rút tiền')}</span>
                     </button>
 
                     <button
                       onClick={() => {
-                        if (confirm(`Bạn có chắc muốn xóa hũ ${g.name}?`)) {
+                        if (confirm(t('budget.deleteGoalConfirm', 'Bạn có chắc muốn xóa hũ này?'))) {
                           deleteGoal(g.id);
                         }
                       }}
@@ -964,7 +966,7 @@ export const BudgetsView: React.FC = () => {
           <div className="relative max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-6">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
               <h3 className="text-lg font-bold text-slate-800 dark:text-white">
-                {editingBudget ? 'Chỉnh sửa hạn mức' : 'Thiết lập hạn mức danh mục'}
+                {editingBudget ? t('budget.editBudgetTitle', 'Chỉnh sửa hạn mức') : t('budget.createBudgetTitle', 'Thiết lập hạn mức danh mục')}
               </h3>
               <button
                 onClick={() => setBudgetModalOpen(false)}
@@ -977,7 +979,7 @@ export const BudgetsView: React.FC = () => {
             <form onSubmit={handleSaveBudget} className="space-y-4 pt-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-500 mb-1">
-                  Danh mục chi tiêu
+                  {t('budget.expenseCategory', 'Danh mục chi tiêu')}
                 </label>
                 <select
                   value={budgetCategoryId}
@@ -988,7 +990,7 @@ export const BudgetsView: React.FC = () => {
                     .filter((c) => c.type === 'EXPENSE')
                     .map((c) => (
                       <option key={c.id} value={c.id}>
-                        {c.name}
+                        {tCategory(c.name)}
                       </option>
                     ))}
                 </select>
@@ -996,7 +998,7 @@ export const BudgetsView: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-500 mb-1">
-                  Hạn mức chi tiêu tháng (VNĐ)
+                  {t('budget.budgetMonthlyLimit', 'Hạn mức chi tiêu tháng (VNĐ)')}
                 </label>
                 <input
                   type="text"
@@ -1020,7 +1022,7 @@ export const BudgetsView: React.FC = () => {
               </div>
 
               <div className="p-3 bg-blue-50 dark:bg-blue-950/40 rounded-xl text-xs text-blue-700 dark:text-blue-300">
-                Hệ thống tự động kích hoạt thông báo cảnh báo khi chi tiêu danh mục này đạt mốc 80% và 100%.
+                {t('budget.budgetThresholdNotice')}
               </div>
 
               <div className="flex justify-end space-x-2 pt-3 border-t border-slate-100 dark:border-slate-800">
@@ -1035,7 +1037,7 @@ export const BudgetsView: React.FC = () => {
                   type="submit"
                   className="px-5 py-2 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm"
                 >
-                  Lưu hạn mức
+                  {t('common.save', 'Lưu hạn mức')}
                 </button>
               </div>
             </form>
@@ -1051,7 +1053,7 @@ export const BudgetsView: React.FC = () => {
           <div className="relative max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-6">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
               <h3 className="text-lg font-bold text-slate-800 dark:text-white">
-                {editingGoal ? 'Sửa mục tiêu tích lũy' : 'Tạo hũ tiết kiệm mới'}
+                {editingGoal ? t('budget.editGoalTitle', 'Sửa mục tiêu tích lũy') : t('budget.createGoalTitle', 'Tạo hũ tiết kiệm mới')}
               </h3>
               <button
                 onClick={() => setGoalModalOpen(false)}
@@ -1064,7 +1066,7 @@ export const BudgetsView: React.FC = () => {
             <form onSubmit={handleSaveGoal} className="space-y-4 pt-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-500 mb-1">
-                  Tên mục tiêu tích lũy
+                  {t('budget.goalName', 'Tên mục tiêu tích lũy')}
                 </label>
                 <input
                   type="text"
@@ -1078,7 +1080,7 @@ export const BudgetsView: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-500 mb-1">
-                  Số tiền mục tiêu (VNĐ)
+                  {t('budget.goalTargetAmount', 'Số tiền mục tiêu (VNĐ)')}
                 </label>
                 <input
                   type="text"
@@ -1103,7 +1105,7 @@ export const BudgetsView: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-500 mb-1">
-                  Hạn hoàn thành dự kiến
+                  {t('budget.goalExpectedDeadline', 'Hạn hoàn thành dự kiến')}
                 </label>
                 <input
                   type="date"
@@ -1114,7 +1116,7 @@ export const BudgetsView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Màu sắc đại diện</label>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">{t('budget.goalColor', 'Màu sắc đại diện')}</label>
                 <div className="flex space-x-2">
                   {['#0ea5e9', '#10b981', '#ec4899', '#8b5cf6', '#f59e0b', '#ef4444'].map((c) => (
                     <button
@@ -1158,7 +1160,7 @@ export const BudgetsView: React.FC = () => {
           <div className="relative max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-6">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
               <h3 className="text-lg font-bold text-slate-800 dark:text-white">
-                {isDepositMode ? `Nạp tiền vào: ${selectedGoal.name}` : `Rút tiền từ: ${selectedGoal.name}`}
+                {isDepositMode ? `${t('budget.depositModalTitle', 'Nạp tiền vào:')} ${selectedGoal.name}` : `${t('budget.withdrawModalTitle', 'Rút tiền từ:')} ${selectedGoal.name}`}
               </h3>
               <button
                 onClick={() => setDepositModalOpen(false)}
@@ -1171,7 +1173,7 @@ export const BudgetsView: React.FC = () => {
             <form onSubmit={handleGoalTransaction} className="space-y-4 pt-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-500 mb-1">
-                  Số tiền {isDepositMode ? 'nạp' : 'rút'} (VNĐ)
+                  {t('budget.depositWithdrawAmount', 'Số tiền')} ({isDepositMode ? t('budget.deposit', 'nạp') : t('budget.withdraw', 'rút')})
                 </label>
                 <input
                   type="text"
@@ -1197,7 +1199,7 @@ export const BudgetsView: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-500 mb-1">
-                  {isDepositMode ? 'Trừ từ Ví nguồn' : 'Chuyển về Ví đích'}
+                  {isDepositMode ? t('budget.sourceWallet', 'Trừ từ Ví nguồn') : t('budget.destWallet', 'Chuyển về Ví đích')}
                 </label>
                 <select
                   value={depositWalletId}
@@ -1239,7 +1241,7 @@ export const BudgetsView: React.FC = () => {
                     isDepositMode ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-blue-600 hover:bg-blue-700'
                   }`}
                 >
-                  Xác nhận {isDepositMode ? 'nạp' : 'rút'}
+                  {isDepositMode ? t('budget.confirmDeposit', 'Xác nhận nạp') : t('budget.confirmWithdraw', 'Xác nhận rút')}
                 </button>
               </div>
             </form>

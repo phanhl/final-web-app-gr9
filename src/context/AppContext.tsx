@@ -26,7 +26,7 @@ import {
   INITIAL_SIMULATOR_CONFIG,
 } from '@/lib/mock-data';
 import { calculateFinancialSummary, checkWalletSufficientFunds, formatCurrency, getLocalDateString } from '@/lib/utils';
-import { translate } from '@/lib/i18n';
+import { translate, translateCategory, translateWalletType } from '@/lib/i18n';
 
 interface AppContextType {
   wallets: Wallet[];
@@ -58,6 +58,8 @@ interface AppContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
   t: (key: string, fallback?: string) => string;
+  tCategory: (name?: string) => string;
+  tWalletType: (type?: string) => string;
 
   // Transactions
   addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) => boolean;
@@ -266,6 +268,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const t = (key: string, fallback?: string): string => {
     return translate(language, key, fallback);
+  };
+
+  const tCategory = (name?: string): string => {
+    return translateCategory(name || '', language);
+  };
+
+  const tWalletType = (type?: string): string => {
+    return translateWalletType(type || '', language);
   };
 
   // Load from server disk first, fallback to local storage
@@ -1040,6 +1050,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         language,
         setLanguage,
         t,
+        tCategory,
+        tWalletType,
         addTransaction,
         editTransaction,
         deleteTransaction,

@@ -1518,6 +1518,56 @@ Qua quét toàn diện mã nguồn, phát hiện và đã xử lý các vị tr�
 | 8 | `src/components/DashboardView.tsx` | **[CHỈNH SỬA]** | Bản địa hóa các khối số liệu tổng quan và thao tác nhanh. |
 | 9 | `TRACKING_CHANGES.md` | **[CHỈNH SỬA]** | Ghi nhận chi tiết lần chỉnh sửa 26. |
 
+---
+
+## [LẦN CHỈNH SỬA 27] - Bản địa hóa toàn diện 100% ứng dụng (Tiếng Việt 🇻🇳, Tiếng Anh 🇬🇧, Tiếng Pháp 🇫🇷)
+
+* **Thời gian thực hiện:** 18/09/2026
+* **Mức độ ảnh hưởng:** Cao (Toàn diện UI/UX trên cả 8 màn hình)
+* **Trạng thái:** ✅ Đã hoàn thành và xác minh
+
+---
+
+### 1. Vấn Đề Ban Đầu Được Báo Cáo
+* Người dùng phản hồi: *"sao khi chuyển sang ngôn ngữ khác vẫn còn ngôn ngữ cũ là sao (trừ mấy cái mình điền hay chỉnh sửa) còn các cái còn lại phải đổi theo đúng thứ tiếng chứ"*
+* Ở phiên bản trước, hệ thống mới chỉ bản địa hóa một phần thanh điều hướng (Navigation), Dashboard và QuickAddModal. Các màn hình còn lại (Sổ giao dịch, Ngân sách, Hóa đơn định kỳ, Báo cáo, Ví & Tài khoản, Mô phỏng What-If, Modal xem ảnh biên lai) vẫn còn nhiều nhãn, tiêu đề, nút bấm, bộ lọc và tên danh mục hiển thị cứng bằng tiếng Việt.
+
+---
+
+### 2. Giải Pháp Triển Khai Toàn Diện
+
+1. **Mở rộng từ điển dịch thuật (`src/lib/i18n.ts`):**
+   - Bổ sung hơn 150 từ khóa dịch chuyên sâu cho cả 3 ngôn ngữ (Tiếng Việt, Tiếng Anh, Tiếng Pháp).
+   - Thiết lập bảng tra cứu chuẩn `CATEGORY_TRANSLATIONS` cho toàn bộ 12 danh mục hệ thống ('Ăn uống', 'Thuê nhà', 'Giáo dục', 'Mua sắm', 'Đi lại', 'Tiền điện & Tiền nước', 'Dự phòng & phát sinh', 'Lương & Thưởng', 'Đầu tư & Tích lũy', 'Giải trí & Du lịch', 'Sức khỏe & Y tế', 'Khác').
+   - Hàm `translateCategory(name, lang)` (`tCategory`) và `translateWalletType(type, lang)` (`tWalletType`): Giúp tên danh mục và loại ví hiển thị tự động theo đúng ngôn ngữ được chọn mà **hoàn toàn không làm biến đổi chuỗi dữ liệu gốc trong CSDL `data/database.json`** (bảo toàn tính tương thích dữ liệu).
+
+2. **Bản địa hóa 100% tất cả các màn hình ứng dụng:**
+   - **`TransactionsView.tsx`:** Dịch toàn bộ tiêu đề, phụ đề, nút xuất file (CSV, Excel), thẻ thống kê (Số giao dịch, Tổng thu, Tổng chi, Dòng tiền ròng), bộ lọc tìm kiếm & loại giao dịch & ví, cơ cấu chi tiêu biểu đồ tròn, timeline nhóm theo ngày, nhãn phí chuyển khoản, tooltip nút Sửa/Xóa và toàn bộ modal Chỉnh sửa giao dịch (EditTransactionModal).
+   - **`BudgetsView.tsx`:** Dịch toàn bộ tiêu đề, 3 tab điều hướng ("Hạn mức theo Danh mục", "Kế hoạch phân bổ thu nhập 50/30/20", "Hũ tiết kiệm & Mục tiêu"), 4 trụ cột phân bổ ngân sách (Thiết yếu, Mong muốn, Tích lũy, Dự phòng), 3 nút preset nhanh, thẻ KPI ngân sách, cảnh báo 80%/100%, modal Tạo/Sửa hạn mức và modal Nạp/Rút tiền hũ tiết kiệm.
+   - **`BillsView.tsx`:** Dịch tiêu đề, KPI hóa đơn, banner nhắc nhở thông minh, trạng thái đến hạn ("Đến hạn hôm nay", "Quá hạn X ngày", "Cần đóng trong X ngày"), các chu kỳ lặp lại ("Hàng tháng", "Hàng quý", "Hàng năm"), nút "Thanh toán ngay", "Đặt lại", modal Thêm/Sửa hóa đơn và modal Xác nhận thanh toán hóa đơn.
+   - **`ReportsView.tsx`:** Dịch bộ chọn thời gian ("Tháng này", "Tháng trước", "Cả năm", "Tùy chọn ngày"), báo cáo tổng hợp in ấn, biểu đồ tròn cơ cấu chi tiêu (donut chart với tâm hiển thị tương tác), biểu đồ cột so sánh Thu/Chi và biểu đồ diện tích dòng tiền thuần.
+   - **`WalletsView.tsx`:** Dịch danh sách các nhóm ví (Tiền mặt, Ngân hàng, Thẻ tín dụng, Sổ tiết kiệm), màn hình chi tiết dòng tiền từng ví (Tổng thu vào, Tổng chi ra, Dòng tiền ròng, bộ lọc), modal Tạo/Sửa ví và modal Chuyển tiền giữa các ví.
+   - **`WhatIfSimulatorView.tsx`:** Dịch toàn bộ bảng điều khiển mô phỏng, thanh trượt thời gian dự phóng, các kịch bản cắt giảm chi tiêu, tiền gửi tiết kiệm, kịch bản lợi nhuận đầu tư, quản lý nợ vay ngoài, biểu đồ so sánh tăng trưởng và bảng dự phóng chi tiết.
+   - **`ReceiptModal.tsx`:** Dịch tiêu đề modal xem hóa đơn đính kèm và nút tải ảnh về máy.
+
+---
+
+### 3. Danh Sách Các Tệp Đã Thay Đổi
+
+| STT | Tệp tin | Trạng thái | Mô tả tóm tắt |
+|---|---|---|---|
+| 1 | `src/lib/i18n.ts` | **[CHỈNH SỬA]** | Mở rộng hệ thống từ điển cho toàn bộ các màn hình, bổ sung helper `translateCategory` và `translateWalletType`. |
+| 2 | `src/context/AppContext.tsx` | **[CHỈNH SỬA]** | Expose `tCategory` và `tWalletType` qua `useApp()`. |
+| 3 | `src/components/TransactionsView.tsx` | **[CHỈNH SỬA]** | Bản địa hóa toàn diện Sổ giao dịch, bộ lọc, biểu đồ và EditTransactionModal. |
+| 4 | `src/components/BudgetsView.tsx` | **[CHỈNH SỬA]** | Bản địa hóa toàn bộ tab ngân sách, kế hoạch 50/30/20, hũ tiết kiệm và modals. |
+| 5 | `src/components/BillsView.tsx` | **[CHỈNH SỬA]** | Bản địa hóa danh sách hóa đơn, lịch thanh toán định kỳ, trạng thái hạn và modal thanh toán. |
+| 6 | `src/components/ReportsView.tsx` | **[CHỈNH SỬA]** | Bản địa hóa biểu đồ báo cáo tài chính, chú giải và xuất bản báo cáo. |
+| 7 | `src/components/WalletsView.tsx` | **[CHỈNH SỬA]** | Bản địa hóa thẻ ví, chi tiết dòng tiền ví, modal tạo ví và chuyển quỹ. |
+| 8 | `src/components/WhatIfSimulatorView.tsx` | **[CHỈNH SỬA]** | Bản địa hóa mô phỏng tài chính, tối ưu hóa tiêu dùng, đầu tư và nợ vay. |
+| 9 | `src/components/ReceiptModal.tsx` | **[CHỈNH SỬA]** | Bản địa hóa modal xem ảnh hóa đơn. |
+| 10 | `TRACKING_CHANGES.md` | **[CHỈNH SỬA]** | Cập nhật nhật ký lần chỉnh sửa 27. |
+
+
 
 
 

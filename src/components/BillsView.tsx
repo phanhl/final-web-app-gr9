@@ -39,6 +39,10 @@ export const BillsView: React.FC = () => {
     setNavTargetBillId,
     billToAutoPayId,
     setBillToAutoPayId,
+    t,
+    tCategory,
+    tWalletType,
+    language,
   } = useApp();
 
   const [billModalOpen, setBillModalOpen] = useState(false);
@@ -197,32 +201,32 @@ export const BillsView: React.FC = () => {
           className="flex items-center space-x-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors"
         >
           <Plus className="w-4 h-4" />
-          <span>Thêm hóa đơn định kỳ</span>
+          <span>{t('bill.newBill', 'Thêm hóa đơn định kỳ')}</span>
         </button>
       </div>
 
       {/* 2. KPI SUMMARY */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <span className="text-xs font-semibold text-slate-400 uppercase">Tổng hóa đơn hàng tháng</span>
+          <span className="text-xs font-semibold text-slate-400 uppercase">{t('bill.totalMonthlyBills', 'Tổng hóa đơn hàng tháng')}</span>
           <p className="text-2xl font-black text-slate-800 dark:text-white mt-1">
             {formatCurrency(totalBillsAmount)}
           </p>
-          <span className="text-[11px] text-slate-400">{bills.length} khoản chi cố định định kỳ</span>
+          <span className="text-[11px] text-slate-400">{bills.length} {t('bill.fixedExpenses', 'khoản chi cố định định kỳ')}</span>
         </div>
 
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <span className="text-xs font-semibold text-slate-400 uppercase">Đã thanh toán tháng {new Date().getMonth() + 1}</span>
+          <span className="text-xs font-semibold text-slate-400 uppercase">{t('bill.paidThisMonth', 'Đã thanh toán tháng')} {new Date().getMonth() + 1}</span>
           <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
             {formatCurrency(totalPaid)}
           </p>
           <span className="text-[11px] text-emerald-600 font-semibold">
-            {paidBills.length} / {bills.length} hóa đơn đã hoàn tất
+            {paidBills.length} / {bills.length} {t('bill.completedCount', 'hóa đơn đã hoàn tất')}
           </span>
         </div>
 
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <span className="text-xs font-semibold text-slate-400 uppercase">Còn phải thanh toán</span>
+          <span className="text-xs font-semibold text-slate-400 uppercase">{t('bill.pendingToPay', 'Còn phải thanh toán')}</span>
           <p
             className={`text-2xl font-black mt-1 ${
               totalUnpaid > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-800 dark:text-white'
@@ -231,7 +235,7 @@ export const BillsView: React.FC = () => {
             {formatCurrency(totalUnpaid)}
           </p>
           <span className="text-[11px] text-slate-400">
-            {unpaidBills.length > 0 ? `Còn ${unpaidBills.length} hóa đơn cần trả` : 'Đã thanh toán đầy đủ'}
+            {unpaidBills.length > 0 ? t('bill.remainingCount', 'Còn {count} hóa đơn cần trả').replace('{count}', String(unpaidBills.length)) : t('bill.allCompleted', 'Đã thanh toán đầy đủ')}
           </span>
         </div>
       </div>
@@ -245,7 +249,7 @@ export const BillsView: React.FC = () => {
             </div>
             <div>
               <h4 className="text-sm font-bold text-amber-900 dark:text-amber-200">
-                Nhắc nhở hóa đơn cần thanh toán ({upcomingBills.length} khoản)
+                {t('bill.reminderTitle', 'Nhắc nhở hóa đơn cần thanh toán')} ({upcomingBills.length})
               </h4>
               <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
                 {upcomingBills
@@ -253,10 +257,10 @@ export const BillsView: React.FC = () => {
                     const diff = b.dueDay - today;
                     const diffLabel =
                       diff === 0
-                        ? 'Đến hạn hôm nay!'
+                        ? t('bill.dueToday', 'Đến hạn hôm nay!')
                         : diff < 0
-                        ? `Quá hạn ${Math.abs(diff)} ngày`
-                        : `Còn ${diff} ngày (Hạn ngày ${b.dueDay})`;
+                        ? t('bill.daysOverdue', 'Quá hạn {days} ngày!').replace('{days}', String(Math.abs(diff)))
+                        : t('bill.dueInDays', 'Cần đóng trong {days} ngày').replace('{days}', String(diff));
                     return `${b.name} (${formatCurrency(b.amount)} - ${diffLabel})`;
                   })
                   .join(' • ')}
@@ -271,9 +275,9 @@ export const BillsView: React.FC = () => {
         <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center space-x-2">
             <CalendarCheck className="w-5 h-5 text-blue-500" />
-            <span>Lịch nhắc thanh toán trong tháng</span>
+            <span>{t('bill.scheduleTitle', 'Lịch nhắc thanh toán trong tháng')}</span>
           </h3>
-          <span className="text-xs text-slate-400">Hôm nay là ngày {formattedToday}</span>
+          <span className="text-xs text-slate-400">{t('bill.todayIs', 'Hôm nay là')} {formattedToday}</span>
         </div>
 
         <div className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -313,38 +317,38 @@ export const BillsView: React.FC = () => {
                       <h4 className="text-sm font-bold text-slate-900 dark:text-white">{bill.name}</h4>
                       {isHighlighted && (
                         <span className="px-1.5 py-0.5 rounded-full text-[9px] font-black bg-blue-600 text-white animate-pulse">
-                          Đang xem từ cảnh báo
+                          {t('notif.activeAlert', 'Đang xem từ cảnh báo')}
                         </span>
                       )}
                       {isPaid ? (
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
-                          Đã trả ngày {formatDisplayDate(bill.lastPaidDate)}
+                          {t('bill.paidDate', 'Đã trả ngày')} {formatDisplayDate(bill.lastPaidDate)}
                         </span>
                       ) : daysLeft < 0 ? (
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300">
-                          Quá hạn {Math.abs(daysLeft)} ngày! (Hạn N{bill.dueDay})
+                          {t('bill.daysOverdue', 'Quá hạn {days} ngày!').replace('{days}', String(Math.abs(daysLeft)))}
                         </span>
                       ) : daysLeft === 0 ? (
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 animate-pulse">
-                          Hôm nay đến hạn!
+                          {t('bill.dueToday', 'Hôm nay đến hạn!')}
                         </span>
                       ) : daysLeft <= (bill.reminderDaysBefore ?? 3) ? (
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300">
-                          Cần đóng trong {daysLeft} ngày (Hạn N{bill.dueDay})
+                          {t('bill.dueInDays', 'Cần đóng trong {days} ngày').replace('{days}', String(daysLeft))}
                         </span>
                       ) : (
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-                          Còn {daysLeft} ngày (Hạn N{bill.dueDay})
+                          {t('bill.remainingDays', 'Còn {days} ngày').replace('{days}', String(daysLeft))}
                         </span>
                       )}
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400 mt-1">
-                      <span>Đến hạn ngày {bill.dueDay} hàng tháng</span>
+                      <span>{t('bill.dueOnDay', 'Đến hạn ngày {day} hàng tháng').replace('{day}', String(bill.dueDay))}</span>
                       <span>•</span>
-                      <span>Nhắc trước {bill.reminderDaysBefore ?? 3} ngày</span>
+                      <span>{t('bill.remindBefore', 'Nhắc trước {days} ngày').replace('{days}', String(bill.reminderDaysBefore ?? 3))}</span>
                       <span>•</span>
-                      <span>{bill.categoryName || 'Hóa đơn'}</span>
+                      <span>{tCategory(bill.categoryName || 'Khác')}</span>
                       {bill.note && (
                         <>
                           <span>•</span>
@@ -362,7 +366,7 @@ export const BillsView: React.FC = () => {
                       {formatCurrency(bill.amount)}
                     </span>
                     <p className="text-[10px] text-slate-400">
-                      {bill.frequency === 'MONTHLY' ? 'Hàng tháng' : 'Định kỳ'}
+                      {bill.frequency === 'MONTHLY' ? t('bill.frequencyMonthly', 'Hàng tháng') : bill.frequency === 'QUARTERLY' ? t('bill.frequencyQuarterly', 'Hàng quý') : t('bill.frequencyYearly', 'Hàng năm')}
                     </p>
                   </div>
 
@@ -377,7 +381,7 @@ export const BillsView: React.FC = () => {
                       className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors flex items-center space-x-1.5"
                     >
                       <Check className="w-3.5 h-3.5" />
-                      <span>Thanh toán ngay</span>
+                      <span>{t('bill.payNow', 'Thanh toán ngay')}</span>
                     </button>
                   ) : (
                     <button
@@ -388,7 +392,7 @@ export const BillsView: React.FC = () => {
                       title="Đặt lại chưa thanh toán"
                     >
                       <RotateCcw className="w-3.5 h-3.5 inline mr-1" />
-                      <span>Đặt lại</span>
+                      <span>{t('bill.resetUnpaid', 'Đặt lại')}</span>
                     </button>
                   )}
 
@@ -414,7 +418,7 @@ export const BillsView: React.FC = () => {
                     </button>
                     <button
                       onClick={() => {
-                        if (confirm(`Xác nhận xóa hóa đơn ${bill.name}?`)) {
+                        if (confirm(t('bill.deleteConfirm', 'Xác nhận xóa hóa đơn này?'))) {
                           deleteBill(bill.id);
                         }
                       }}
@@ -438,7 +442,7 @@ export const BillsView: React.FC = () => {
           <div className="relative max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-6">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
               <h3 className="text-lg font-bold text-slate-800 dark:text-white">
-                {editingBill ? 'Chỉnh sửa hóa đơn' : 'Thêm hóa đơn định kỳ mới'}
+                {editingBill ? t('bill.editBill', 'Chỉnh sửa hóa đơn') : t('bill.newBill', 'Thêm hóa đơn định kỳ mới')}
               </h3>
               <button
                 onClick={() => setBillModalOpen(false)}
@@ -451,7 +455,7 @@ export const BillsView: React.FC = () => {
             <form onSubmit={handleSaveBill} className="space-y-4 pt-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-500 mb-1">
-                  Tên hóa đơn cố định
+                  {t('bill.billName', 'Tên hóa đơn cố định')}
                 </label>
                 <input
                   type="text"
@@ -465,7 +469,7 @@ export const BillsView: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-500 mb-1">
-                  Số tiền thanh toán (VNĐ)
+                  {t('bill.paymentAmount', 'Số tiền thanh toán (VNĐ)')}
                 </label>
                 <input
                   type="text"
@@ -491,7 +495,7 @@ export const BillsView: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 mb-1">
-                    Ngày đến hạn trong tháng
+                    {t('bill.dueDayInMonth', 'Ngày đến hạn trong tháng')}
                   </label>
                   <select
                     value={billDueDay}
@@ -500,7 +504,7 @@ export const BillsView: React.FC = () => {
                   >
                     {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
                       <option key={d} value={d}>
-                        Ngày {d} hàng tháng
+                        {t('bill.dayOfMonth', 'Ngày {day} hàng tháng').replace('{day}', String(d))}
                       </option>
                     ))}
                   </select>
@@ -508,19 +512,19 @@ export const BillsView: React.FC = () => {
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 mb-1">
-                    Nhắc trước khi đến hạn
+                    {t('bill.remindTiming', 'Nhắc trước khi đến hạn')}
                   </label>
                   <select
                     value={billReminderDays}
                     onChange={(e) => setBillReminderDays(e.target.value)}
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm dark:text-white"
                   >
-                    <option value="0">Đúng ngày đến hạn</option>
-                    <option value="1">Trước 1 ngày</option>
-                    <option value="2">Trước 2 ngày</option>
-                    <option value="3">Trước 3 ngày</option>
-                    <option value="5">Trước 5 ngày</option>
-                    <option value="7">Trước 7 ngày</option>
+                    <option value="0">{t('bill.onDueDay', 'Đúng ngày đến hạn')}</option>
+                    <option value="1">{t('bill.daysBefore', 'Trước {days} ngày').replace('{days}', '1')}</option>
+                    <option value="2">{t('bill.daysBefore', 'Trước {days} ngày').replace('{days}', '2')}</option>
+                    <option value="3">{t('bill.daysBefore', 'Trước {days} ngày').replace('{days}', '3')}</option>
+                    <option value="5">{t('bill.daysBefore', 'Trước {days} ngày').replace('{days}', '5')}</option>
+                    <option value="7">{t('bill.daysBefore', 'Trước {days} ngày').replace('{days}', '7')}</option>
                   </select>
                 </div>
               </div>
@@ -528,7 +532,7 @@ export const BillsView: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 mb-1">
-                    Tần suất lặp lại
+                    {t('bill.frequency', 'Tần suất lặp lại')}
                   </label>
                   <select
                     value={billFrequency}
@@ -536,15 +540,15 @@ export const BillsView: React.FC = () => {
                     onChange={(e) => setBillFrequency(e.target.value as any)}
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm dark:text-white"
                   >
-                    <option value="MONTHLY">Hàng tháng</option>
-                    <option value="QUARTERLY">Hàng quý (3 tháng)</option>
-                    <option value="YEARLY">Hàng năm</option>
+                    <option value="MONTHLY">{t('bill.frequencyMonthly', 'Hàng tháng')}</option>
+                    <option value="QUARTERLY">{t('bill.frequencyQuarterly', 'Hàng quý (3 tháng)')}</option>
+                    <option value="YEARLY">{t('bill.frequencyYearly', 'Hàng năm')}</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 mb-1">
-                    Danh mục gắn kèm
+                    {t('bill.linkedCategory', 'Danh mục gắn kèm')}
                   </label>
                   <select
                     value={billCategory}
@@ -566,22 +570,22 @@ export const BillsView: React.FC = () => {
               <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-700/60 space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">
-                    Trạng thái thanh toán tháng này:
+                    {t('bill.statusThisMonth', 'Trạng thái thanh toán tháng này:')}
                   </label>
                   <select
                     value={billStatus}
                     onChange={(e) => setBillStatus(e.target.value as 'UNPAID' | 'PAID')}
                     className="px-2.5 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-xs font-bold dark:text-white"
                   >
-                    <option value="UNPAID">Chưa thanh toán</option>
-                    <option value="PAID">Đã thanh toán</option>
+                    <option value="UNPAID">{t('bill.statusUnpaid', 'Chưa thanh toán')}</option>
+                    <option value="PAID">{t('bill.statusPaid', 'Đã thanh toán')}</option>
                   </select>
                 </div>
 
                 {billStatus === 'PAID' && (
                   <div>
                     <label className="block text-[11px] font-medium text-slate-500 mb-1">
-                      Ngày đã thanh toán (có thể điều chỉnh tùy ý):
+                      {t('bill.paidDateOptional', 'Ngày đã thanh toán (có thể điều chỉnh tùy ý):')}
                     </label>
                     <input
                       type="date"
@@ -595,7 +599,7 @@ export const BillsView: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-500 mb-1">
-                  Ghi chú thêm (Mã khách hàng, cú pháp)
+                  {t('bill.extraNote', 'Ghi chú thêm (Mã khách hàng, cú pháp)')}
                 </label>
                 <input
                   type="text"
@@ -618,7 +622,7 @@ export const BillsView: React.FC = () => {
                   type="submit"
                   className="px-5 py-2 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm"
                 >
-                  Lưu hóa đơn
+                  {t('common.save', 'Lưu hóa đơn')}
                 </button>
               </div>
             </form>
@@ -634,7 +638,7 @@ export const BillsView: React.FC = () => {
           <div className="relative max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-6">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
               <h3 className="text-lg font-bold text-slate-800 dark:text-white">
-                Xác nhận thanh toán hóa đơn
+                {t('bill.confirmPayModalTitle', 'Xác nhận thanh toán hóa đơn')}
               </h3>
               <button
                 onClick={() => setPayModalOpen(false)}
@@ -646,7 +650,7 @@ export const BillsView: React.FC = () => {
 
             <div className="py-4 space-y-4">
               <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-800">
-                <p className="text-xs text-slate-500">Khoản thanh toán:</p>
+                <p className="text-xs text-slate-500">{t('bill.paymentItem', 'Khoản thanh toán:')}</p>
                 <h4 className="text-base font-bold text-slate-800 dark:text-white mt-0.5">
                   {billToPay.name}
                 </h4>
@@ -657,7 +661,7 @@ export const BillsView: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-500 mb-1">
-                  Trừ tiền từ Ví / Tài khoản:
+                  {t('bill.deductFromWallet', 'Trừ tiền từ Ví / Tài khoản:')}
                 </label>
                 <select
                   value={payWalletId}
@@ -674,7 +678,7 @@ export const BillsView: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                  Ngày thanh toán thực tế:
+                  {t('bill.actualPayDate', 'Ngày thanh toán thực tế:')}
                 </label>
                 <input
                   type="date"
@@ -683,12 +687,12 @@ export const BillsView: React.FC = () => {
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold dark:text-white"
                 />
                 <span className="text-[11px] text-slate-400 mt-1 block">
-                  Mặc định là ngày hôm nay ({formattedToday}). Bạn có thể tùy chỉnh ngày nếu đã đóng trước đó.
+                  {t('bill.actualPayDateNote', 'Mặc định là ngày hôm nay. Bạn có thể tùy chỉnh ngày nếu đã đóng trước đó.')}
                 </span>
               </div>
 
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Hệ thống sẽ tự động trừ số tiền này khỏi ví đã chọn và ghi nhận một giao dịch chi tiêu vào sổ.
+                {t('bill.autoDeductNote')}
               </p>
             </div>
 

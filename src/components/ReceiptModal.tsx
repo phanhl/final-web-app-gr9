@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { X, Download, ZoomIn } from 'lucide-react';
+import { useApp } from '@/context/AppContext';
 
 interface ReceiptModalProps {
   isOpen: boolean;
@@ -14,8 +15,9 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   isOpen,
   onClose,
   imageUrl,
-  title = 'Ảnh chụp hóa đơn',
+  title,
 }) => {
+  const { t } = useApp();
   if (!isOpen || !imageUrl) return null;
 
   return (
@@ -24,20 +26,20 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/50">
           <div className="flex items-center space-x-2">
             <ZoomIn className="w-5 h-5 text-blue-400" />
-            <h3 className="text-lg font-semibold text-white">{title}</h3>
+            <h3 className="text-lg font-semibold text-white">{title || t('receipt.title', 'Ảnh chụp hóa đơn')}</h3>
           </div>
           <div className="flex items-center space-x-2">
             <a
               href={imageUrl}
               download="hoa-don.jpg"
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
-              title="Tải ảnh về máy"
+              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+              title={t('receipt.download', 'Tải ảnh về máy')}
             >
               <Download className="w-5 h-5" />
             </a>
             <button
               onClick={onClose}
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -47,7 +49,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={imageUrl}
-            alt="Hóa đơn giao dịch"
+            alt={t('receipt.alt', 'Hóa đơn giao dịch')}
             className="max-h-[70vh] w-auto rounded-lg object-contain shadow-md"
           />
         </div>
