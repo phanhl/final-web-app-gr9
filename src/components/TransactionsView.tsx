@@ -25,6 +25,8 @@ import {
   AlertTriangle,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { formatCurrency, formatDate, exportToCSV, exportToExcel, formatNumberWithDots, formatCompactNumber, formatMonthLabel } from '@/lib/utils';
 import { POPULAR_TAGS } from '@/lib/mock-data';
@@ -81,6 +83,8 @@ export const TransactionsView: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>('ALL');
   const [pieType, setPieType] = useState<'EXPENSE' | 'INCOME'>('EXPENSE');
   const [barMode, setBarMode] = useState<'BOTH' | 'EXPENSE' | 'INCOME'>('BOTH');
+  const INITIAL_VISIBLE_COUNT = 10;
+  const [visibleCount, setVisibleCount] = useState<number>(INITIAL_VISIBLE_COUNT);
 
   const handlePrevMonth = () => {
     const activeM = selectedMonth !== 'ALL' ? selectedMonth : currentMonth;
@@ -112,6 +116,11 @@ export const TransactionsView: React.FC = () => {
       setEndDate('');
     }
   }, [navTargetCategoryId]);
+
+  // Reset pagination when any filter changes
+  useEffect(() => {
+    setVisibleCount(INITIAL_VISIBLE_COUNT);
+  }, [searchTerm, selectedType, selectedWallet, selectedCategory, selectedTag, startDate, endDate, selectedMonth]);
 
   // Filter logic
   const filteredTransactions = useMemo(() => {
@@ -304,10 +313,15 @@ export const TransactionsView: React.FC = () => {
     return pieChartData.reduce((sum, item) => sum + item.value, 0);
   }, [pieChartData]);
 
-  // Group by Date for Timeline View
+  // Sliced transactions for View More pagination
+  const visibleTransactions = useMemo(() => {
+    return filteredTransactions.slice(0, visibleCount);
+  }, [filteredTransactions, visibleCount]);
+
+  // Group by Date for Timeline View (based on visible transactions)
   const groupedTransactions = useMemo(() => {
     const groups: { [dateKey: string]: Transaction[] } = {};
-    filteredTransactions.forEach((tx) => {
+    visibleTransactions.forEach((tx) => {
       const dateKey = tx.date.split('T')[0];
       if (!groups[dateKey]) {
         groups[dateKey] = [];
@@ -329,7 +343,7 @@ export const TransactionsView: React.FC = () => {
         net: dayIncome - dayExpense,
       };
     });
-  }, [filteredTransactions]);
+  }, [visibleTransactions]);
 
   const allTags = useMemo(() => {
     const set = new Set<string>();
@@ -1080,6 +1094,24 @@ export const TransactionsView: React.FC = () => {
 
       {/* 4. TIMELINE LIST */}
       <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
+          <div className="flex items-center space-x-2">
+            <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+              {t('tx.listTitle', 'Danh sách giao dịch')}
+            </h3>
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+              {filteredTransactions.length > visibleCount
+                ? `${visibleTransactions.length} / ${filteredTransactions.length}`
+                : `${filteredTransactions.length}`}
+            </span>
+          </div>
+          {filteredTransactions.length > visibleCount && (
+            <span className="text-xs text-slate-400 font-medium">
+              {t('tx.showingPartial', 'Đang rút gọn danh sách để dễ theo dõi')}
+            </span>
+          )}
+        </div>
+
         {groupedTransactions.length === 0 ? (
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-12 text-center">
             <Calendar className="w-12 h-12 mx-auto text-slate-300 dark:text-slate-700 mb-3" />
@@ -1253,6 +1285,62 @@ export const TransactionsView: React.FC = () => {
               </div>
             </div>
           ))
+        )}
+
+        {/* View More / Pagination Panel */}
+        {filteredTransactions.length > INITIAL_VISIBLE_COUNT && (
+          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left animate-in fade-in">
+            <div>
+              <p className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-center sm:justify-start gap-1.5">
+                <span>{t('tx.showingCount', 'Đang hiển thị')}</span>
+                <span className="text-blue-600 dark:text-blue-400 font-extrabold">{Math.min(visibleCount, filteredTransactions.length)}</span>
+                <span>{t('tx.onTotal', 'trên tổng số')}</span>
+                <span className="font-extrabold text-slate-900 dark:text-white">{filteredTransactions.length}</span>
+                <span>{t('tx.txUnit', 'giao dịch')}</span>
+              </p>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                {visibleCount < filteredTransactions.length
+                  ? `${t('tx.moreRemaining', 'Còn')} ${filteredTransactions.length - visibleCount} ${t('tx.txRemaining', 'giao dịch chưa hiển thị')}`
+                  : t('tx.allLoaded', 'Đã hiển thị toàn bộ giao dịch trong kỳ')}
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {visibleCount < filteredTransactions.length && (
+                <button
+                  type="button"
+                  onClick={() => setVisibleCount((prev) => prev + 10)}
+                  className="flex items-center space-x-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all cursor-pointer active:scale-95"
+                >
+                  <span>{t('tx.viewMore', 'Xem thêm')} (+10)</span>
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+              )}
+
+              {visibleCount < filteredTransactions.length && (
+                <button
+                  type="button"
+                  onClick={() => setVisibleCount(filteredTransactions.length)}
+                  className="px-3.5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+                >
+                  {t('tx.viewAll', 'Xem tất cả')} ({filteredTransactions.length})
+                </button>
+              )}
+
+              {visibleCount > INITIAL_VISIBLE_COUNT && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVisibleCount(INITIAL_VISIBLE_COUNT);
+                  }}
+                  className="flex items-center space-x-1 px-3.5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+                >
+                  <ChevronUp className="w-4 h-4" />
+                  <span>{t('tx.showLess', 'Thu gọn')}</span>
+                </button>
+              )}
+            </div>
+          </div>
         )}
       </div>
 

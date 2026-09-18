@@ -12,6 +12,20 @@
       "icon": "Building2",
       "id": "wal-1789749593421",
       "createdAt": "2026-09-18T16:39:53.421Z"
+    },
+    {
+      "name": "nợ",
+      "type": "CREDIT",
+      "balance": 3000000000,
+      "initialBalance": 3000000000,
+      "currency": "VND",
+      "bankName": "Vietcombank",
+      "accountNumber": "",
+      "creditLimit": 0,
+      "color": "#0ea5e9",
+      "icon": "CreditCard",
+      "id": "wal-1789752452586",
+      "createdAt": "2026-09-18T17:27:32.586Z"
     }
   ],
   "transactions": [
@@ -1057,7 +1071,7 @@
     "notes": "Áp dụng quy tắc 50/30/20: 50% thiết yếu, 30% sở thích cá nhân, 20% tích lũy & quỹ khẩn cấp",
     "emergencyPercent": 10
   },
-  "currentMonth": "2026-10",
+  "currentMonth": "2026-09",
   "userProfile": {
     "name": "PanC",
     "email": "admin@fintrack.vn",
@@ -1177,5 +1191,5 @@
       }
     ]
   },
-  "updatedAt": "2026-09-18T17:11:18.659Z"
+  "updatedAt": "2026-09-18T17:34:33.144Z"
 }
