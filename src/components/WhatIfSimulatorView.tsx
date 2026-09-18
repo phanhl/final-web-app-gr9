@@ -525,30 +525,33 @@ export const WhatIfSimulatorView: React.FC = () => {
                       : 'border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 hover:border-slate-300'
                   }`}
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-2.5">
-                      <div
-                        className="w-8 h-8 rounded-xl flex items-center justify-center text-white shadow-sm shrink-0"
-                        style={{ backgroundColor: item.color }}
-                      >
-                        <IconHelper name={item.icon} size={16} />
-                      </div>
-                      <div className="min-w-0">
-                        <h4 className="text-xs font-bold text-slate-800 dark:text-white truncate">
-                          {tCategory(item.categoryName)}
-                        </h4>
-                        <span className="text-[10px] text-slate-400 block">
-                          {t('whatif.personalExpense', 'Chi tiêu cá nhân')}
-                        </span>
-                      </div>
+                  {/* Top: Icon & Category name */}
+                  <div className="flex items-center space-x-2.5">
+                    <div
+                      className="w-8 h-8 rounded-xl flex items-center justify-center text-white shadow-sm shrink-0"
+                      style={{ backgroundColor: item.color }}
+                    >
+                      <IconHelper name={item.icon} size={16} />
                     </div>
-
-                    {item.isSelected && (
-                      <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/60 text-rose-600 dark:text-rose-300 shrink-0">
-                        {t('whatif.cuttingBy', 'Đang giảm')} -{item.cutPercent}%
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-xs font-bold text-slate-800 dark:text-white truncate">
+                        {tCategory(item.categoryName)}
+                      </h4>
+                      <span className="text-[10px] text-slate-400 block">
+                        {t('whatif.personalExpense', 'Chi tiêu cá nhân')}
                       </span>
-                    )}
+                    </div>
                   </div>
+
+                  {/* Badge hiển thị xuống dưới */}
+                  {item.isSelected && (
+                    <div className="mt-2 flex items-center">
+                      <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/60 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-800 inline-flex items-center gap-1.5 shadow-2xs">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0 animate-pulse" />
+                        <span>{t('whatif.cuttingBy', 'Đang giảm')} -{item.cutPercent}%</span>
+                      </span>
+                    </div>
+                  )}
 
                   {/* Monthly expense input */}
                   <div className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between text-xs">
