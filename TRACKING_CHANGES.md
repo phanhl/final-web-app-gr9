@@ -1371,6 +1371,59 @@ Qua quét toàn diện mã nguồn, phát hiện và đã xử lý các vị tr�
 | 4 | `data/database.json` | **[CHỈNH SỬA]** | Đồng bộ toàn bộ dữ liệu mới nhất của người dùng. |
 | 5 | `TRACKING_CHANGES.md` | **[CHỈNH SỬA]** | Ghi nhận chi tiết lần chỉnh sửa 23. |
 
+---
+
+# [LẦN CHỈNH SỬA 24] - ĐỒNG BỘ GIAO DIỆN BIỂU ĐỒ TRÒN GIỮA "BÁO CÁO" VÀ "SỔ GIAO DỊCH"
+
+### 1. Phân Tích Hiện Trạng & Yêu Cầu Người Dùng
+* **Yêu cầu:** *"cái biểu đồ tròn ở danh mục 'báo cáo' nó phải giao diện nó phải giống cái 'Sổ giao dịch'"*.
+* **So sánh trước khi chỉnh sửa:**
+  - **Tại "Sổ giao dịch" (`TransactionsView.tsx`):**
+    + Sử dụng biểu đồ Donut hiện đại với lỗ hổng trung tâm thông minh (`innerRadius` và `outerRadius`).
+    + Tại tâm biểu đồ (Center hole): Hiển thị tổng chi tiêu và số lượng danh mục; khi rê chuột (hover) vào bất kỳ lát cắt nào sẽ phóng to lát cắt (`scale(1.04)` viền trắng) và tâm biểu đồ cập nhật ngay lập tức: Tên danh mục, tỷ lệ % to đậm nổi bật, và số tiền chi tiết.
+    + Tooltip dạng Glassmorphism tối màu hiện đại, có chấm tròn màu danh mục, số tiền và huy hiệu % màu xanh ngọc.
+    + Danh sách phân rã danh mục bên dưới: Có huy hiệu % riêng, số tiền căn phải rõ ràng và **thanh tiến trình mini (progress bar)** mang màu sắc đặc trưng của từng danh mục.
+    + Tương tác 2 chiều: Di chuột vào dòng danh sách thì lát cắt trên biểu đồ cũng phát sáng tương ứng.
+    + Huy hiệu tổng chi phí màu hồng (`bg-rose-50 text-rose-600`) ở góc trên bên phải tiêu đề thẻ.
+  - **Tại "Báo cáo" (`ReportsView.tsx` cũ):**
+    + Biểu đồ tròn đơn điệu, không có thông số tương tác ở tâm biểu đồ.
+    + Không có hiệu ứng phóng to hover trên các lát cắt.
+    + Tooltip mặc định đơn giản.
+    + Danh sách danh mục chia 2 cột tĩnh, không có thanh tiến trình mini và không có tương tác chuột 2 chiều.
+    + Màu sắc chưa đồng bộ với danh mục thực tế trong hệ thống.
+
+---
+
+### 2. Các Nâng Cấp Đã Triển Khai
+
+1. **Đồng bộ Data Model & Màu Sắc Danh Mục:**
+   - Kết nối `categories` từ `useApp()` vào `ReportsView.tsx`.
+   - Các danh mục chi tiêu tự động lấy đúng mã màu chuẩn đã thiết lập trong hệ thống (Ăn uống: cam, Mua sắm: hồng, Hóa đơn: xanh...).
+
+2. **Tái thiết kế Biểu đồ Donut Đột phá:**
+   - Thêm trạng thái `hoveredPieIndex`.
+   - Cấu trúc Donut với hiệu ứng nổi bật lát cắt khi di chuột (`transform: scale(1.04)` kèm viền trắng).
+   - Tooltip Glassmorphism nền đen mờ sang trọng hiển thị tên, số tiền và huy hiệu tỷ lệ % nổi bật.
+   - **Tâm biểu đồ động:** Khi trạng thái bình thường hiển thị Tổng chi tiêu và số lượng danh mục; khi rê chuột hiển thị tên danh mục, tỷ lệ phần trăm cỡ lớn và số tiền cụ thể.
+
+3. **Danh sách phân rã danh mục trực quan:**
+   - Mỗi danh mục là 1 dòng bo góc tinh tế có thể tương tác chuột.
+   - Tên danh mục kèm chấm màu viền trắng sắc nét.
+   - Huy hiệu phần trăm bo góc cạnh số tiền chi tiêu.
+   - Thanh tiến trình mini hiển thị tỷ trọng màu sắc mượt mà bên dưới.
+   - Tương tác 2 chiều: Di chuột vào danh sách danh mục sẽ làm nổi bật lát cắt trên biểu đồ và hiển thị số liệu vào tâm Donut.
+   - Thêm nhãn tổng tiền `formatCurrency(totalExpense)` màu hồng nổi bật trên tiêu đề thẻ.
+
+---
+
+### 3. Danh Sách Các Tệp Đã Thay Đổi
+
+| STT | Tệp tin | Trạng thái | Mô tả tóm tắt |
+|---|---|---|---|
+| 1 | `src/components/ReportsView.tsx` | **[CHỈNH SỬA TOÀN DIỆN]** | Nâng cấp toàn diện biểu đồ tròn cơ cấu chi tiêu đồng bộ 100% về giao diện, tương tác tâm donut, tooltip và thanh tiến trình danh mục giống hệt Sổ giao dịch. |
+| 2 | `TRACKING_CHANGES.md` | **[CHỈNH SỬA]** | Ghi nhận chi tiết lần chỉnh sửa 24. |
+
+
 
 
 

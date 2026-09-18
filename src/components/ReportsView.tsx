@@ -37,12 +37,15 @@ import {
 } from 'recharts';
 import { IconHelper } from './IconHelper';
 
+const pieChartColors = ['#f97316', '#ec4899', '#8b5cf6', '#0ea5e9', '#eab308', '#10b981', '#64748b', '#ef4444'];
+
 export const ReportsView: React.FC = () => {
-  const { transactions, budgets, wallets, financialSummary, currentMonth } = useApp();
+  const { transactions, budgets, wallets, financialSummary, currentMonth, categories } = useApp();
 
   const [period, setPeriod] = useState<'THIS_MONTH' | 'LAST_MONTH' | 'THIS_YEAR' | 'CUSTOM'>('THIS_MONTH');
   const [customStart, setCustomStart] = useState(`${currentMonth}-01`);
   const [customEnd, setCustomEnd] = useState(`${currentMonth}-31`);
+  const [hoveredPieIndex, setHoveredPieIndex] = useState<number | null>(null);
 
   // Filter transactions according to selected period
   const filteredTxs = useMemo(() => {
@@ -82,7 +85,7 @@ export const ReportsView: React.FC = () => {
   const netSavings = totalIncome - totalExpense;
   const savingsRate = totalIncome > 0 ? Math.max(0, Math.round((netSavings / totalIncome) * 100)) : 0;
 
-  // Pie chart: Category Breakdown
+  // Pie chart: Category Breakdown (matching TransactionsView)
   const categoryBreakdown = useMemo(() => {
     const expenseTxs = filteredTxs.filter((t) => t.type === 'EXPENSE');
     const catMap: { [name: string]: { total: number; count: number } } = {};
@@ -94,17 +97,25 @@ export const ReportsView: React.FC = () => {
       catMap[name].count += 1;
     });
 
-    const colors = ['#f97316', '#ec4899', '#8b5cf6', '#0ea5e9', '#eab308', '#10b981', '#64748b', '#ef4444'];
-    return Object.keys(catMap)
-      .map((name, i) => ({
+    const list = Object.keys(catMap).map((name) => {
+      const matchedCat = categories.find((c) => c.name === name);
+      return {
         name,
         value: catMap[name].total,
         count: catMap[name].count,
         percentage: totalExpense > 0 ? Math.round((catMap[name].total / totalExpense) * 1000) / 10 : 0,
-        color: colors[i % colors.length],
-      }))
-      .sort((a, b) => b.value - a.value);
-  }, [filteredTxs, totalExpense]);
+        color: matchedCat?.color || '',
+      };
+    });
+
+    // Sort descending by value (highest spending category first)
+    list.sort((a, b) => b.value - a.value);
+
+    return list.map((item, idx) => ({
+      ...item,
+      color: item.color || pieChartColors[idx % pieChartColors.length],
+    }));
+  }, [filteredTxs, categories, totalExpense]);
 
   // Bar chart: Income vs Expense over time
   const monthlyComparisonData = useMemo(() => {
@@ -299,64 +310,174 @@ export const ReportsView: React.FC = () => {
 
       {/* 4. CHARTS: BIỂU ĐỒ TRÒN & BIỂU ĐỒ CỘT */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print:block print:space-y-6">
-        {/* Chart 1: Biểu đồ tròn Cơ cấu chi tiêu */}
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center space-x-2">
-                <PieChartIcon className="w-5 h-5 text-purple-500" />
-                <span>Cơ cấu chi tiêu theo Danh mục</span>
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Phân bổ tỷ trọng % các nhóm chi tiêu trong kỳ
-              </p>
-            </div>
-          </div>
-
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={categoryBreakdown}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={95}
-                  paddingAngle={3}
-                  dataKey="value"
-                >
-                  {categoryBreakdown.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  formatter={(val: any) => formatCurrency(Number(val))}
-                  contentStyle={{
-                    backgroundColor: '#1e293b',
-                    borderColor: '#334155',
-                    borderRadius: '12px',
-                    color: '#fff',
-                    fontSize: '12px',
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Category breakdown pills */}
-          <div className="grid grid-cols-2 gap-2 mt-2 max-h-40 overflow-y-auto">
-            {categoryBreakdown.map((item) => (
-              <div key={item.name} className="flex items-center justify-between text-xs p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/40">
-                <div className="flex items-center space-x-1.5 truncate">
-                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
-                  <span className="text-slate-700 dark:text-slate-300 truncate">{item.name}</span>
-                </div>
-                <span className="font-bold text-slate-900 dark:text-white shrink-0 ml-1">
-                  {item.percentage}%
-                </span>
+        {/* Chart 1: Biểu đồ tròn Cơ cấu chi tiêu (Đồng bộ giao diện hoàn toàn với Sổ giao dịch) */}
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center space-x-2">
+                  <PieChartIcon className="w-5 h-5 text-purple-500" />
+                  <span>Cơ cấu chi tiêu theo Danh mục</span>
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Phân bổ tỷ trọng % các nhóm chi tiêu trong kỳ
+                </p>
               </div>
-            ))}
+              {totalExpense > 0 && (
+                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40">
+                  {formatCurrency(totalExpense)}
+                </span>
+              )}
+            </div>
+
+            {categoryBreakdown.length > 0 ? (
+              <>
+                {/* Donut Chart with Center Interactive Metrics */}
+                <div className="relative h-56 w-full flex items-center justify-center my-2">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={categoryBreakdown}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={58}
+                        outerRadius={82}
+                        paddingAngle={2.5}
+                        dataKey="value"
+                        onMouseEnter={(_, index) => setHoveredPieIndex(index)}
+                        onMouseLeave={() => setHoveredPieIndex(null)}
+                      >
+                        {categoryBreakdown.map((entry, index) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={entry.color}
+                            stroke={hoveredPieIndex === index ? '#ffffff' : 'transparent'}
+                            strokeWidth={hoveredPieIndex === index ? 2 : 0}
+                            style={{
+                              transform: hoveredPieIndex === index ? 'scale(1.04)' : 'scale(1)',
+                              transformOrigin: 'center center',
+                              transition: 'all 0.2s ease',
+                              cursor: 'pointer',
+                            }}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const data = payload[0].payload;
+                            const percent = totalExpense > 0 ? ((data.value / totalExpense) * 100).toFixed(1) : '0';
+                            return (
+                              <div className="bg-slate-900/95 dark:bg-slate-800/95 backdrop-blur-md text-white text-xs px-3 py-2 rounded-xl shadow-xl border border-slate-700/60 pointer-events-none z-50">
+                                <div className="flex items-center gap-1.5 mb-1">
+                                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: data.color }} />
+                                  <span className="font-bold text-white">{data.name}</span>
+                                </div>
+                                <div className="flex items-center justify-between gap-3 text-slate-300">
+                                  <span className="font-semibold text-white">{formatCurrency(data.value)}</span>
+                                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/10 text-emerald-300">
+                                    {percent}%
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+
+                  {/* Center of the Donut */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-2">
+                    {hoveredPieIndex !== null && categoryBreakdown[hoveredPieIndex] ? (
+                      <div className="animate-in fade-in zoom-in-90 duration-150">
+                        <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 truncate max-w-[100px] mx-auto">
+                          {categoryBreakdown[hoveredPieIndex].name}
+                        </p>
+                        <p className="text-lg font-black text-slate-900 dark:text-white leading-tight">
+                          {totalExpense > 0
+                            ? ((categoryBreakdown[hoveredPieIndex].value / totalExpense) * 100).toFixed(1)
+                            : 0}%
+                        </p>
+                        <p className="text-[11px] font-bold text-slate-600 dark:text-slate-300">
+                          {formatCurrency(categoryBreakdown[hoveredPieIndex].value)}
+                        </p>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider">
+                          Tổng chi
+                        </p>
+                        <p className="text-base font-black text-slate-900 dark:text-white leading-tight mt-0.5">
+                          {formatCurrency(totalExpense)}
+                        </p>
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+                          {categoryBreakdown.length} danh mục
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Category Breakdown List with Percentage & Sleek Progress Bars (same as TransactionsView) */}
+                <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1 mt-2 scrollbar-thin [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300 dark:[&::-webkit-scrollbar-thumb]:bg-slate-700">
+                  {categoryBreakdown.map((entry, idx) => {
+                    const percent = totalExpense > 0 ? ((entry.value / totalExpense) * 100).toFixed(1) : '0';
+                    const isHovered = hoveredPieIndex === idx;
+                    return (
+                      <div
+                        key={entry.name}
+                        onMouseEnter={() => setHoveredPieIndex(idx)}
+                        onMouseLeave={() => setHoveredPieIndex(null)}
+                        className={`p-2 rounded-xl transition-all cursor-pointer ${
+                          isHovered
+                            ? 'bg-slate-100 dark:bg-slate-800 scale-[1.01]'
+                            : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span
+                              className="w-2.5 h-2.5 rounded-full shrink-0 ring-2 ring-white dark:ring-slate-900"
+                              style={{ backgroundColor: entry.color }}
+                            />
+                            <span className="text-slate-700 dark:text-slate-300 font-medium truncate">
+                              {entry.name}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                              {percent}%
+                            </span>
+                            <span className="font-bold text-slate-900 dark:text-white">
+                              {formatCurrency(entry.value)}
+                            </span>
+                          </div>
+                        </div>
+                        {/* Mini progress bar */}
+                        <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-300"
+                            style={{
+                              width: `${percent}%`,
+                              backgroundColor: entry.color,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <div className="py-16 flex flex-col items-center justify-center text-center">
+                <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 mb-2">
+                  <PieChartIcon className="w-6 h-6" />
+                </div>
+                <p className="text-xs text-slate-400 font-medium">Chưa có dữ liệu chi tiêu trong kỳ này</p>
+              </div>
+            )}
           </div>
         </div>
 
