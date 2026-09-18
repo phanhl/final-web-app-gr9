@@ -4,7 +4,7 @@
       "id": "wal-cash",
       "name": "Tiền mặt ví tay",
       "type": "CASH",
-      "balance": 1130781,
+      "balance": 7767233,
       "initialBalance": 3000000,
       "currency": "VND",
       "color": "#0ea5e9",
@@ -56,7 +56,7 @@
       "id": "wal-savings",
       "name": "Sổ tiết kiệm MB Bank 6T",
       "type": "SAVINGS",
-      "balance": 124800000,
+      "balance": 150000000,
       "initialBalance": 150000000,
       "bankName": "MB Bank",
       "accountNumber": "MB-SAV-88992",
@@ -70,17 +70,31 @@
   "transactions": [
     {
       "type": "EXPENSE",
-      "amount": 10000000,
+      "amount": 13548,
       "categoryId": "cat-food",
       "categoryName": "Ăn uống",
-      "walletId": "wal-savings",
-      "walletName": "Sổ tiết kiệm MB Bank 6T",
+      "walletId": "wal-cash",
+      "walletName": "Tiền mặt ví tay",
       "fee": 0,
-      "date": "2026-09-17T21:15:00.000Z",
+      "date": "2026-09-17T21:48:00.000Z",
       "note": "Ăn uống",
       "tags": [],
-      "id": "tx-1789704957937",
-      "createdAt": "2026-09-18T04:15:57.937Z"
+      "id": "tx-1789706928206",
+      "createdAt": "2026-09-18T04:48:48.206Z"
+    },
+    {
+      "type": "EXPENSE",
+      "amount": 500000,
+      "categoryId": "cat-food",
+      "categoryName": "Ăn uống",
+      "walletId": "wal-cash",
+      "walletName": "Tiền mặt ví tay",
+      "fee": 0,
+      "date": "2026-09-17T21:48:00.000Z",
+      "note": "Ăn uống",
+      "tags": [],
+      "id": "tx-1789706914546",
+      "createdAt": "2026-09-18T04:48:34.546Z"
     },
     {
       "type": "INCOME",
@@ -109,51 +123,6 @@
       "tags": [],
       "id": "tx-1789703758858",
       "createdAt": "2026-09-18T03:55:58.858Z"
-    },
-    {
-      "type": "EXPENSE",
-      "amount": 1150000,
-      "categoryId": "cat-bills",
-      "categoryName": "Hóa đơn & Tiện ích",
-      "walletId": "wal-cash",
-      "walletName": "Tiền mặt ví tay",
-      "date": "2026-09-18T01:22:00",
-      "note": "Thanh toán hóa đơn: Tiền điện EVN Hà Nội",
-      "tags": [
-        "Hóa đơn định kỳ"
-      ],
-      "id": "tx-1789669320529",
-      "createdAt": "2026-09-17T18:22:00.529Z"
-    },
-    {
-      "type": "EXPENSE",
-      "amount": 6000000,
-      "categoryId": "cat-housing",
-      "categoryName": "Nhà cửa & Thuê nhà",
-      "walletId": "wal-cash",
-      "walletName": "Tiền mặt ví tay",
-      "date": "2026-09-18T01:21:53",
-      "note": "Thanh toán hóa đơn: Tiền thuê căn hộ tháng 9",
-      "tags": [
-        "Hóa đơn định kỳ"
-      ],
-      "id": "tx-1789669313582",
-      "createdAt": "2026-09-17T18:21:53.582Z"
-    },
-    {
-      "type": "EXPENSE",
-      "amount": 15200000,
-      "categoryId": "cat-invest-exp",
-      "categoryName": "Đầu tư & Tích lũy",
-      "walletId": "wal-savings",
-      "walletName": "Sổ tiết kiệm MB Bank 6T",
-      "date": "2026-09-17T18:07:33.868Z",
-      "note": "Tích lũy vào hũ: cưới vợ",
-      "tags": [
-        "Tích lũy mục tiêu"
-      ],
-      "id": "tx-1789668453868",
-      "createdAt": "2026-09-17T18:07:33.868Z"
     },
     {
       "type": "TRANSFER",
@@ -953,11 +922,11 @@
   ],
   "planner": {
     "monthlyIncome": 32000000,
-    "needsPercent": 50,
-    "wantsPercent": 30,
-    "savingsPercent": 20,
+    "needsPercent": 70,
+    "wantsPercent": 26,
+    "savingsPercent": 19,
     "notes": "Áp dụng quy tắc 50/30/20: 50% thiết yếu, 30% sở thích cá nhân, 20% tích lũy & quỹ khẩn cấp",
-    "emergencyPercent": 10
+    "emergencyPercent": 15
   },
   "currentMonth": "2026-09",
   "userProfile": {
@@ -1079,5 +1048,5 @@
       }
     ]
   },
-  "updatedAt": "2026-09-18T04:15:58.980Z"
+  "updatedAt": "2026-09-18T05:03:58.794Z"
 }

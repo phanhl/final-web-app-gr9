@@ -4,16 +4,20 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$DIR"
 
 # Dung tien trinh cu
-PORT_PID=$(lsof -ti:3000 2>/dev/null)
-if [ -n "$PORT_PID" ]; then
-  kill -9 $PORT_PID 2>/dev/null
+fuser -k 3000/tcp 2>/dev/null
+pkill -9 -f "next" 2>/dev/null
+pkill -9 -f "ngrok" 2>/dev/null
+pkill -9 -f "cloudflared" 2>/dev/null
+sleep 1
+
+# Kiem tra ban build production
+if [ ! -d ".next" ] || [ ! -f ".next/BUILD_ID" ]; then
+  echo "Dang build ung dung..."
+  npm run build
 fi
 
-pkill -f "ngrok http" 2>/dev/null
-pkill -f "cloudflared tunnel" 2>/dev/null
-
-# 1. Khoi chay Next.js ngam doc lap
-python3 -c "import subprocess, os; subprocess.Popen(['npm', 'run', 'dev'], cwd='$DIR', start_new_session=True, stdout=open('logs_dev.log', 'a'), stderr=subprocess.STDOUT)"
+# 1. Khoi chay Next.js Production Server ngam doc lap
+python3 -c "import subprocess, os; subprocess.Popen(['npx', 'next', 'start', '-H', '0.0.0.0', '-p', '3000'], cwd='$DIR', start_new_session=True, stdout=open('logs_prod.log', 'w'), stderr=subprocess.STDOUT)"
 
 # 2. Khoi chay Ngrok voi Domain co dinh vinh vien
 if [ -x "/home/hlp0609/.local/bin/ngrok" ]; then

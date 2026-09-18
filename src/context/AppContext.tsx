@@ -109,6 +109,14 @@ interface AppContextType {
   navigateToBudget: (budgetId: string) => void;
   navigateToBill: (billId: string, autoOpenPay?: boolean) => void;
 
+  // Alert Dismissal Management
+  dismissedAlertIds: string[];
+  dismissAlert: (alertId: string) => void;
+  restoreAlert: (alertId: string) => void;
+  dismissAllAlerts: (alertIds: string[]) => void;
+  restoreAllAlerts: () => void;
+  isAlertDismissed: (alertId: string) => boolean;
+
   // Backup & Reset
   saveDataNow: () => Promise<boolean>;
   syncDataFromServer: () => Promise<boolean>;
@@ -190,6 +198,63 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setBillToAutoPayId(billId);
     }
     setActiveTab('bills');
+  };
+
+  // Alert Dismissal Management
+  const [dismissedAlertIds, setDismissedAlertIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('fintrack_dismissed_alerts');
+      if (saved) {
+        setDismissedAlertIds(JSON.parse(saved));
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, []);
+
+  const dismissAlert = (alertId: string) => {
+    setDismissedAlertIds((prev) => {
+      if (prev.includes(alertId)) return prev;
+      const next = [...prev, alertId];
+      try {
+        localStorage.setItem('fintrack_dismissed_alerts', JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
+  };
+
+  const restoreAlert = (alertId: string) => {
+    setDismissedAlertIds((prev) => {
+      const next = prev.filter((id) => id !== alertId);
+      try {
+        localStorage.setItem('fintrack_dismissed_alerts', JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
+  };
+
+  const dismissAllAlerts = (alertIds: string[]) => {
+    setDismissedAlertIds((prev) => {
+      const set = new Set([...prev, ...alertIds]);
+      const next = Array.from(set);
+      try {
+        localStorage.setItem('fintrack_dismissed_alerts', JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
+  };
+
+  const restoreAllAlerts = () => {
+    setDismissedAlertIds([]);
+    try {
+      localStorage.removeItem('fintrack_dismissed_alerts');
+    } catch (e) {}
+  };
+
+  const isAlertDismissed = (alertId: string) => {
+    return dismissedAlertIds.includes(alertId);
   };
 
   // Theme Management (Light, Dark, System)
@@ -1260,6 +1325,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         navigateToCategoryTransactions,
         navigateToBudget,
         navigateToBill,
+        dismissedAlertIds,
+        dismissAlert,
+        restoreAlert,
+        dismissAllAlerts,
+        restoreAllAlerts,
+        isAlertDismissed,
         saveDataNow,
         syncDataFromServer,
         resetToDefaultData,

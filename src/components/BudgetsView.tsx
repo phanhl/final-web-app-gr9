@@ -25,6 +25,8 @@ import {
   ReceiptText,
   Save,
   Check,
+  Bell,
+  BellOff,
 } from 'lucide-react';
 import { formatCurrency, calculateBudgetStatuses, formatNumberWithDots } from '@/lib/utils';
 import { IconHelper } from './IconHelper';
@@ -58,6 +60,9 @@ export const BudgetsView: React.FC = () => {
     tCategory,
     tWalletType,
     language,
+    isAlertDismissed,
+    dismissAlert,
+    restoreAlert,
   } = useApp();
 
   const [activeSubTab, setActiveSubTab] = useState<'CATEGORY_BUDGETS' | 'PLANNER' | 'SAVINGS_GOALS'>(
@@ -358,17 +363,21 @@ export const BudgetsView: React.FC = () => {
                   }`}
                 >
                   {/* Top: Icon & Category name & Badge */}
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center space-x-3">
+                  <div className="flex items-start justify-between mb-2">
+                    <div
+                      onClick={() => navigateToCategoryTransactions(budget.categoryId)}
+                      className="flex items-center space-x-3 cursor-pointer group/title"
+                      title={t('budget.viewTxTitle', 'Xem danh sách giao dịch đã chi của danh mục này')}
+                    >
                       <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm"
+                        className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm group-hover/title:scale-105 transition-transform"
                         style={{ backgroundColor: cat?.color || '#6366f1' }}
                       >
                         <IconHelper name={cat?.icon || 'CircleDot'} size={20} />
                       </div>
                       <div>
                         <div className="flex items-center space-x-1.5">
-                          <h3 className="text-sm font-bold text-slate-800 dark:text-white">
+                          <h3 className="text-sm font-bold text-slate-800 dark:text-white group-hover/title:text-blue-600 dark:group-hover/title:text-blue-400 transition-colors">
                             {tCategory(budget.categoryName)}
                           </h3>
                           {isHighlighted && (
@@ -402,6 +411,83 @@ export const BudgetsView: React.FC = () => {
                       </span>
                     )}
                   </div>
+
+                  {/* Status Banner when Over-budget or Warning */}
+                  {status === 'EXCEEDED' && (
+                    <div className="flex items-center justify-between p-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 my-2.5">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-rose-700 dark:text-rose-300 min-w-0 pr-1">
+                        <AlertTriangle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400 shrink-0" />
+                        <span className="truncate">
+                          {t('budget.exceededAlertMsg', 'Đã vượt ngân sách')} {formatCurrency(Math.abs(remaining))}!
+                        </span>
+                      </div>
+                      {isAlertDismissed(`budget-${budget.id}`) ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            restoreAlert(`budget-${budget.id}`);
+                          }}
+                          className="px-2 py-0.5 bg-white dark:bg-slate-800 text-[10px] font-bold text-slate-500 hover:text-rose-600 dark:hover:text-rose-300 rounded-md border border-slate-200 dark:border-slate-700 flex items-center gap-1 cursor-pointer transition-colors shadow-2xs shrink-0"
+                          title={t('budget.restoreAlertTip', 'Bật lại chuông cảnh báo')}
+                        >
+                          <BellOff className="w-3 h-3 text-slate-400" />
+                          <span>{t('budget.muted', 'Chuông: Tắt')}</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            dismissAlert(`budget-${budget.id}`);
+                          }}
+                          className="px-2 py-0.5 bg-white dark:bg-slate-800 text-[10px] font-bold text-rose-600 hover:text-slate-600 dark:hover:text-slate-300 rounded-md border border-rose-200 dark:border-rose-800 flex items-center gap-1 cursor-pointer transition-colors shadow-2xs shrink-0"
+                          title={t('budget.dismissAlertTip', 'Tắt thông báo chuông cho mục này')}
+                        >
+                          <Bell className="w-3 h-3 text-rose-500" />
+                          <span>{t('budget.bellActive', 'Chuông: Bật')}</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {status === 'WARNING' && (
+                    <div className="flex items-center justify-between p-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 my-2.5">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-amber-700 dark:text-amber-300 min-w-0 pr-1">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                        <span className="truncate">
+                          {t('budget.warningAlertMsg', 'Sắp chạm hạn mức')} ({percentage}%)
+                        </span>
+                      </div>
+                      {isAlertDismissed(`budget-${budget.id}`) ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            restoreAlert(`budget-${budget.id}`);
+                          }}
+                          className="px-2 py-0.5 bg-white dark:bg-slate-800 text-[10px] font-bold text-slate-500 hover:text-amber-600 dark:hover:text-amber-300 rounded-md border border-slate-200 dark:border-slate-700 flex items-center gap-1 cursor-pointer transition-colors shadow-2xs shrink-0"
+                          title={t('budget.restoreAlertTip', 'Bật lại chuông cảnh báo')}
+                        >
+                          <BellOff className="w-3 h-3 text-slate-400" />
+                          <span>{t('budget.muted', 'Chuông: Tắt')}</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            dismissAlert(`budget-${budget.id}`);
+                          }}
+                          className="px-2 py-0.5 bg-white dark:bg-slate-800 text-[10px] font-bold text-amber-600 hover:text-slate-600 dark:hover:text-slate-300 rounded-md border border-amber-200 dark:border-amber-800 flex items-center gap-1 cursor-pointer transition-colors shadow-2xs shrink-0"
+                          title={t('budget.dismissAlertTip', 'Tắt thông báo chuông cho mục này')}
+                        >
+                          <Bell className="w-3 h-3 text-amber-500" />
+                          <span>{t('budget.bellActive', 'Chuông: Bật')}</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
 
                   {/* Amounts Info */}
                   <div className="space-y-1.5 my-3">

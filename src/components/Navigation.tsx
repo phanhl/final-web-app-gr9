@@ -33,6 +33,8 @@ import {
   CreditCard,
   ArrowRight,
   RefreshCw,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { formatCurrency, calculateBudgetStatuses } from '@/lib/utils';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
@@ -83,9 +85,16 @@ export const Navigation: React.FC = () => {
     t,
     tCategory,
     tWalletType,
+    dismissedAlertIds,
+    dismissAlert,
+    restoreAlert,
+    dismissAllAlerts,
+    restoreAllAlerts,
+    isAlertDismissed,
   } = useApp();
 
   const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [showDismissedSection, setShowDismissedSection] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [isManualSyncing, setIsManualSyncing] = useState(false);
 
@@ -108,7 +117,18 @@ export const Navigation: React.FC = () => {
   const warningBudgets = budgetStatuses.filter((b) => b.status === 'WARNING');
   const exceededBudgets = budgetStatuses.filter((b) => b.status === 'EXCEEDED');
   const unpaidUpcomingBills = bills.filter((b) => b.status === 'UNPAID');
-  const alertCount = warningBudgets.length + exceededBudgets.length + unpaidUpcomingBills.length;
+
+  // Active (non-dismissed) alerts for bell badge and primary list
+  const activeExceededBudgets = exceededBudgets.filter((b) => !isAlertDismissed(`budget-${b.budget.id}`));
+  const activeWarningBudgets = warningBudgets.filter((b) => !isAlertDismissed(`budget-${b.budget.id}`));
+  const activeUnpaidBills = unpaidUpcomingBills.filter((b) => !isAlertDismissed(`bill-${b.id}`));
+  const alertCount = activeExceededBudgets.length + activeWarningBudgets.length + activeUnpaidBills.length;
+
+  // Dismissed alerts list
+  const dismissedExceededBudgets = exceededBudgets.filter((b) => isAlertDismissed(`budget-${b.budget.id}`));
+  const dismissedWarningBudgets = warningBudgets.filter((b) => isAlertDismissed(`budget-${b.budget.id}`));
+  const dismissedUnpaidBills = unpaidUpcomingBills.filter((b) => isAlertDismissed(`bill-${b.id}`));
+  const dismissedCount = dismissedExceededBudgets.length + dismissedWarningBudgets.length + dismissedUnpaidBills.length;
 
   return (
     <>
@@ -417,28 +437,52 @@ export const Navigation: React.FC = () => {
             onClick={() => setShowNotificationModal(false)}
           />
 
-          <div className="fixed lg:absolute lg:right-8 lg:top-16 lg:w-[420px] inset-x-3 top-16 lg:top-auto lg:inset-x-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-4 z-40 max-h-[85vh] overflow-hidden flex flex-col animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="fixed lg:absolute lg:right-8 lg:top-16 lg:w-[430px] inset-x-3 top-16 lg:top-auto lg:inset-x-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-4 z-40 max-h-[85vh] overflow-hidden flex flex-col animate-in fade-in slide-in-from-top-2 duration-200">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
               <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                 <Bell className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 <span>{t('notif.title', 'Trung tâm Cảnh báo')}</span>
               </h4>
               <div className="flex items-center space-x-2">
-                <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-full">
-                  {alertCount} {t('notif.pendingTasks', 'việc cần xử lý')}
-                </span>
+                {alertCount > 0 ? (
+                  <span className="text-[11px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900 px-2.5 py-0.5 rounded-full">
+                    {alertCount} {t('notif.pendingTasks', 'việc cần xử lý')}
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-900 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                    <Check className="w-3 h-3" />
+                    <span>{t('notif.allClear', 'Đã xử lý xong')}</span>
+                  </span>
+                )}
+                {alertCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const allIds = [
+                        ...activeExceededBudgets.map((b) => `budget-${b.budget.id}`),
+                        ...activeWarningBudgets.map((b) => `budget-${b.budget.id}`),
+                        ...activeUnpaidBills.map((b) => `bill-${b.id}`),
+                      ];
+                      dismissAllAlerts(allIds);
+                    }}
+                    className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 px-2 py-0.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                    title={t('notif.dismissAllTitle', 'Ẩn tất cả cảnh báo khỏi chuông thông báo')}
+                  >
+                    {t('notif.dismissAll', 'Ẩn tất cả')}
+                  </button>
+                )}
                 <button
                   onClick={() => setShowNotificationModal(false)}
-                  className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
-            <div className="py-2.5 space-y-2.5 overflow-y-auto pr-0.5 max-h-[60vh]">
-              {/* EXCEEDED BUDGETS */}
-              {exceededBudgets.map((b) => (
+            <div className="py-2.5 space-y-2.5 overflow-y-auto pr-0.5 max-h-[58vh]">
+              {/* ACTIVE EXCEEDED BUDGETS */}
+              {activeExceededBudgets.map((b) => (
                 <div
                   key={b.budget.id}
                   onClick={() => {
@@ -466,18 +510,33 @@ export const Navigation: React.FC = () => {
 
                   {/* Quick Actions */}
                   <div className="mt-2.5 pt-2 border-t border-rose-200/60 dark:border-rose-900/50 flex items-center justify-between text-[11px]">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigateToCategoryTransactions(b.budget.categoryId);
-                        setShowNotificationModal(false);
-                      }}
-                      className="px-2.5 py-1 bg-white dark:bg-slate-800 text-rose-700 dark:text-rose-300 font-bold rounded-lg hover:bg-rose-100 dark:hover:bg-rose-900/60 transition-colors shadow-2xs border border-rose-200 dark:border-rose-800 flex items-center gap-1"
-                    >
-                      <Search className="w-3 h-3" />
-                      <span>{t('notif.viewExpenses', 'Xem các khoản đã chi')}</span>
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigateToCategoryTransactions(b.budget.categoryId);
+                          setShowNotificationModal(false);
+                        }}
+                        className="px-2.5 py-1 bg-white dark:bg-slate-800 text-rose-700 dark:text-rose-300 font-bold rounded-lg hover:bg-rose-100 dark:hover:bg-rose-900/60 transition-colors shadow-2xs border border-rose-200 dark:border-rose-800 flex items-center gap-1 cursor-pointer"
+                      >
+                        <Search className="w-3 h-3" />
+                        <span>{t('notif.viewExpenses', 'Xem các khoản đã chi')}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          dismissAlert(`budget-${b.budget.id}`);
+                        }}
+                        className="px-2.5 py-1 bg-rose-100/70 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300 hover:bg-rose-200 dark:hover:bg-rose-900/80 font-semibold rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                        title={t('notif.dismissTip', 'Ẩn cảnh báo này khỏi chuông thông báo (vẫn giữ cảnh báo trong phần Ngân sách)')}
+                      >
+                        <EyeOff className="w-3 h-3" />
+                        <span>{t('notif.dismiss', 'Ẩn')}</span>
+                      </button>
+                    </div>
 
                     <button
                       type="button"
@@ -486,7 +545,7 @@ export const Navigation: React.FC = () => {
                         navigateToBudget(b.budget.id);
                         setShowNotificationModal(false);
                       }}
-                      className="text-rose-600 dark:text-rose-400 font-semibold hover:underline flex items-center gap-0.5"
+                      className="text-rose-600 dark:text-rose-400 font-semibold hover:underline flex items-center gap-0.5 cursor-pointer"
                     >
                       <span>{t('nav.budgets', 'Ngân sách')}</span>
                       <ChevronRight className="w-3 h-3" />
@@ -495,8 +554,8 @@ export const Navigation: React.FC = () => {
                 </div>
               ))}
 
-              {/* WARNING BUDGETS (80%) */}
-              {warningBudgets.map((b) => (
+              {/* ACTIVE WARNING BUDGETS (80%) */}
+              {activeWarningBudgets.map((b) => (
                 <div
                   key={b.budget.id}
                   onClick={() => {
@@ -524,18 +583,33 @@ export const Navigation: React.FC = () => {
 
                   {/* Quick Actions */}
                   <div className="mt-2.5 pt-2 border-t border-amber-200/60 dark:border-amber-900/50 flex items-center justify-between text-[11px]">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigateToCategoryTransactions(b.budget.categoryId);
-                        setShowNotificationModal(false);
-                      }}
-                      className="px-2.5 py-1 bg-white dark:bg-slate-800 text-amber-700 dark:text-amber-300 font-bold rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/60 transition-colors shadow-2xs border border-amber-200 dark:border-amber-800 flex items-center gap-1"
-                    >
-                      <Search className="w-3 h-3" />
-                      <span>{t('notif.viewExpenses', 'Xem các khoản đã chi')}</span>
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigateToCategoryTransactions(b.budget.categoryId);
+                          setShowNotificationModal(false);
+                        }}
+                        className="px-2.5 py-1 bg-white dark:bg-slate-800 text-amber-700 dark:text-amber-300 font-bold rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/60 transition-colors shadow-2xs border border-amber-200 dark:border-amber-800 flex items-center gap-1 cursor-pointer"
+                      >
+                        <Search className="w-3 h-3" />
+                        <span>{t('notif.viewExpenses', 'Xem các khoản đã chi')}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          dismissAlert(`budget-${b.budget.id}`);
+                        }}
+                        className="px-2.5 py-1 bg-amber-100/70 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/80 font-semibold rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                        title={t('notif.dismissTip', 'Ẩn cảnh báo này khỏi chuông thông báo (vẫn giữ cảnh báo trong phần Ngân sách)')}
+                      >
+                        <EyeOff className="w-3 h-3" />
+                        <span>{t('notif.dismiss', 'Ẩn')}</span>
+                      </button>
+                    </div>
 
                     <button
                       type="button"
@@ -544,7 +618,7 @@ export const Navigation: React.FC = () => {
                         navigateToBudget(b.budget.id);
                         setShowNotificationModal(false);
                       }}
-                      className="text-amber-600 dark:text-amber-400 font-semibold hover:underline flex items-center gap-0.5"
+                      className="text-amber-600 dark:text-amber-400 font-semibold hover:underline flex items-center gap-0.5 cursor-pointer"
                     >
                       <span>{t('nav.budgets', 'Ngân sách')}</span>
                       <ChevronRight className="w-3 h-3" />
@@ -553,8 +627,8 @@ export const Navigation: React.FC = () => {
                 </div>
               ))}
 
-              {/* UNPAID UPCOMING BILLS */}
-              {unpaidUpcomingBills.map((bill) => (
+              {/* ACTIVE UNPAID UPCOMING BILLS */}
+              {activeUnpaidBills.map((bill) => (
                 <div
                   key={bill.id}
                   onClick={() => {
@@ -582,18 +656,33 @@ export const Navigation: React.FC = () => {
 
                   {/* Quick Actions */}
                   <div className="mt-2.5 pt-2 border-t border-blue-200/60 dark:border-blue-900/50 flex items-center justify-between text-[11px]">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigateToBill(bill.id, true);
-                        setShowNotificationModal(false);
-                      }}
-                      className="px-3 py-1 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-2xs flex items-center gap-1"
-                    >
-                      <CreditCard className="w-3 h-3" />
-                      <span>{t('notif.payNow', 'Thanh toán ngay')}</span>
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigateToBill(bill.id, true);
+                          setShowNotificationModal(false);
+                        }}
+                        className="px-3 py-1 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-2xs flex items-center gap-1 cursor-pointer"
+                      >
+                        <CreditCard className="w-3 h-3" />
+                        <span>{t('notif.payNow', 'Thanh toán ngay')}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          dismissAlert(`bill-${bill.id}`);
+                        }}
+                        className="px-2.5 py-1 bg-blue-100/70 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/80 font-semibold rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                        title={t('notif.dismissTip', 'Ẩn cảnh báo này khỏi chuông thông báo')}
+                      >
+                        <EyeOff className="w-3 h-3" />
+                        <span>{t('notif.dismiss', 'Ẩn')}</span>
+                      </button>
+                    </div>
 
                     <button
                       type="button"
@@ -602,7 +691,7 @@ export const Navigation: React.FC = () => {
                         navigateToBill(bill.id, false);
                         setShowNotificationModal(false);
                       }}
-                      className="text-blue-600 dark:text-blue-400 font-semibold hover:underline flex items-center gap-0.5"
+                      className="text-blue-600 dark:text-blue-400 font-semibold hover:underline flex items-center gap-0.5 cursor-pointer"
                     >
                       <span>{t('nav.bills', 'Định kỳ')}</span>
                       <ChevronRight className="w-3 h-3" />
@@ -611,10 +700,114 @@ export const Navigation: React.FC = () => {
                 </div>
               ))}
 
+              {/* EMPTY STATE */}
               {alertCount === 0 && (
-                <div className="text-center py-8 text-slate-500 dark:text-slate-400">
-                  <CheckCircle2 className="w-9 h-9 mx-auto text-emerald-500 dark:text-emerald-400 mb-1.5" />
-                  <p className="text-xs font-bold text-slate-700 dark:text-slate-200">{t('notif.noAlerts', 'Tuyệt vời! Không có cảnh báo tài chính nào.')}</p>
+                <div className="text-center py-6 px-2 text-slate-500 dark:text-slate-400">
+                  <CheckCircle2 className="w-9 h-9 mx-auto text-emerald-500 dark:text-emerald-400 mb-2" />
+                  <p className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                    {t('notif.noAlerts', 'Tuyệt vời! Không có cảnh báo tài chính nào.')}
+                  </p>
+                  {dismissedCount > 0 && (
+                    <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5">
+                      {t('notif.hasDismissedHint', `Đang ẩn ${dismissedCount} cảnh báo khỏi chuông. Các mục vẫn hiển thị cảnh báo chi tiết trong trang Ngân sách.`).replace('{count}', String(dismissedCount))}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* DISMISSED ALERTS ACCORDION */}
+              {dismissedCount > 0 && (
+                <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setShowDismissedSection((prev) => !prev)}
+                    className="w-full flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-[11px] font-semibold text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <Eye className="w-3.5 h-3.5 text-slate-400" />
+                      <span>{t('notif.dismissedCount', 'Cảnh báo đã ẩn')} ({dismissedCount})</span>
+                    </span>
+                    <span className="text-[11px] text-blue-600 dark:text-blue-400 font-bold">
+                      {showDismissedSection ? t('notif.hideDismissed', 'Thu gọn') : t('notif.showDismissed', 'Xem chi tiết')}
+                    </span>
+                  </button>
+
+                  {showDismissedSection && (
+                    <div className="mt-2 space-y-2 max-h-[160px] overflow-y-auto pr-1 animate-in fade-in duration-150">
+                      <div className="flex justify-end pb-1">
+                        <button
+                          type="button"
+                          onClick={() => restoreAllAlerts()}
+                          className="text-[10px] text-blue-600 dark:text-blue-400 hover:underline font-bold cursor-pointer"
+                        >
+                          {t('notif.restoreAll', 'Khôi phục tất cả')}
+                        </button>
+                      </div>
+
+                      {dismissedExceededBudgets.map((b) => (
+                        <div
+                          key={`dismissed-exceeded-${b.budget.id}`}
+                          className="p-2 rounded-lg bg-slate-100/70 dark:bg-slate-800/60 flex items-center justify-between text-xs"
+                        >
+                          <div className="flex items-center gap-2 min-w-0 pr-2">
+                            <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
+                            <span className="truncate font-medium text-slate-700 dark:text-slate-300">
+                              {tCategory(b.budget.categoryName)} ({b.percentage}%)
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => restoreAlert(`budget-${b.budget.id}`)}
+                            className="px-2 py-0.5 bg-white dark:bg-slate-700 text-[10px] font-bold text-blue-600 dark:text-blue-300 rounded shadow-2xs hover:bg-blue-50 dark:hover:bg-slate-600 transition-colors cursor-pointer shrink-0"
+                          >
+                            {t('notif.restore', 'Hiện lại')}
+                          </button>
+                        </div>
+                      ))}
+
+                      {dismissedWarningBudgets.map((b) => (
+                        <div
+                          key={`dismissed-warning-${b.budget.id}`}
+                          className="p-2 rounded-lg bg-slate-100/70 dark:bg-slate-800/60 flex items-center justify-between text-xs"
+                        >
+                          <div className="flex items-center gap-2 min-w-0 pr-2">
+                            <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                            <span className="truncate font-medium text-slate-700 dark:text-slate-300">
+                              {tCategory(b.budget.categoryName)} ({b.percentage}%)
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => restoreAlert(`budget-${b.budget.id}`)}
+                            className="px-2 py-0.5 bg-white dark:bg-slate-700 text-[10px] font-bold text-blue-600 dark:text-blue-300 rounded shadow-2xs hover:bg-blue-50 dark:hover:bg-slate-600 transition-colors cursor-pointer shrink-0"
+                          >
+                            {t('notif.restore', 'Hiện lại')}
+                          </button>
+                        </div>
+                      ))}
+
+                      {dismissedUnpaidBills.map((bill) => (
+                        <div
+                          key={`dismissed-bill-${bill.id}`}
+                          className="p-2 rounded-lg bg-slate-100/70 dark:bg-slate-800/60 flex items-center justify-between text-xs"
+                        >
+                          <div className="flex items-center gap-2 min-w-0 pr-2">
+                            <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                            <span className="truncate font-medium text-slate-700 dark:text-slate-300">
+                              {bill.name} ({formatCurrency(bill.amount)})
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => restoreAlert(`bill-${bill.id}`)}
+                            className="px-2 py-0.5 bg-white dark:bg-slate-700 text-[10px] font-bold text-blue-600 dark:text-blue-300 rounded shadow-2xs hover:bg-blue-50 dark:hover:bg-slate-600 transition-colors cursor-pointer shrink-0"
+                          >
+                            {t('notif.restore', 'Hiện lại')}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

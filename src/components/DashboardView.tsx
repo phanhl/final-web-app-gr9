@@ -12,6 +12,7 @@ import {
   PiggyBank,
   Eye,
   Sparkles,
+  X,
 } from 'lucide-react';
 import { formatCurrency, formatDate, calculateBudgetStatuses } from '@/lib/utils';
 import { ReceiptModal } from './ReceiptModal';
@@ -29,6 +30,8 @@ export const DashboardView: React.FC = () => {
     tCategory,
     tWalletType,
     language,
+    isAlertDismissed,
+    dismissAlert,
   } = useApp();
   const [selectedReceipt, setSelectedReceipt] = useState<string | null>(null);
   const [showBalance, setShowBalance] = useState(true);
@@ -47,7 +50,10 @@ export const DashboardView: React.FC = () => {
     { label: t('dash.quickBudget', 'Ngân sách'), icon: PiggyBank, color: 'bg-amber-500', onClick: () => setActiveTab('budgets') },
   ];
 
-  const hasAlerts = exceededBudgets.length > 0 || warningBudgets.length > 0 || unpaidBills.length > 0;
+  const activeExceededBudgets = exceededBudgets.filter((b) => !isAlertDismissed(`budget-${b.budget.id}`));
+  const activeWarningBudgets = warningBudgets.filter((b) => !isAlertDismissed(`budget-${b.budget.id}`));
+  const activeUnpaidBills = unpaidBills.filter((b) => !isAlertDismissed(`bill-${b.id}`));
+  const hasAlerts = activeExceededBudgets.length > 0 || activeWarningBudgets.length > 0 || activeUnpaidBills.length > 0;
 
   return (
     <div className="space-y-5 pb-4">
@@ -150,58 +156,110 @@ export const DashboardView: React.FC = () => {
       {/* Alerts */}
       {hasAlerts && (
         <div className="space-y-2.5">
-          {exceededBudgets.slice(0, 1).map((item) => (
-            <button
+          {activeExceededBudgets.slice(0, 1).map((item) => (
+            <div
               key={item.budget.id}
-              onClick={() => setActiveTab('budgets')}
-              className="w-full flex items-center gap-3 p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/40 rounded-2xl text-left transition-colors"
+              className="w-full flex items-center justify-between gap-2 p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/40 rounded-2xl text-left transition-colors"
             >
-              <div className="w-10 h-10 rounded-full bg-rose-500 text-white flex items-center justify-center shrink-0">
-                <AlertTriangle className="w-5 h-5" />
+              <button
+                onClick={() => setActiveTab('budgets')}
+                className="flex items-center gap-3 flex-1 min-w-0 text-left cursor-pointer"
+              >
+                <div className="w-10 h-10 rounded-full bg-rose-500 text-white flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-rose-800 dark:text-rose-200 truncate">
+                    {t('dashboard.alertOverBudget', 'Vượt ngân sách')} {tCategory(item.budget.categoryName)}
+                  </p>
+                  <p className="text-xs text-rose-600/80 dark:text-rose-400 truncate">
+                    {t('dashboard.spent', 'Đã chi')} {formatCurrency(item.spent)} / {formatCurrency(item.budget.amount)}
+                  </p>
+                </div>
+              </button>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => dismissAlert(`budget-${item.budget.id}`)}
+                  className="p-1.5 text-rose-400 hover:text-rose-700 dark:hover:text-rose-200 hover:bg-rose-100 dark:hover:bg-rose-900/50 rounded-lg transition-colors cursor-pointer"
+                  title={t('notif.dismiss', 'Ẩn')}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+                <ChevronRight className="w-4 h-4 text-rose-300 dark:text-rose-500" />
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-rose-800 dark:text-rose-200">{t('dashboard.alertOverBudget', 'Vượt ngân sách')} {tCategory(item.budget.categoryName)}</p>
-                <p className="text-xs text-rose-600/80 dark:text-rose-400 truncate">
-                  {t('dashboard.spent', 'Đã chi')} {formatCurrency(item.spent)} / {formatCurrency(item.budget.amount)}
-                </p>
-              </div>
-              <ChevronRight className="w-4 h-4 text-rose-300 dark:text-rose-500 shrink-0" />
-            </button>
+            </div>
           ))}
 
-          {warningBudgets.slice(0, 1).map((item) => (
-            <button
+          {activeWarningBudgets.slice(0, 1).map((item) => (
+            <div
               key={item.budget.id}
-              onClick={() => setActiveTab('budgets')}
-              className="w-full flex items-center gap-3 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40 rounded-2xl text-left transition-colors"
+              className="w-full flex items-center justify-between gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40 rounded-2xl text-left transition-colors"
             >
-              <div className="w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center shrink-0">
-                <AlertTriangle className="w-5 h-5" />
+              <button
+                onClick={() => setActiveTab('budgets')}
+                className="flex items-center gap-3 flex-1 min-w-0 text-left cursor-pointer"
+              >
+                <div className="w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-amber-800 dark:text-amber-200 truncate">
+                    {t('dashboard.alertNearBudget', 'Sắp vượt ngân sách')} {tCategory(item.budget.categoryName)}
+                  </p>
+                  <p className="text-xs text-amber-600/80 dark:text-amber-400 truncate">
+                    {t('budget.usedBudget', 'Đã sử dụng')} {item.percentage}%
+                  </p>
+                </div>
+              </button>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => dismissAlert(`budget-${item.budget.id}`)}
+                  className="p-1.5 text-amber-400 hover:text-amber-700 dark:hover:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/50 rounded-lg transition-colors cursor-pointer"
+                  title={t('notif.dismiss', 'Ẩn')}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+                <ChevronRight className="w-4 h-4 text-amber-300 dark:text-amber-500" />
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-amber-800 dark:text-amber-200">{t('dashboard.alertNearBudget', 'Sắp vượt ngân sách')} {tCategory(item.budget.categoryName)}</p>
-                <p className="text-xs text-amber-600/80 dark:text-amber-400 truncate">{t('budget.usedBudget', 'Đã sử dụng')} {item.percentage}%</p>
-              </div>
-              <ChevronRight className="w-4 h-4 text-amber-300 dark:text-amber-500 shrink-0" />
-            </button>
+            </div>
           ))}
 
-          {unpaidBills.length > 0 && (
-            <button
-              onClick={() => setActiveTab('bills')}
-              className="w-full flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 rounded-2xl text-left transition-colors"
+          {activeUnpaidBills.length > 0 && (
+            <div
+              className="w-full flex items-center justify-between gap-2 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 rounded-2xl text-left transition-colors"
             >
-              <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0">
-                <Wallet className="w-5 h-5" />
+              <button
+                onClick={() => setActiveTab('bills')}
+                className="flex items-center gap-3 flex-1 min-w-0 text-left cursor-pointer"
+              >
+                <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0">
+                  <Wallet className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-blue-800 dark:text-blue-200 truncate">
+                    {activeUnpaidBills.length} {t('dashboard.billsDueSoon', 'hóa đơn sắp đến hạn')}
+                  </p>
+                  <p className="text-xs text-blue-600/80 dark:text-blue-400 truncate">
+                    {t('tx.total', 'Tổng')} {formatCurrency(activeUnpaidBills.reduce((s, b) => s + b.amount, 0))}
+                  </p>
+                </div>
+              </button>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    activeUnpaidBills.forEach((b) => dismissAlert(`bill-${b.id}`));
+                  }}
+                  className="p-1.5 text-blue-400 hover:text-blue-700 dark:hover:text-blue-200 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg transition-colors cursor-pointer"
+                  title={t('notif.dismiss', 'Ẩn')}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+                <ChevronRight className="w-4 h-4 text-blue-300 dark:text-blue-500" />
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-blue-800 dark:text-blue-200">{unpaidBills.length} {t('dashboard.billsDueSoon', 'hóa đơn sắp đến hạn')}</p>
-                <p className="text-xs text-blue-600/80 dark:text-blue-400 truncate">
-                  {t('tx.total', 'Tổng')} {formatCurrency(unpaidBills.reduce((s, b) => s + b.amount, 0))}
-                </p>
-              </div>
-              <ChevronRight className="w-4 h-4 text-blue-300 dark:text-blue-500 shrink-0" />
-            </button>
+            </div>
           )}
         </div>
       )}
