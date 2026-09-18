@@ -201,6 +201,45 @@ export const ReportsView: React.FC = () => {
     ? dailyBreakdownData
     : monthlyComparisonData;
 
+  // Scaled bar chart data: values strictly 0 produce 0 height (no bar drawn)
+  // Non-zero values scale progressively so bars visibly grow without flattening
+  const scaledBarChartData = useMemo(() => {
+    const rawData = activeBarChartData;
+    if (!rawData || rawData.length === 0) return [];
+
+    const relevantValues: number[] = [];
+    rawData.forEach((d) => {
+      if ((barMode === 'BOTH' || barMode === 'INCOME') && d.Thu > 0) relevantValues.push(d.Thu);
+      if ((barMode === 'BOTH' || barMode === 'EXPENSE') && d.Chi > 0) relevantValues.push(d.Chi);
+    });
+
+    if (relevantValues.length === 0) {
+      return rawData.map((d) => ({ ...d, displayThu: 0, displayChi: 0 }));
+    }
+
+    const maxVal = Math.max(...relevantValues);
+    const minVal = Math.min(...relevantValues);
+    const ratio = maxVal / (minVal || 1);
+
+    const useSymlog = ratio > 20;
+    const C = Math.max(minVal, 100000);
+    const maxLog = Math.log10(1 + maxVal / C);
+
+    const scaleVal = (val: number) => {
+      if (val <= 0) return 0;
+      if (!useSymlog) {
+        return (val / maxVal) * 100;
+      }
+      return (Math.log10(1 + val / C) / maxLog) * 100;
+    };
+
+    return rawData.map((d) => ({
+      ...d,
+      displayThu: scaleVal(d.Thu),
+      displayChi: scaleVal(d.Chi),
+    }));
+  }, [activeBarChartData, barMode]);
+
   // Real total wealth from wallets
   const currentTotalWealth = useMemo(() => {
     return wallets.reduce((s, w) => s + w.balance, 0);
@@ -667,30 +706,93 @@ export const ReportsView: React.FC = () => {
 
           <div className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={activeBarChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <BarChart data={scaledBarChartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
                 <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                <YAxis
-                  tickFormatter={formatCompactNumber}
-                  tick={{ fontSize: 11 }}
-                  width={54}
-                />
+                <YAxis domain={[0, 100]} hide={true} />
                 <Tooltip
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  formatter={(val: any) => formatCurrency(Number(val))}
-                  contentStyle={{
-                    backgroundColor: '#1e293b',
-                    borderColor: '#334155',
-                    borderRadius: '12px',
-                    color: '#fff',
-                    fontSize: '12px',
+                  content={({ active, payload }: any) => {
+                    if (!active || !payload || !payload.length) return null;
+                    const data = payload[0].payload;
+                    return (
+                      <div className="bg-slate-900/95 dark:bg-slate-800/95 backdrop-blur-md text-white text-xs px-3.5 py-2.5 rounded-xl shadow-xl border border-slate-700/60 pointer-events-none z-50 min-w-[150px]">
+                        <p className="font-bold text-slate-200 mb-1.5 border-b border-slate-700/60 pb-1">
+                          {data.rawMonth ? formatDate(data.rawMonth, 'short') : data.month}
+                        </p>
+                        <div className="space-y-1">
+                          {(barMode === 'BOTH' || barMode === 'INCOME') && (
+                            <div className="flex items-center justify-between gap-3 text-emerald-400">
+                              <span className="text-slate-400">{t('dashboard.income', 'Thu nhập')}:</span>
+                              <span className="font-bold">
+                                {data.Thu > 0 ? `+${formatCurrency(data.Thu)}` : '0 ₫'}
+                              </span>
+                            </div>
+                          )}
+                          {(barMode === 'BOTH' || barMode === 'EXPENSE') && (
+                            <div className="flex items-center justify-between gap-3 text-rose-400">
+                              <span className="text-slate-400">{t('dashboard.expense', 'Chi tiêu')}:</span>
+                              <span className="font-bold">
+                                {data.Chi > 0 ? `-${formatCurrency(data.Chi)}` : '0 ₫'}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
                   }}
                 />
-                <Legend wrapperStyle={{ fontSize: '12px' }} />
                 {(barMode === 'BOTH' || barMode === 'INCOME') && (
-                  <Bar dataKey="Thu" fill="#10b981" minPointSize={6} radius={[6, 6, 0, 0]} name={t('dashboard.income', 'Thu nhập')} />
+                  <Bar
+                    dataKey="displayThu"
+                    fill="#10b981"
+                    shape={(props: any) => {
+                      const { x, y, width, height, value } = props;
+                      if (!value || value <= 0 || height <= 0) return <g />;
+                      const r = Math.min(6, width / 2);
+                      const minH = 4;
+                      const h = Math.max(height, minH);
+                      const adjustedY = y - (h - height);
+                      return (
+                        <rect
+                          x={x}
+                          y={adjustedY}
+                          width={width}
+                          height={h}
+                          fill="#10b981"
+                          rx={r}
+                          ry={r}
+                          className="cursor-pointer transition-all hover:opacity-80"
+                        />
+                      );
+                    }}
+                    name={t('dashboard.income', 'Thu nhập')}
+                  />
                 )}
                 {(barMode === 'BOTH' || barMode === 'EXPENSE') && (
-                  <Bar dataKey="Chi" fill="#f43f5e" minPointSize={6} radius={[6, 6, 0, 0]} name={t('dashboard.expense', 'Chi tiêu')} />
+                  <Bar
+                    dataKey="displayChi"
+                    fill="#f43f5e"
+                    shape={(props: any) => {
+                      const { x, y, width, height, value } = props;
+                      if (!value || value <= 0 || height <= 0) return <g />;
+                      const r = Math.min(6, width / 2);
+                      const minH = 4;
+                      const h = Math.max(height, minH);
+                      const adjustedY = y - (h - height);
+                      return (
+                        <rect
+                          x={x}
+                          y={adjustedY}
+                          width={width}
+                          height={h}
+                          fill="#f43f5e"
+                          rx={r}
+                          ry={r}
+                          className="cursor-pointer transition-all hover:opacity-80"
+                        />
+                      );
+                    }}
+                    name={t('dashboard.expense', 'Chi tiêu')}
+                  />
                 )}
               </BarChart>
             </ResponsiveContainer>

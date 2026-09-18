@@ -1040,7 +1040,7 @@
         "color": "#10b981",
         "monthlyExpense": 2000000,
         "isSelected": true,
-        "cutPercent": 30
+        "cutPercent": 20
       },
       {
         "id": "spend-housing",
@@ -1103,7 +1103,7 @@
         "cutPercent": 20
       }
     ],
-    "projectionMonths": 24,
+    "projectionMonths": 6,
     "savingsAmount": 2200000,
     "savingsInterestRate": 7.1,
     "investmentAmount": 2600000,
@@ -1120,5 +1120,5 @@
       }
     ]
   },
-  "updatedAt": "2026-09-18T16:19:09.860Z"
+  "updatedAt": "2026-09-18T16:32:49.249Z"
 }
