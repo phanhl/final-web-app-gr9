@@ -435,7 +435,7 @@ export const WhatIfSimulatorView: React.FC = () => {
               totalMonthlyDebtPayment > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-800 dark:text-white'
             }`}
           >
-            {hasExternalLoan ? `-${formatCurrency(totalMonthlyDebtPayment)}/T` : t('whatif.noDebt', '0 ₫ (Không nợ)')}
+            {hasExternalLoan ? `-${formatCurrency(totalMonthlyDebtPayment)}${t('whatif.currencyPerMonth', '₫/T')}` : t('whatif.noDebt', '0 ₫ (Không nợ)')}
           </p>
           <span className="text-[10px] text-slate-400">
             {hasExternalLoan ? `${externalLoans.length} ${t('whatif.externalLoansCount', 'khoản nợ vay ngoài')}` : t('whatif.financialSafety', 'An toàn tài chính')}
@@ -444,7 +444,7 @@ export const WhatIfSimulatorView: React.FC = () => {
 
         <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-900 to-slate-900 text-white shadow-lg border border-indigo-500/30">
           <span className="text-[11px] font-bold text-indigo-300 uppercase">
-            `${t('sim.forecastAfter', 'DỰ BÁO SAU')} ${projectionMonths} ${t('whatif.monthsCount', 'THÁNG')}`
+            {t('sim.forecastAfter', 'DỰ BÁO SAU')} {projectionMonths} {t('whatif.monthsCount', 'THÁNG')}
           </span>
           <p className="text-xl font-black text-emerald-400 mt-1">
             {formatCurrency(finalRow.whatIfTotal)}
@@ -574,7 +574,7 @@ export const WhatIfSimulatorView: React.FC = () => {
                         }}
                         className="w-28 px-2 py-0.5 text-right font-extrabold text-slate-800 dark:text-white bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs focus:ring-1 focus:ring-blue-500"
                       />
-                      <span className="text-[11px] font-semibold text-slate-400">₫/T</span>
+                      <span className="text-[11px] font-semibold text-slate-400">{t('whatif.currencyPerMonth', '₫/T')}</span>
                     </div>
                   </div>
 
@@ -699,7 +699,7 @@ export const WhatIfSimulatorView: React.FC = () => {
                           <div className="flex justify-between text-xs">
                             <span className="text-slate-500 text-[11px]">{t('whatif.cutRatio', 'Tỷ lệ cắt giảm:')}</span>
                             <span className="font-extrabold text-rose-600 dark:text-rose-400">
-                              -{cut.cutPercent}% ({t('whatif.savingsPrefix', 'Tiết kiệm')} +{formatCurrency(cutSavings)}/T)
+                              -{cut.cutPercent}% ({t('whatif.savingsPrefix', 'Tiết kiệm')} +{formatCurrency(cutSavings)}{t('whatif.currencyPerMonth', '₫/T')})
                             </span>
                           </div>
 
@@ -728,7 +728,7 @@ export const WhatIfSimulatorView: React.FC = () => {
 
                           {/* Quick buttons */}
                           <div className="flex items-center space-x-1.5 pt-1">
-                            <span className="text-[10px] text-slate-400">Nhanh:</span>
+                            <span className="text-[10px] text-slate-400">{t('whatif.quickLabel', 'Nhanh:')}</span>
                             {[10, 20, 30, 50].map((pct) => (
                               <button
                                 key={pct}

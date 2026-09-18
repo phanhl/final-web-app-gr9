@@ -4,7 +4,7 @@
       "id": "wal-cash",
       "name": "Tiền mặt ví tay",
       "type": "CASH",
-      "balance": 530781,
+      "balance": 1130781,
       "initialBalance": 3000000,
       "currency": "VND",
       "color": "#0ea5e9",
@@ -56,7 +56,7 @@
       "id": "wal-savings",
       "name": "Sổ tiết kiệm MB Bank 6T",
       "type": "SAVINGS",
-      "balance": 134800000,
+      "balance": 124800000,
       "initialBalance": 150000000,
       "bankName": "MB Bank",
       "accountNumber": "MB-SAV-88992",
@@ -68,6 +68,48 @@
     }
   ],
   "transactions": [
+    {
+      "type": "EXPENSE",
+      "amount": 10000000,
+      "categoryId": "cat-food",
+      "categoryName": "Ăn uống",
+      "walletId": "wal-savings",
+      "walletName": "Sổ tiết kiệm MB Bank 6T",
+      "fee": 0,
+      "date": "2026-09-17T21:15:00.000Z",
+      "note": "Ăn uống",
+      "tags": [],
+      "id": "tx-1789704957937",
+      "createdAt": "2026-09-18T04:15:57.937Z"
+    },
+    {
+      "type": "INCOME",
+      "amount": 100000,
+      "categoryId": "cat-invest-inc",
+      "categoryName": "Lợi nhuận đầu tư",
+      "walletId": "wal-cash",
+      "walletName": "Tiền mặt ví tay",
+      "fee": 0,
+      "date": "2026-09-17T20:56:00.000Z",
+      "note": "Lợi nhuận đầu tư",
+      "tags": [],
+      "id": "tx-1789703791131",
+      "createdAt": "2026-09-18T03:56:31.131Z"
+    },
+    {
+      "type": "INCOME",
+      "amount": 500000,
+      "categoryId": "cat-bonus",
+      "categoryName": "Thưởng & Làm thêm",
+      "walletId": "wal-cash",
+      "walletName": "Tiền mặt ví tay",
+      "fee": 0,
+      "date": "2026-09-17T20:55:00.000Z",
+      "note": "Thưởng & Làm thêm",
+      "tags": [],
+      "id": "tx-1789703758858",
+      "createdAt": "2026-09-18T03:55:58.858Z"
+    },
     {
       "type": "EXPENSE",
       "amount": 1150000,
@@ -1037,5 +1079,5 @@
       }
     ]
   },
-  "updatedAt": "2026-09-18T03:23:05.136Z"
+  "updatedAt": "2026-09-18T04:15:58.980Z"
 }
