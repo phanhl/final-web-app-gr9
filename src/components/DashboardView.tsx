@@ -50,7 +50,6 @@ export const DashboardView: React.FC = () => {
   const quickActions = [
     { label: t('dash.quickExpense', 'Chi phí'), icon: ArrowDownLeft, color: 'bg-rose-500', onClick: () => openQuickAdd('EXPENSE') },
     { label: t('dash.quickIncome', 'Thu nhập'), icon: ArrowUpRight, color: 'bg-emerald-500', onClick: () => openQuickAdd('INCOME') },
-    { label: t('dash.quickTransfer', 'Chuyển ví'), icon: ArrowRightLeft, color: 'bg-sky-500', onClick: () => openQuickAdd('TRANSFER') },
     { label: t('dash.quickBudget', 'Ngân sách'), icon: PiggyBank, color: 'bg-amber-500', onClick: () => setActiveTab('budgets') },
   ];
 

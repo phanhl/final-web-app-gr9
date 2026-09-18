@@ -1057,7 +1057,7 @@
     "notes": "Áp dụng quy tắc 50/30/20: 50% thiết yếu, 30% sở thích cá nhân, 20% tích lũy & quỹ khẩn cấp",
     "emergencyPercent": 10
   },
-  "currentMonth": "2026-09",
+  "currentMonth": "2026-10",
   "userProfile": {
     "name": "PanC",
     "email": "admin@fintrack.vn",
@@ -1169,13 +1169,13 @@
     "hasExternalLoan": true,
     "externalLoans": [
       {
-        "id": "loan-1789750235513",
-        "name": "nợ",
-        "originalDebt": 10000000,
-        "monthlyPayment": 100000,
+        "id": "loan-1789750548047",
+        "name": "no",
+        "originalDebt": 888888888,
+        "monthlyPayment": 7000700,
         "annualInterestRate": 0
       }
     ]
   },
-  "updatedAt": "2026-09-18T16:50:53.329Z"
+  "updatedAt": "2026-09-18T17:11:18.659Z"
 }

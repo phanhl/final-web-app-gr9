@@ -49,7 +49,6 @@ export const WalletsView: React.FC = () => {
     editWallet,
     deleteWallet,
     deleteTransaction,
-    transferFunds,
     recalculateWalletBalances,
     openQuickAdd,
     t,
@@ -61,7 +60,7 @@ export const WalletsView: React.FC = () => {
   // Selected Wallet for viewing detailed cash flow
   const [selectedWalletId, setSelectedWalletId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterType, setFilterType] = useState<'ALL' | 'EXPENSE' | 'INCOME' | 'TRANSFER'>('ALL');
+  const [filterType, setFilterType] = useState<'ALL' | 'EXPENSE' | 'INCOME'>('ALL');
   const [receiptModalImage, setReceiptModalImage] = useState<string | null>(null);
 
   // Modals state
@@ -76,14 +75,6 @@ export const WalletsView: React.FC = () => {
   const [walletCreditLimit, setWalletCreditLimit] = useState('');
   const [walletInterestRate, setWalletInterestRate] = useState('');
   const [walletColor, setWalletColor] = useState('#0ea5e9');
-
-  // Transfer Modal state
-  const [transferModalOpen, setTransferModalOpen] = useState(false);
-  const [fromWalletId, setFromWalletId] = useState(wallets[0]?.id || '');
-  const [toWalletId, setToWalletId] = useState(wallets[1]?.id || '');
-  const [transferAmount, setTransferAmount] = useState('');
-  const [transferFee, setTransferFee] = useState('0');
-  const [transferNote, setTransferNote] = useState('');
 
   // Groups
   const cashWallets = wallets.filter((w) => w.type === 'CASH');
@@ -118,18 +109,6 @@ export const WalletsView: React.FC = () => {
     setWalletInterestRate('');
     setWalletColor('#0ea5e9');
     setWalletModalOpen(true);
-  };
-
-  // Start Transfer Modal
-  const handleStartTransfer = (fromId?: string) => {
-    const sourceId = fromId || wallets[0]?.id || '';
-    setFromWalletId(sourceId);
-    const other = wallets.find((w) => w.id !== sourceId);
-    setToWalletId(other?.id || '');
-    setTransferAmount('');
-    setTransferFee('0');
-    setTransferNote('');
-    setTransferModalOpen(true);
   };
 
   // Save Wallet (Add or Edit)
@@ -182,34 +161,6 @@ export const WalletsView: React.FC = () => {
     setEditingWallet(null);
   };
 
-  const handleConfirmTransfer = (e: React.FormEvent) => {
-    e.preventDefault();
-    const amountNum = Number(transferAmount);
-    if (!amountNum || amountNum <= 0) {
-      alert('Vui lòng nhập số tiền chuyển hợp lệ (> 0)');
-      return;
-    }
-    if (fromWalletId === toWalletId) {
-      alert('Ví nhận phải khác ví chuyển');
-      return;
-    }
-
-    const fromW = wallets.find((w) => w.id === fromWalletId);
-    const validation = checkWalletSufficientFunds(fromW, amountNum, Number(transferFee) || 0);
-    if (!validation.isValid) {
-      alert(validation.errorMessage || 'Số dư ví nguồn không đủ để thực hiện giao dịch!');
-      return;
-    }
-
-    const success = transferFunds(fromWalletId, toWalletId, amountNum, Number(transferFee) || 0, transferNote);
-    if (success) {
-      setTransferModalOpen(false);
-      setTransferAmount('');
-      setTransferFee('0');
-      setTransferNote('');
-    }
-  };
-
   const selectedWallet = wallets.find((w) => w.id === selectedWalletId);
 
   // If a wallet is selected, compute its transactions & summary
@@ -233,7 +184,6 @@ export const WalletsView: React.FC = () => {
 
   const countExpense = walletTransactions.filter((t) => t.type === 'EXPENSE').length;
   const countIncome = walletTransactions.filter((t) => t.type === 'INCOME').length;
-  const countTransfer = walletTransactions.filter((t) => t.type === 'TRANSFER').length;
 
   const filteredWalletTransactions = walletTransactions
     .filter((t) => {
@@ -328,14 +278,6 @@ export const WalletsView: React.FC = () => {
                 </button>
 
                 <button
-                  onClick={() => handleStartTransfer(selectedWallet.id)}
-                  className="flex items-center space-x-1.5 px-3.5 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold shadow-sm transition-colors cursor-pointer"
-                >
-                  <ArrowRightLeft className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                  <span>{t('wallets.transferBtn', 'Chuyển tiền')}</span>
-                </button>
-
-                <button
                   onClick={(e) => handleStartEditWallet(selectedWallet, e)}
                   className="flex items-center space-x-1.5 px-3.5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
                 >
@@ -410,7 +352,6 @@ export const WalletsView: React.FC = () => {
                   { id: 'ALL', label: `${t('common.all', 'Tất cả')} (${walletTransactions.length})` },
                   { id: 'EXPENSE', label: `${t('dashboard.expense', 'Chi tiêu')} (${countExpense})` },
                   { id: 'INCOME', label: `${t('dashboard.income', 'Thu nhập')} (${countIncome})` },
-                  { id: 'TRANSFER', label: `${t('nav.transfer', 'Chuyển khoản')} (${countTransfer})` },
                 ].map((f) => (
                   <button
                     key={f.id}
@@ -634,14 +575,6 @@ export const WalletsView: React.FC = () => {
             </div>
 
             <div className="flex items-center space-x-2">
-              <button
-                onClick={() => handleStartTransfer()}
-                className="flex items-center space-x-1.5 px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold shadow-sm transition-colors cursor-pointer"
-              >
-                <ArrowRightLeft className="w-4 h-4 text-blue-600" />
-                <span>{t('wallets.internalTransfer', 'Chuyển khoản nội bộ')}</span>
-              </button>
-
               <button
                 onClick={handleStartCreateWallet}
                 className="flex items-center space-x-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors cursor-pointer"
@@ -989,200 +922,6 @@ export const WalletsView: React.FC = () => {
           </div>
         </div>
       )}
-
-      {/* ========================================================================= */}
-      {/* MODAL: CHUYỂN KHOẢN NỘI BỘ                                               */}
-      {/* ========================================================================= */}
-      {transferModalOpen && (() => {
-        const fromWallet = wallets.find((w) => w.id === fromWalletId);
-        const amountNum = Number(transferAmount) || 0;
-        const feeNum = Number(transferFee) || 0;
-        const totalRequired = amountNum + feeNum;
-        const transferValidation = checkWalletSufficientFunds(fromWallet, amountNum, feeNum);
-        const fromAvailable = getWalletAvailableBalance(fromWallet);
-        const remainingPreview = fromWallet ? fromWallet.balance - totalRequired : 0;
-        const isTransferOverdraft = amountNum > 0 && !transferValidation.isValid;
-
-        return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <div className="relative max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-6">
-              <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
-                <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center space-x-2">
-                  <ArrowRightLeft className="w-5 h-5 text-blue-600" />
-                  <span>{t('wallets.transferModalTitle', 'Chuyển Khoản Giữa Các Ví')}</span>
-                </h3>
-                <button
-                  onClick={() => setTransferModalOpen(false)}
-                  className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <form onSubmit={handleConfirmTransfer} className="space-y-4 pt-4">
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">{t('wallets.fromWalletLabel', 'Ví chuyển (Nguồn)')}</label>
-                    <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-                      {t('qa.availableBalance', 'Khả dụng')}: {formatCurrency(fromAvailable)}
-                    </span>
-                  </div>
-                  <select
-                    value={fromWalletId}
-                    onChange={(e) => setFromWalletId(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white"
-                  >
-                    {wallets.map((w) => (
-                      <option key={w.id} value={w.id}>
-                        {w.name} ({t('wallets.currentBalance', 'Số dư')}: {formatCurrency(w.balance)})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">{t('wallets.toWalletLabel', 'Ví nhận (Đích)')}</label>
-                  <select
-                    value={toWalletId}
-                    onChange={(e) => setToWalletId(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white"
-                  >
-                    {wallets
-                      .filter((w) => w.id !== fromWalletId)
-                      .map((w) => (
-                        <option key={w.id}>
-                          {w.name} ({t('wallets.currentBalance', 'Số dư')}: {formatCurrency(w.balance)})
-                        </option>
-                      ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                    {t('wallets.transferAmount', 'Số tiền chuyển (VNĐ)')} <span className="text-rose-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      required
-                      autoFocus
-                      value={formatNumberWithDots(transferAmount)}
-                      onChange={(e) => {
-                        const cleaned = e.target.value.replace(/\D/g, '');
-                        if (cleaned.length <= 18) {
-                          setTransferAmount(cleaned);
-                        }
-                      }}
-                      onKeyDown={(e) => {
-                        if (['e', 'E', '+', '-', '.', ','].includes(e.key)) {
-                          e.preventDefault();
-                        }
-                      }}
-                      placeholder="0"
-                      className="w-full text-2xl font-bold pl-4 pr-10 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                    />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-lg pointer-events-none">₫</span>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                    {t('wallets.transferFeeLabel', 'Phí chuyển (nếu có)')}
-                  </label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={transferFee ? formatNumberWithDots(transferFee) : ''}
-                    onChange={(e) => {
-                      const cleaned = e.target.value.replace(/\D/g, '');
-                      if (cleaned.length <= 18) {
-                        setTransferFee(cleaned);
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if (['e', 'E', '+', '-', '.', ','].includes(e.key)) {
-                        e.preventDefault();
-                      }
-                    }}
-                    placeholder="0"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  />
-                </div>
-
-                {/* Real-time Calculation Panel & Overdraft Prevention */}
-                {amountNum > 0 && (
-                  <div
-                    className={`p-3 rounded-xl border text-xs space-y-1.5 transition-all min-w-0 max-w-full overflow-hidden ${
-                      isTransferOverdraft
-                        ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900/60'
-                        : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-2 text-slate-600 dark:text-slate-300 min-w-0">
-                      <span className="shrink-0">{t('wallets.totalDeducted', 'Tổng tiền trừ khỏi ví nguồn (Gồm phí):')}</span>
-                      <span className="font-bold min-w-0 text-right break-words break-all [overflow-wrap:anywhere]">{formatCurrency(totalRequired)}</span>
-                    </div>
-                    <div className="flex items-center justify-between gap-2 min-w-0">
-                      <span className="text-slate-600 dark:text-slate-300 shrink-0">{t('wallets.estimatedRemaining', 'Dự kiến số dư còn lại của ví nguồn:')}</span>
-                      <span
-                        className={`font-bold min-w-0 text-right break-words break-all [overflow-wrap:anywhere] ${
-                          isTransferOverdraft
-                            ? 'text-rose-600 dark:text-rose-400'
-                            : 'text-emerald-600 dark:text-emerald-400'
-                        }`}
-                      >
-                        {formatCurrency(remainingPreview)} {isTransferOverdraft ? '(ÂM QUỸ)' : ''}
-                      </span>
-                    </div>
-
-                    {isTransferOverdraft && (
-                      <div className="pt-2 mt-1 border-t border-rose-200 dark:border-rose-900/50 flex items-start gap-2 text-rose-700 dark:text-rose-300 font-semibold text-[11px] min-w-0">
-                        <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
-                        <span className="min-w-0 flex-1 leading-relaxed break-words break-all [overflow-wrap:anywhere]">
-                          {t('wallets.overdraftAlert', 'Cảnh báo: Số tiền chuyển vượt quá số dư hiện có. Hệ thống khóa chuyển tiền để chống âm quỹ!')} ({formatCurrency(fromAvailable)})
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">{t('qa.note', 'Ghi chú')}</label>
-                  <input
-                    type="text"
-                    value={transferNote}
-                    onChange={(e) => setTransferNote(e.target.value)}
-                    placeholder={t('wallets.transferNotePlaceholder', 'Ví dụ: Rút tiền mặt, chuyển tiền tiết kiệm...')}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white"
-                  />
-                </div>
-
-                <div className="flex justify-end space-x-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                  <button
-                    type="button"
-                    onClick={() => setTransferModalOpen(false)}
-                    className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer"
-                  >
-                    {t('common.cancel', 'Hủy')}
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isTransferOverdraft || amountNum <= 0 || fromWalletId === toWalletId}
-                    className={`px-5 py-2 text-xs font-semibold rounded-xl shadow-sm transition-all ${
-                      isTransferOverdraft || amountNum <= 0 || fromWalletId === toWalletId
-                        ? 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-60'
-                        : 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer active:scale-95'
-                    }`}
-                  >
-                    {isTransferOverdraft ? t('wallets.insufficientBalance', 'Số dư không đủ') : t('wallets.executeTransfer', 'Thực hiện chuyển')}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        );
-      })()}
 
       {/* ========================================================================= */}
       {/* MODAL: VIEW RECEIPT */}

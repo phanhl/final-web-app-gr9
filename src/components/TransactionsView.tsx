@@ -989,7 +989,6 @@ export const TransactionsView: React.FC = () => {
               <option value="ALL">{t('tx.allTypes', 'Tất cả loại giao dịch')}</option>
               <option value="EXPENSE">{t('qa.expense', 'Khoản chi')}</option>
               <option value="INCOME">{t('qa.income', 'Khoản thu')}</option>
-              <option value="TRANSFER">{t('qa.transfer', 'Chuyển khoản')}</option>
             </select>
           </div>
 
@@ -1287,12 +1286,10 @@ const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
 }) => {
   const { wallets, categories, editTransaction, deleteTransaction, t, tCategory, tWalletType } = useApp();
 
-  const [type, setType] = useState<TransactionType>('EXPENSE');
+  const [type, setType] = useState<'EXPENSE' | 'INCOME'>('EXPENSE');
   const [amount, setAmount] = useState<number>(0);
   const [categoryId, setCategoryId] = useState<string>('');
   const [walletId, setWalletId] = useState<string>('');
-  const [toWalletId, setToWalletId] = useState<string>('');
-  const [fee, setFee] = useState<number>(0);
   const [date, setDate] = useState<string>('');
   const [note, setNote] = useState<string>('');
   const [tags, setTags] = useState<string[]>([]);
@@ -1300,12 +1297,10 @@ const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
 
   useEffect(() => {
     if (transaction) {
-      setType(transaction.type);
+      setType(transaction.type === 'INCOME' ? 'INCOME' : 'EXPENSE');
       setAmount(transaction.amount);
       setCategoryId(transaction.categoryId || '');
       setWalletId(transaction.walletId || (wallets[0]?.id ?? ''));
-      setToWalletId(transaction.toWalletId || '');
-      setFee(transaction.fee || 0);
       setDate(transaction.date ? transaction.date.slice(0, 16) : new Date().toISOString().slice(0, 16));
       setNote(transaction.note || '');
       setTags(transaction.tags || []);
@@ -1341,19 +1336,15 @@ const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
     }
 
     const selectedWallet = wallets.find((w) => w.id === walletId);
-    const selectedToWallet = wallets.find((w) => w.id === toWalletId);
     const selectedCategory = categories.find((c) => c.id === categoryId);
 
     const success = editTransaction(transaction.id, {
       type,
       amount: Number(amount),
-      categoryId: type === 'TRANSFER' ? undefined : categoryId,
-      categoryName: type === 'TRANSFER' ? undefined : (selectedCategory?.name || tCategory('Khác')),
+      categoryId,
+      categoryName: selectedCategory?.name || tCategory('Khác'),
       walletId,
       walletName: selectedWallet?.name,
-      toWalletId: type === 'TRANSFER' ? toWalletId : undefined,
-      toWalletName: type === 'TRANSFER' ? selectedToWallet?.name : undefined,
-      fee: type === 'TRANSFER' ? Number(fee) : 0,
       date: new Date(date).toISOString(),
       note,
       tags,
@@ -1392,7 +1383,7 @@ const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
 
         <div className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
           {/* Type Selector */}
-          <div className="grid grid-cols-3 gap-2 bg-slate-100 dark:bg-slate-800/60 p-1.5 rounded-xl">
+          <div className="grid grid-cols-2 gap-2 bg-slate-100 dark:bg-slate-800/60 p-1.5 rounded-xl">
             <button
               type="button"
               onClick={() => setType('EXPENSE')}
@@ -1414,17 +1405,6 @@ const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
               }`}
             >
               {t('qa.income', 'Khoản thu')}
-            </button>
-            <button
-              type="button"
-              onClick={() => setType('TRANSFER')}
-              className={`py-2 text-sm font-semibold rounded-lg transition-all cursor-pointer ${
-                type === 'TRANSFER'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              {t('qa.transfer', 'Chuyển khoản')}
             </button>
           </div>
 
@@ -1456,11 +1436,11 @@ const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
             </div>
           </div>
 
-          {/* Wallet */}
+          {/* Wallet & Category */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                {type === 'TRANSFER' ? t('qa.fromWallet', 'Từ ví / tài khoản') : t('qa.wallet', 'Ví thanh toán')}
+                {t('qa.wallet', 'Ví thanh toán')}
               </label>
               <select
                 value={walletId}
@@ -1475,45 +1455,23 @@ const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
               </select>
             </div>
 
-            {type === 'TRANSFER' ? (
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                  {t('qa.toWallet', 'Đến ví / tài khoản')}
-                </label>
-                <select
-                  value={toWalletId}
-                  onChange={(e) => setToWalletId(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
-                >
-                  <option value="">-- {t('qa.selectToWallet', 'Chọn ví đích')} --</option>
-                  {wallets
-                    .filter((w) => w.id !== walletId)
-                    .map((w) => (
-                      <option key={w.id} value={w.id}>
-                        {w.name} ({tWalletType(w.type)})
-                      </option>
-                    ))}
-                </select>
-              </div>
-            ) : (
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                  {t('qa.category', 'Danh mục')}
-                </label>
-                <select
-                  value={categoryId}
-                  onChange={(e) => setCategoryId(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
-                >
-                  <option value="">-- {t('qa.selectCategory', 'Chọn danh mục')} --</option>
-                  {filteredCategories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {tCategory(c.name)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                {t('qa.category', 'Danh mục')}
+              </label>
+              <select
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
+              >
+                <option value="">-- {t('qa.selectCategory', 'Chọn danh mục')} --</option>
+                {filteredCategories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {tCategory(c.name)}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Date & Time */}

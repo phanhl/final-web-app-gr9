@@ -25,12 +25,10 @@ export const QuickAddModal: React.FC = () => {
     tWalletType,
   } = useApp();
 
-  const [type, setType] = useState<TransactionType>('EXPENSE');
+  const [type, setType] = useState<'EXPENSE' | 'INCOME'>('EXPENSE');
   const [amount, setAmount] = useState<string>('');
   const [categoryId, setCategoryId] = useState<string>('');
   const [walletId, setWalletId] = useState<string>('');
-  const [toWalletId, setToWalletId] = useState<string>('');
-  const [fee, setFee] = useState<string>('0');
   const [date, setDate] = useState<string>('');
   const [note, setNote] = useState<string>('');
   const [tags, setTags] = useState<string[]>([]);
@@ -38,7 +36,7 @@ export const QuickAddModal: React.FC = () => {
 
   useEffect(() => {
     if (quickAddOpen) {
-      setType(quickAddDefaultType);
+      setType(quickAddDefaultType === 'INCOME' ? 'INCOME' : 'EXPENSE');
       setAmount('');
       const defaultCat = categories.find((c) => c.type === (quickAddDefaultType === 'INCOME' ? 'INCOME' : 'EXPENSE'));
       setCategoryId(defaultCat?.id || '');
@@ -46,9 +44,6 @@ export const QuickAddModal: React.FC = () => {
         ? quickAddDefaultWalletId
         : (wallets[0]?.id || '');
       setWalletId(targetWalletId);
-      const otherWallet = wallets.find((w) => w.id !== targetWalletId);
-      setToWalletId(otherWallet?.id || '');
-      setFee('0');
       setDate(new Date().toISOString().slice(0, 16));
       setNote('');
       setTags([]);
@@ -83,15 +78,12 @@ export const QuickAddModal: React.FC = () => {
   };
 
   const selectedWallet = wallets.find((w) => w.id === walletId);
-  const selectedToWallet = wallets.find((w) => w.id === toWalletId);
   const selectedCategory = categories.find((c) => c.id === categoryId);
 
   const numAmount = Number(amount) || 0;
-  const numFee = type === 'TRANSFER' ? (Number(fee) || 0) : 0;
-  const totalRequired = numAmount + numFee;
-  const fundValidation = checkWalletSufficientFunds(selectedWallet, numAmount, numFee);
+  const fundValidation = checkWalletSufficientFunds(selectedWallet, numAmount, 0);
   const availableBalance = getWalletAvailableBalance(selectedWallet);
-  const isOverdraft = (type === 'EXPENSE' || type === 'TRANSFER') && numAmount > 0 && !fundValidation.isValid;
+  const isOverdraft = type === 'EXPENSE' && numAmount > 0 && !fundValidation.isValid;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,12 +97,7 @@ export const QuickAddModal: React.FC = () => {
       return;
     }
 
-    if (type === 'TRANSFER' && (!toWalletId || toWalletId === walletId)) {
-      alert('Vui lòng chọn ví nhận khác ví chuyển');
-      return;
-    }
-
-    if ((type === 'EXPENSE' || type === 'TRANSFER') && !fundValidation.isValid) {
+    if (type === 'EXPENSE' && !fundValidation.isValid) {
       alert(fundValidation.errorMessage || 'Số dư ví không đủ để thực hiện giao dịch!');
       return;
     }
@@ -124,15 +111,12 @@ export const QuickAddModal: React.FC = () => {
     const success = addTransaction({
       type,
       amount: numAmount,
-      categoryId: type === 'TRANSFER' ? undefined : categoryId,
-      categoryName: type === 'TRANSFER' ? undefined : (selectedCategory?.name || tCategory('Khác')),
+      categoryId,
+      categoryName: selectedCategory?.name || tCategory('Khác'),
       walletId,
       walletName: selectedWallet?.name,
-      toWalletId: type === 'TRANSFER' ? toWalletId : undefined,
-      toWalletName: type === 'TRANSFER' ? selectedToWallet?.name : undefined,
-      fee: type === 'TRANSFER' ? Number(fee) : 0,
       date: txDate,
-      note: note || (type === 'TRANSFER' ? `${t('tx.transferTo', 'Chuyển sang')} ${selectedToWallet?.name}` : selectedCategory?.name || t('tx.transaction', 'Giao dịch')),
+      note: note || selectedCategory?.name || t('tx.transaction', 'Giao dịch'),
       tags,
       receiptImage,
     });
@@ -168,7 +152,7 @@ export const QuickAddModal: React.FC = () => {
 
         <form onSubmit={handleSubmit} className="p-5 space-y-5 overflow-y-auto">
           {/* Type switcher */}
-          <div className="grid grid-cols-3 gap-1 bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-xl">
+          <div className="grid grid-cols-2 gap-1 bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-xl">
             <button
               type="button"
               onClick={() => {
@@ -198,17 +182,6 @@ export const QuickAddModal: React.FC = () => {
               }`}
             >
               {t('qa.income', 'Khoản thu')}
-            </button>
-            <button
-              type="button"
-              onClick={() => setType('TRANSFER')}
-              className={`py-2.5 text-sm font-semibold rounded-lg transition-all cursor-pointer ${
-                type === 'TRANSFER'
-                  ? 'bg-blue-600 text-white shadow'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              {t('qa.transfer', 'Chuyển khoản')}
             </button>
           </div>
 
@@ -275,12 +248,12 @@ export const QuickAddModal: React.FC = () => {
             </div>
           </div>
 
-          {/* Wallets */}
+          {/* Wallets & Category */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  {type === 'TRANSFER' ? t('qa.fromWallet', 'Từ ví nguồn') : t('qa.payWallet', 'Ví thanh toán')} <span className="text-rose-500">*</span>
+                  {t('qa.payWallet', 'Ví thanh toán')} <span className="text-rose-500">*</span>
                 </label>
                 {selectedWallet && (
                   <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
@@ -301,71 +274,23 @@ export const QuickAddModal: React.FC = () => {
               </select>
             </div>
 
-            {type === 'TRANSFER' ? (
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                  {t('qa.toWallet', 'Đến ví đích')} <span className="text-rose-500">*</span>
-                </label>
-                <select
-                  value={toWalletId}
-                  onChange={(e) => setToWalletId(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
-                >
-                  {wallets
-                    .filter((w) => w.id !== walletId)
-                    .map((w) => (
-                      <option key={w.id} value={w.id}>
-                        {w.name}
-                      </option>
-                    ))}
-                </select>
-              </div>
-            ) : (
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                  {t('qa.category', 'Danh mục')} <span className="text-rose-500">*</span>
-                </label>
-                <select
-                  value={categoryId}
-                  onChange={(e) => setCategoryId(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
-                >
-                  {filteredCategories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </div>
-
-          {/* Transfer fee if applicable */}
-          {type === 'TRANSFER' && (
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                {t('qa.transferFeeHint', 'Phí chuyển tiền (nếu có)')}
+                {t('qa.category', 'Danh mục')} <span className="text-rose-500">*</span>
               </label>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={fee ? formatNumberWithDots(fee) : ''}
-                onChange={(e) => {
-                  const cleaned = e.target.value.replace(/\D/g, '');
-                  if (cleaned.length <= 18) {
-                    setFee(cleaned);
-                  }
-                }}
-                onKeyDown={(e) => {
-                  if (['e', 'E', '+', '-', '.', ','].includes(e.key)) {
-                    e.preventDefault();
-                  }
-                }}
-                placeholder="0"
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
-              />
+              <select
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
+              >
+                {filteredCategories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
             </div>
-          )}
+          </div>
 
           {/* Real-time Overdraft Warning Alert */}
           {isOverdraft && (
@@ -379,11 +304,10 @@ export const QuickAddModal: React.FC = () => {
           )}
 
           {/* Category Quick Badges */}
-          {type !== 'TRANSFER' && (
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                {t('qa.quickSelectCategory', 'Chọn nhanh danh mục')}
-              </label>
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+              {t('qa.quickSelectCategory', 'Chọn nhanh danh mục')}
+            </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {filteredCategories.slice(0, 8).map((cat) => (
                   <button
@@ -407,7 +331,6 @@ export const QuickAddModal: React.FC = () => {
                 ))}
               </div>
             </div>
-          )}
 
           {/* Date & Note */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
