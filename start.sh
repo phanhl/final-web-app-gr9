@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Script khoi chay FinTrack Pro va Cloudflare Tunnel cho dien thoai
+# Script khoi chay FinTrack Pro va cac duong truyen co dinh cho dien thoai
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$DIR"
 
@@ -9,25 +9,30 @@ if [ -n "$PORT_PID" ]; then
   kill -9 $PORT_PID 2>/dev/null
 fi
 
+pkill -f "ngrok http" 2>/dev/null
 pkill -f "cloudflared tunnel" 2>/dev/null
 
-# Khoi chay Next.js ngam doc lap
+# 1. Khoi chay Next.js ngam doc lap
 python3 -c "import subprocess, os; subprocess.Popen(['npm', 'run', 'dev'], cwd='$DIR', start_new_session=True, stdout=open('logs_dev.log', 'a'), stderr=subprocess.STDOUT)"
 
-# Khoi chay Cloudflare Tunnel ngam doc lap (giup dien thoai vao duoc 100% ca khi dung 4G/WiFi)
+# 2. Khoi chay Ngrok voi Domain co dinh vinh vien
+if [ -x "/home/hlp0609/.local/bin/ngrok" ]; then
+  python3 -c "import subprocess, os; subprocess.Popen(['/home/hlp0609/.local/bin/ngrok', 'http', '3000', '--log=stdout'], cwd='$DIR', start_new_session=True, stdout=open('ngrok.log', 'w'), stderr=subprocess.STDOUT)"
+fi
+
+# 3. Khoi chay Cloudflare lam du phong
 if [ -x "/home/hlp0609/.local/bin/cloudflared" ]; then
   python3 -c "import subprocess, os; subprocess.Popen(['/home/hlp0609/.local/bin/cloudflared', 'tunnel', '--url', 'http://localhost:3000'], cwd='$DIR', start_new_session=True, stdout=open('tunnel.log', 'w'), stderr=subprocess.STDOUT)"
 fi
 
 sleep 2
-IP_LAN=$(hostname -I | awk '{print $1}')
-TUNNEL_URL=$(grep -o 'https://.*\.trycloudflare\.com' tunnel.log 2>/dev/null | tail -n 1)
-
-echo "=================================================="
-echo "FinTrack Pro da duoc khoi chay thanh cong!"
-echo "1. May tinh:               http://localhost:3000"
-echo "2. Dien thoai (Cung WiFi): http://${IP_LAN}:3000"
-if [ -n "$TUNNEL_URL" ]; then
-echo "3. Dien thoai (4G / Moi noi): $TUNNEL_URL"
+NGROK_URL=$(curl -s http://127.0.0.1:4040/api/tunnels 2>/dev/null | grep -o 'https://[^"]*ngrok[^"]*')
+if [ -z "$NGROK_URL" ]; then
+  NGROK_URL="https://tightly-sensation-uncle.ngrok-free.dev"
 fi
-echo "=================================================="
+
+echo "=================================================================="
+echo "FinTrack Pro da duoc khoi chay thanh cong!"
+echo "1. May tinh:                     http://localhost:3000"
+echo "2. Link CO DINH cho dien thoai: $NGROK_URL"
+echo "=================================================================="
