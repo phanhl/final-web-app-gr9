@@ -192,7 +192,7 @@ export const DashboardView: React.FC = () => {
       {/* Quick Actions */}
       <div>
         <h2 className="text-sm font-bold text-slate-900 dark:text-white mb-3">{t('dash.quickActions', 'Thao tác nhanh')}</h2>
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           {quickActions.map((action) => {
             const Icon = action.icon;
             return (
