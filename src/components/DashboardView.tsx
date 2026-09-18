@@ -8,13 +8,15 @@ import {
   ArrowDownLeft,
   ArrowRightLeft,
   ChevronRight,
+  ChevronLeft,
+  Calendar,
   AlertTriangle,
   PiggyBank,
   Eye,
   Sparkles,
   X,
 } from 'lucide-react';
-import { formatCurrency, formatDate, calculateBudgetStatuses } from '@/lib/utils';
+import { formatCurrency, formatDate, calculateBudgetStatuses, formatMonthLabel } from '@/lib/utils';
 import { ReceiptModal } from './ReceiptModal';
 
 export const DashboardView: React.FC = () => {
@@ -24,6 +26,8 @@ export const DashboardView: React.FC = () => {
     budgets,
     bills,
     currentMonth,
+    setCurrentMonth,
+    availableMonths,
     openQuickAdd,
     setActiveTab,
     t,
@@ -107,6 +111,55 @@ export const DashboardView: React.FC = () => {
         <div className="absolute right-10 top-0 w-20 h-20 rounded-full bg-white/10 blur-xl" />
       </div>
 
+      {/* Month Navigator */}
+      <div className="flex items-center justify-between p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-xs">
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-emerald-500" />
+          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+            {t('dash.viewPeriod', 'Kỳ tài chính:')}
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => {
+              const idx = availableMonths.indexOf(currentMonth);
+              if (idx !== -1 && idx < availableMonths.length - 1) {
+                setCurrentMonth(availableMonths[idx + 1]);
+              }
+            }}
+            disabled={availableMonths.indexOf(currentMonth) >= availableMonths.length - 1}
+            className="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+            title={t('tx.prevMonth', 'Tháng trước')}
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <select
+            value={currentMonth}
+            onChange={(e) => setCurrentMonth(e.target.value)}
+            className="px-2.5 py-1 text-xs font-bold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+          >
+            {availableMonths.map((m) => (
+              <option key={m} value={m}>
+                {formatMonthLabel(m, language)}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={() => {
+              const idx = availableMonths.indexOf(currentMonth);
+              if (idx > 0) {
+                setCurrentMonth(availableMonths[idx - 1]);
+              }
+            }}
+            disabled={availableMonths.indexOf(currentMonth) <= 0}
+            className="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+            title={t('tx.nextMonth', 'Tháng sau')}
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
       {/* Income / Expense */}
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm">
@@ -114,7 +167,9 @@ export const DashboardView: React.FC = () => {
             <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
               <ArrowUpRight className="w-4 h-4" />
             </div>
-            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{t('dash.income', 'Thu nhập')}</span>
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              {t('dash.income', 'Thu nhập')} ({currentMonth.slice(5)}/{currentMonth.slice(0, 4)})
+            </span>
           </div>
           <p className="text-lg font-bold text-slate-900 dark:text-white truncate">
             {formatCurrency(financialSummary.monthlyIncome)}
@@ -125,7 +180,9 @@ export const DashboardView: React.FC = () => {
             <div className="w-8 h-8 rounded-full bg-rose-100 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center">
               <ArrowDownLeft className="w-4 h-4" />
             </div>
-            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{t('dash.expense', 'Chi tiêu')}</span>
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              {t('dash.expense', 'Chi tiêu')} ({currentMonth.slice(5)}/{currentMonth.slice(0, 4)})
+            </span>
           </div>
           <p className="text-lg font-bold text-slate-900 dark:text-white truncate">
             {formatCurrency(financialSummary.monthlyExpense)}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   Wallet,
   Transaction,
@@ -38,6 +38,7 @@ interface AppContextType {
   planner: IncomeBudgetPlanner;
   currentMonth: string;
   setCurrentMonth: (month: string) => void;
+  availableMonths: string[];
   serverSyncStatus: 'synced' | 'syncing' | 'offline';
   activeTab: string;
   setActiveTab: (tab: string) => void;
@@ -705,6 +706,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Financial summary
   const financialSummary = calculateFinancialSummary(wallets, transactions, currentMonth);
 
+  // Available distinct months from all transactions + currentMonth
+  const availableMonths = useMemo(() => {
+    const set = new Set<string>();
+    if (currentMonth && /^\d{4}-\d{2}$/.test(currentMonth)) set.add(currentMonth);
+    const now = new Date();
+    const todayMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    set.add(todayMonth);
+
+    transactions.forEach((tx) => {
+      const m = tx.date?.slice(0, 7);
+      if (m && /^\d{4}-\d{2}$/.test(m)) {
+        set.add(m);
+      }
+    });
+
+    return Array.from(set).sort((a, b) => b.localeCompare(a));
+  }, [transactions, currentMonth]);
+
   // Add Transaction
   const addTransaction = (tx: Omit<Transaction, 'id' | 'createdAt'>): boolean => {
     // 1. Validate funds for EXPENSE and TRANSFER to prevent negative balance
@@ -1278,6 +1297,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         planner,
         currentMonth,
         setCurrentMonth,
+        availableMonths,
         serverSyncStatus,
         activeTab,
         setActiveTab,

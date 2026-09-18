@@ -410,3 +410,37 @@ export function checkWalletSufficientFunds(
     shortfall: 0,
   };
 }
+
+export function formatCompactNumber(val: number): string {
+  if (!val || val === 0) return '0';
+  const abs = Math.abs(val);
+  const sign = val < 0 ? '-' : '';
+  if (abs >= 1_000_000_000) {
+    const num = abs / 1_000_000_000;
+    return `${sign}${num % 1 === 0 ? num.toFixed(0) : num.toFixed(1)}Tỷ`;
+  }
+  if (abs >= 1_000_000) {
+    const num = abs / 1_000_000;
+    return `${sign}${num % 1 === 0 ? num.toFixed(0) : num.toFixed(1)}Tr`;
+  }
+  if (abs >= 1_000) {
+    return `${sign}${(abs / 1_000).toFixed(0)}k`;
+  }
+  return `${sign}${abs}`;
+}
+
+export function formatMonthLabel(monthStr: string, language: 'vi' | 'en' = 'vi'): string {
+  if (!monthStr || monthStr === 'ALL') {
+    return language === 'en' ? 'All months' : 'Tất cả các tháng';
+  }
+  const parts = monthStr.split('-');
+  if (parts.length < 2) return monthStr;
+  const y = parts[0];
+  const m = parts[1];
+  if (language === 'en') {
+    const mNum = parseInt(m, 10);
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${monthNames[mNum - 1] || m} ${y}`;
+  }
+  return `Tháng ${m}/${y}`;
+}

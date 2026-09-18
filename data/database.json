@@ -1,19 +1,75 @@
 {
   "wallets": [
     {
-      "id": "wal-cash",
-      "name": "Tiền mặt ví tay",
+      "name": "tiền ặt",
       "type": "CASH",
-      "balance": 9992767233,
-      "initialBalance": 3000000,
+      "balance": 405010503116955,
+      "initialBalance": 0,
       "currency": "VND",
+      "accountNumber": "",
       "color": "#0ea5e9",
       "icon": "Banknote",
-      "createdAt": "2026-01-01",
-      "accountNumber": ""
+      "id": "wal-1789745951728",
+      "createdAt": "2026-09-18T15:39:11.728Z"
     }
   ],
   "transactions": [
+    {
+      "type": "EXPENSE",
+      "amount": 233323,
+      "categoryId": "cat-food",
+      "categoryName": "Ăn uống",
+      "walletId": "wal-1789745951728",
+      "walletName": "tiền ặt",
+      "fee": 0,
+      "date": "2026-07-18T08:53:00.000Z",
+      "note": "Ăn uống",
+      "tags": [],
+      "id": "tx-1789746797130",
+      "createdAt": "2026-09-18T15:53:17.130Z"
+    },
+    {
+      "type": "INCOME",
+      "amount": 58675867958679,
+      "categoryId": "cat-salary",
+      "categoryName": "Lương chính",
+      "walletId": "wal-1789745951728",
+      "walletName": "tiền ặt",
+      "fee": 0,
+      "date": "2026-10-22T08:51:00.000Z",
+      "note": "Lương chính",
+      "tags": [],
+      "id": "tx-1789746684891",
+      "createdAt": "2026-09-18T15:51:24.891Z"
+    },
+    {
+      "type": "INCOME",
+      "amount": 45245,
+      "categoryId": "cat-salary",
+      "categoryName": "Lương chính",
+      "walletId": "wal-1789745951728",
+      "walletName": "tiền ặt",
+      "fee": 0,
+      "date": "2026-10-10T08:46:00.000Z",
+      "note": "Lương chính",
+      "tags": [],
+      "id": "tx-1789746385082",
+      "createdAt": "2026-09-18T15:46:25.082Z"
+    },
+    {
+      "type": "INCOME",
+      "amount": 346334635346354,
+      "categoryId": "cat-salary",
+      "categoryName": "Lương chính",
+      "walletId": "wal-1789745951728",
+      "walletName": "tiền ặt",
+      "fee": 0,
+      "date": "2026-09-25T08:41:00.000Z",
+      "note": "Lương chính",
+      "tags": [],
+      "id": "tx-1789746122830",
+      "createdAt": "2026-09-18T15:42:02.830Z"
+    },
     {
       "type": "TRANSFER",
       "amount": 10000000,
@@ -916,7 +972,7 @@
     "notes": "Áp dụng quy tắc 50/30/20: 50% thiết yếu, 30% sở thích cá nhân, 20% tích lũy & quỹ khẩn cấp",
     "emergencyPercent": 10
   },
-  "currentMonth": "2026-09",
+  "currentMonth": "2026-07",
   "userProfile": {
     "name": "PanC",
     "email": "admin@fintrack.vn",
@@ -1036,5 +1092,5 @@
       }
     ]
   },
-  "updatedAt": "2026-09-18T15:32:49.582Z"
+  "updatedAt": "2026-09-18T15:53:17.560Z"
 }
