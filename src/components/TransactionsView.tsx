@@ -80,6 +80,7 @@ export const TransactionsView: React.FC = () => {
   const [hoveredPieIndex, setHoveredPieIndex] = useState<number | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<string>('ALL');
   const [pieType, setPieType] = useState<'EXPENSE' | 'INCOME'>('EXPENSE');
+  const [barMode, setBarMode] = useState<'BOTH' | 'EXPENSE' | 'INCOME'>('BOTH');
 
   const handlePrevMonth = () => {
     const activeM = selectedMonth !== 'ALL' ? selectedMonth : currentMonth;
@@ -453,7 +454,7 @@ export const TransactionsView: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Bar Chart: Thu - Chi */}
           <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
               <div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">{t('tx.cashflowMonthly', 'Dòng tiền Thu - Chi')}</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -461,6 +462,43 @@ export const TransactionsView: React.FC = () => {
                     ? `${t('tx.dailyBreakdown', 'Diễn biến thu - chi theo ngày')} (${formatMonthLabel(selectedMonth, language)})`
                     : t('tx.cashflowSub', 'So sánh thu nhập và chi tiêu 6 tháng gần nhất')}
                 </p>
+              </div>
+
+              {/* Bar Chart Mode Toggle */}
+              <div className="flex items-center p-0.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-[11px] font-semibold border border-slate-200 dark:border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => setBarMode('BOTH')}
+                  className={`px-2 py-0.5 rounded-lg transition-all cursor-pointer ${
+                    barMode === 'BOTH'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
+                >
+                  {t('tx.bothCashflow', 'Thu & Chi')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBarMode('EXPENSE')}
+                  className={`px-2 py-0.5 rounded-lg transition-all cursor-pointer ${
+                    barMode === 'EXPENSE'
+                      ? 'bg-rose-500 text-white shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
+                >
+                  {t('tx.onlyExpense', 'Chỉ Chi tiêu')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBarMode('INCOME')}
+                  className={`px-2 py-0.5 rounded-lg transition-all cursor-pointer ${
+                    barMode === 'INCOME'
+                      ? 'bg-emerald-500 text-white shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
+                >
+                  {t('tx.onlyIncome', 'Chỉ Thu nhập')}
+                </button>
               </div>
             </div>
             <div className="h-56 w-full">
@@ -493,8 +531,26 @@ export const TransactionsView: React.FC = () => {
                       color: '#fff',
                     }}
                   />
-                  <Bar dataKey="Thu" fill="#10b981" radius={[6, 6, 0, 0]} name={t('dashboard.income', 'Thu nhập')} className="cursor-pointer" />
-                  <Bar dataKey="Chi" fill="#f43f5e" radius={[6, 6, 0, 0]} name={t('dashboard.expense', 'Chi tiêu')} className="cursor-pointer" />
+                  {(barMode === 'BOTH' || barMode === 'INCOME') && (
+                    <Bar
+                      dataKey="Thu"
+                      fill="#10b981"
+                      minPointSize={6}
+                      radius={[6, 6, 0, 0]}
+                      name={t('dashboard.income', 'Thu nhập')}
+                      className="cursor-pointer"
+                    />
+                  )}
+                  {(barMode === 'BOTH' || barMode === 'EXPENSE') && (
+                    <Bar
+                      dataKey="Chi"
+                      fill="#f43f5e"
+                      minPointSize={6}
+                      radius={[6, 6, 0, 0]}
+                      name={t('dashboard.expense', 'Chi tiêu')}
+                      className="cursor-pointer"
+                    />
+                  )}
                 </BarChart>
               </ResponsiveContainer>
             </div>
