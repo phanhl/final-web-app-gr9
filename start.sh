@@ -11,8 +11,8 @@ pkill -9 -f "cloudflared" 2>/dev/null
 sleep 1
 
 # Kiem tra ban build production
-if [ ! -d ".next" ] || [ ! -f ".next/BUILD_ID" ]; then
-  echo "Dang build ung dung..."
+if [ ! -d ".next" ] || [ ! -f ".next/required-server-files.json" ]; then
+  echo "Dang build ung dung cho production..."
   npm run build
 fi
 

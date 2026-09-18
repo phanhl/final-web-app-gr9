@@ -471,8 +471,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.error('Failed to parse localStorage data:', e);
       }
 
-      // Server is single source of truth. Fallback to local only if server completely unreachable
-      const chosenData = serverData || localData;
+      // Choose between server and local by comparing last updatedAt timestamp
+      let chosenData = serverData || localData;
+      if (localData && serverData) {
+        const localTime = new Date(localData.updatedAt || 0).getTime();
+        const serverTime = new Date(serverData.updatedAt || 0).getTime();
+        if (localTime > serverTime) {
+          chosenData = localData;
+        }
+      }
 
       if (chosenData && isSubscribed) {
         applyServerData(chosenData);
