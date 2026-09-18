@@ -11,60 +11,6 @@
       "icon": "Banknote",
       "createdAt": "2026-01-01",
       "accountNumber": ""
-    },
-    {
-      "id": "wal-tcb",
-      "name": "Techcombank Chi tiêu",
-      "type": "BANK",
-      "balance": 39743232,
-      "initialBalance": 25000000,
-      "bankName": "Techcombank",
-      "accountNumber": "19038899887766",
-      "currency": "VND",
-      "color": "#ef4444",
-      "icon": "CreditCard",
-      "createdAt": "2026-01-01"
-    },
-    {
-      "id": "wal-vcb",
-      "name": "Vietcombank Nhận lương",
-      "type": "BANK",
-      "balance": 50000000,
-      "initialBalance": 20000000,
-      "bankName": "Vietcombank",
-      "accountNumber": "00110099882211",
-      "currency": "VND",
-      "color": "#007a33",
-      "icon": "Building2",
-      "createdAt": "2026-01-01"
-    },
-    {
-      "id": "wal-credit",
-      "name": "VPBank Cashback StepUp",
-      "type": "CREDIT",
-      "balance": 4680000,
-      "initialBalance": 0,
-      "bankName": "VPBank",
-      "accountNumber": "•••• 5824",
-      "creditLimit": 30000000,
-      "currency": "VND",
-      "color": "#8b5cf6",
-      "icon": "CreditCard",
-      "createdAt": "2026-01-01"
-    },
-    {
-      "id": "wal-savings",
-      "name": "Sổ tiết kiệm MB Bank 6T",
-      "type": "SAVINGS",
-      "balance": 150000000,
-      "initialBalance": 150000000,
-      "bankName": "MB Bank",
-      "accountNumber": "MB-SAV-88992",
-      "interestRate": 6.2,
-      "currency": "VND",
-      "color": "#3b82f6",
-      "icon": "PiggyBank",
-      "createdAt": "2026-01-01"
     }
   ],
   "transactions": [
@@ -972,7 +918,7 @@
   },
   "currentMonth": "2026-09",
   "userProfile": {
-    "name": "Admin",
+    "name": "PanC",
     "email": "admin@fintrack.vn",
     "phone": "0912 345 678",
     "role": "Chủ tài khoản (Owner)",
@@ -1090,5 +1036,5 @@
       }
     ]
   },
-  "updatedAt": "2026-09-18T15:13:27.589Z"
+  "updatedAt": "2026-09-18T15:32:49.582Z"
 }
