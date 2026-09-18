@@ -38,6 +38,9 @@ function getDefaultData() {
   };
 }
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET() {
   try {
     await ensureDataDir();
@@ -45,18 +48,41 @@ export async function GET() {
     try {
       const fileContent = await fs.readFile(DB_FILE, 'utf-8');
       const data = JSON.parse(fileContent);
-      return NextResponse.json({ success: true, data });
+      return NextResponse.json(
+        { success: true, data },
+        {
+          headers: {
+            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+            Pragma: 'no-cache',
+            Expires: '0',
+          },
+        }
+      );
     } catch {
       // File doesn't exist yet, initialize with default data
       const defaultData = getDefaultData();
       await fs.writeFile(DB_FILE, JSON.stringify(defaultData, null, 2), 'utf-8');
-      return NextResponse.json({ success: true, data: defaultData });
+      return NextResponse.json(
+        { success: true, data: defaultData },
+        {
+          headers: {
+            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+            Pragma: 'no-cache',
+            Expires: '0',
+          },
+        }
+      );
     }
   } catch (error) {
     console.error('API /api/storage GET Error:', error);
     return NextResponse.json(
       { success: false, error: 'Không thể đọc dữ liệu từ server disk' },
-      { status: 500 }
+      {
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+        },
+      }
     );
   }
 }

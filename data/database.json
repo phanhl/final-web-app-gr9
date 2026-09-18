@@ -4,7 +4,7 @@
       "id": "wal-cash",
       "name": "Tiền mặt ví tay",
       "type": "CASH",
-      "balance": 7680781,
+      "balance": 530781,
       "initialBalance": 3000000,
       "currency": "VND",
       "color": "#0ea5e9",
@@ -56,7 +56,7 @@
       "id": "wal-savings",
       "name": "Sổ tiết kiệm MB Bank 6T",
       "type": "SAVINGS",
-      "balance": 150000000,
+      "balance": 134800000,
       "initialBalance": 150000000,
       "bankName": "MB Bank",
       "accountNumber": "MB-SAV-88992",
@@ -68,6 +68,51 @@
     }
   ],
   "transactions": [
+    {
+      "type": "EXPENSE",
+      "amount": 1150000,
+      "categoryId": "cat-bills",
+      "categoryName": "Hóa đơn & Tiện ích",
+      "walletId": "wal-cash",
+      "walletName": "Tiền mặt ví tay",
+      "date": "2026-09-18T01:22:00",
+      "note": "Thanh toán hóa đơn: Tiền điện EVN Hà Nội",
+      "tags": [
+        "Hóa đơn định kỳ"
+      ],
+      "id": "tx-1789669320529",
+      "createdAt": "2026-09-17T18:22:00.529Z"
+    },
+    {
+      "type": "EXPENSE",
+      "amount": 6000000,
+      "categoryId": "cat-housing",
+      "categoryName": "Nhà cửa & Thuê nhà",
+      "walletId": "wal-cash",
+      "walletName": "Tiền mặt ví tay",
+      "date": "2026-09-18T01:21:53",
+      "note": "Thanh toán hóa đơn: Tiền thuê căn hộ tháng 9",
+      "tags": [
+        "Hóa đơn định kỳ"
+      ],
+      "id": "tx-1789669313582",
+      "createdAt": "2026-09-17T18:21:53.582Z"
+    },
+    {
+      "type": "EXPENSE",
+      "amount": 15200000,
+      "categoryId": "cat-invest-exp",
+      "categoryName": "Đầu tư & Tích lũy",
+      "walletId": "wal-savings",
+      "walletName": "Sổ tiết kiệm MB Bank 6T",
+      "date": "2026-09-17T18:07:33.868Z",
+      "note": "Tích lũy vào hũ: cưới vợ",
+      "tags": [
+        "Tích lũy mục tiêu"
+      ],
+      "id": "tx-1789668453868",
+      "createdAt": "2026-09-17T18:07:33.868Z"
+    },
     {
       "type": "TRANSFER",
       "amount": 12423232,
@@ -719,7 +764,7 @@
       "id": "bud-food",
       "categoryId": "cat-food",
       "categoryName": "Ăn uống",
-      "amount": 5500000,
+      "amount": 55000000,
       "month": "2026-09",
       "alertThreshold80": true,
       "alertThreshold100": true
@@ -728,7 +773,7 @@
       "id": "bud-shopping",
       "categoryId": "cat-shopping",
       "categoryName": "Mua sắm",
-      "amount": 30000000,
+      "amount": 3000000,
       "month": "2026-09",
       "alertThreshold80": true,
       "alertThreshold100": true
@@ -737,7 +782,7 @@
       "id": "bud-transport",
       "categoryId": "cat-transport",
       "categoryName": "Di chuyển & Xe",
-      "amount": 1800000,
+      "amount": 180000,
       "month": "2026-09",
       "alertThreshold80": true,
       "alertThreshold100": true
@@ -777,11 +822,11 @@
       "amount": 6000000,
       "categoryId": "cat-housing",
       "categoryName": "Nhà cửa & Thuê nhà",
-      "walletId": "wal-vcb",
+      "walletId": "wal-cash",
       "dueDay": 5,
       "frequency": "MONTHLY",
       "status": "PAID",
-      "lastPaidDate": "2026-09-05",
+      "lastPaidDate": "2026-09-18",
       "note": "Chuyển khoản chủ nhà qua Techcombank",
       "reminderDaysBefore": 3
     },
@@ -797,7 +842,7 @@
       "status": "PAID",
       "note": "Mã khách hàng PD08876522",
       "reminderDaysBefore": 5,
-      "lastPaidDate": "2026-09-16"
+      "lastPaidDate": "2026-09-18"
     },
     {
       "id": "bill-internet",
@@ -842,14 +887,35 @@
       "lastPaidDate": "2026-09-16"
     }
   ],
-  "goals": [],
+  "goals": [
+    {
+      "name": "cưới vợ",
+      "targetAmount": 3000300003,
+      "currentAmount": 15200000,
+      "deadline": "2029-02-15",
+      "color": "#10b981",
+      "icon": "PiggyBank",
+      "id": "goal-1789668409197",
+      "history": [
+        {
+          "id": "gh-1789668453868",
+          "date": "2026-09-18",
+          "amount": 15200000,
+          "type": "DEPOSIT",
+          "walletId": "wal-savings",
+          "note": "Nạp từ Sổ tiết kiệm MB Bank 6T"
+        }
+      ],
+      "createdAt": "2026-09-17T18:06:49.197Z"
+    }
+  ],
   "planner": {
     "monthlyIncome": 32000000,
     "needsPercent": 50,
-    "wantsPercent": 25,
-    "savingsPercent": 15,
-    "emergencyPercent": 10,
-    "notes": "Quy tắc phân bổ 4 quỹ: 50% thiết yếu, 25% hưởng thụ, 15% tích lũy đầu tư, 10% quỹ dự phòng khẩn cấp & rủi ro phát sinh"
+    "wantsPercent": 30,
+    "savingsPercent": 20,
+    "notes": "Áp dụng quy tắc 50/30/20: 50% thiết yếu, 30% sở thích cá nhân, 20% tích lũy & quỹ khẩn cấp",
+    "emergencyPercent": 10
   },
   "currentMonth": "2026-09",
   "userProfile": {
@@ -870,8 +936,8 @@
         "icon": "Utensils",
         "color": "#f97316",
         "monthlyExpense": 5500000,
-        "isSelected": false,
-        "cutPercent": 50
+        "isSelected": true,
+        "cutPercent": 30
       },
       {
         "id": "spend-shopping",
@@ -880,8 +946,8 @@
         "icon": "ShoppingBag",
         "color": "#ec4899",
         "monthlyExpense": 3000000,
-        "isSelected": false,
-        "cutPercent": 50
+        "isSelected": true,
+        "cutPercent": 30
       },
       {
         "id": "spend-entertainment",
@@ -890,8 +956,8 @@
         "icon": "Gamepad2",
         "color": "#10b981",
         "monthlyExpense": 2000000,
-        "isSelected": false,
-        "cutPercent": 25
+        "isSelected": true,
+        "cutPercent": 30
       },
       {
         "id": "spend-housing",
@@ -954,14 +1020,22 @@
         "cutPercent": 20
       }
     ],
-    "projectionMonths": 6,
+    "projectionMonths": 24,
     "savingsAmount": 2200000,
     "savingsInterestRate": 7.1,
     "investmentAmount": 2600000,
-    "investmentRateScenario": 12,
+    "investmentRateScenario": 8.5,
     "customInvestRate": "8.5",
     "hasExternalLoan": true,
-    "externalLoans": []
+    "externalLoans": [
+      {
+        "id": "loan-1789668909858",
+        "name": "duyên nợ cần trả",
+        "originalDebt": 3000300003,
+        "monthlyPayment": 15200000,
+        "annualInterestRate": 0
+      }
+    ]
   },
-  "updatedAt": "2026-09-17T13:18:32.067Z"
+  "updatedAt": "2026-09-17T18:22:22.537Z"
 }

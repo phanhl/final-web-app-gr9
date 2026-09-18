@@ -101,6 +101,7 @@ interface AppContextType {
   navigateToBill: (billId: string, autoOpenPay?: boolean) => void;
 
   // Backup & Reset
+  saveDataNow: () => Promise<boolean>;
   resetToDefaultData: () => void;
   clearAllData: () => void;
   exportDatabaseJSON: () => void;
@@ -238,61 +239,68 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let isSubscribed = true;
 
     async function loadData() {
-      let loadedFromServer = false;
+      let serverData: any = null;
       try {
-        const res = await fetch('/api/storage');
+        const res = await fetch('/api/storage', {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache, no-store',
+            Pragma: 'no-cache',
+          },
+        });
         if (res.ok) {
           const result = await res.json();
-          if (result.success && result.data && isSubscribed) {
-            const d = result.data;
-            if (d.wallets) setWallets(d.wallets);
-            if (d.transactions) setTransactions(d.transactions);
-            if (d.categories) setCategories(d.categories);
-            if (d.budgets) setBudgets(d.budgets);
-            if (d.bills) setBills(d.bills);
-            if (d.goals) setGoals(d.goals);
-            if (d.planner) {
-              setPlanner({
-                ...d.planner,
-                emergencyPercent: d.planner.emergencyPercent !== undefined ? d.planner.emergencyPercent : 10,
-              });
-            }
-            if (d.currentMonth) setCurrentMonth(d.currentMonth);
-            if (d.userProfile) setUserProfile(d.userProfile);
-            if (d.simulatorConfig) setSimulatorConfig(d.simulatorConfig);
-            loadedFromServer = true;
-            setServerSyncStatus('synced');
+          if (result.success && result.data) {
+            serverData = result.data;
           }
         }
       } catch (e) {
-        console.warn('Could not connect to server storage API, falling back to localStorage:', e);
-        if (isSubscribed) setServerSyncStatus('offline');
+        console.warn('Could not connect to server storage API:', e);
       }
 
-      if (!loadedFromServer && isSubscribed) {
-        try {
-          const saved = localStorage.getItem(STORAGE_KEY);
-          if (saved) {
-            const parsed = JSON.parse(saved);
-            if (parsed.wallets) setWallets(parsed.wallets);
-            if (parsed.transactions) setTransactions(parsed.transactions);
-            if (parsed.categories) setCategories(parsed.categories);
-            if (parsed.budgets) setBudgets(parsed.budgets);
-            if (parsed.bills) setBills(parsed.bills);
-            if (parsed.goals) setGoals(parsed.goals);
-            if (parsed.planner) {
-              setPlanner({
-                ...parsed.planner,
-                emergencyPercent: parsed.planner.emergencyPercent !== undefined ? parsed.planner.emergencyPercent : 10,
-              });
-            }
-            if (parsed.currentMonth) setCurrentMonth(parsed.currentMonth);
-            if (parsed.userProfile) setUserProfile(parsed.userProfile);
-            if (parsed.simulatorConfig) setSimulatorConfig(parsed.simulatorConfig);
-          }
-        } catch (e) {
-          console.error('Failed to load localStorage data:', e);
+      let localData: any = null;
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          localData = JSON.parse(saved);
         }
+      } catch (e) {
+        console.error('Failed to parse localStorage data:', e);
+      }
+
+      // Pick the freshest dataset between server disk and localStorage
+      let chosenData = serverData;
+      if (!serverData && localData) {
+        chosenData = localData;
+      } else if (serverData && localData) {
+        const serverTime = serverData.updatedAt ? new Date(serverData.updatedAt).getTime() : 0;
+        const localTime = localData.updatedAt ? new Date(localData.updatedAt).getTime() : 0;
+        // If local data is newer by more than 500ms, prioritize local
+        if (localTime > serverTime + 500) {
+          chosenData = localData;
+        }
+      }
+
+      if (chosenData && isSubscribed) {
+        const d = chosenData;
+        if (d.wallets) setWallets(d.wallets);
+        if (d.transactions) setTransactions(d.transactions);
+        if (d.categories) setCategories(d.categories);
+        if (d.budgets) setBudgets(d.budgets);
+        if (d.bills) setBills(d.bills);
+        if (d.goals) setGoals(d.goals);
+        if (d.planner) {
+          setPlanner({
+            ...d.planner,
+            emergencyPercent: d.planner.emergencyPercent !== undefined ? d.planner.emergencyPercent : 10,
+          });
+        }
+        if (d.currentMonth) setCurrentMonth(d.currentMonth);
+        if (d.userProfile) setUserProfile(d.userProfile);
+        if (d.simulatorConfig) setSimulatorConfig(d.simulatorConfig);
+        setServerSyncStatus('synced');
+      } else if (!chosenData && isSubscribed) {
+        setServerSyncStatus('offline');
       }
 
       if (isSubscribed) {
@@ -322,6 +330,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       currentMonth,
       userProfile,
       simulatorConfig,
+      updatedAt: new Date().toISOString(),
     };
 
     // 1. Fast local cache save
@@ -353,6 +362,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     return () => clearTimeout(timer);
   }, [mounted, wallets, transactions, categories, budgets, bills, goals, planner, currentMonth, userProfile, simulatorConfig]);
+
+  // Immediate save on demand
+  const saveDataNow = async (): Promise<boolean> => {
+    const payload = {
+      wallets,
+      transactions,
+      categories,
+      budgets,
+      bills,
+      goals,
+      planner,
+      currentMonth,
+      userProfile,
+      simulatorConfig,
+      updatedAt: new Date().toISOString(),
+    };
+
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    } catch (e) {
+      console.error('Failed to save to localStorage:', e);
+    }
+
+    setServerSyncStatus('syncing');
+    try {
+      const res = await fetch('/api/storage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        setServerSyncStatus('synced');
+        return true;
+      } else {
+        setServerSyncStatus('offline');
+        return false;
+      }
+    } catch (err) {
+      console.warn('Failed to sync to server storage API:', err);
+      setServerSyncStatus('offline');
+      return false;
+    }
+  };
 
   const openQuickAdd = (type: 'EXPENSE' | 'INCOME' | 'TRANSFER' = 'EXPENSE', defaultWalletId?: string) => {
     setQuickAddDefaultType(type);
@@ -985,6 +1037,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         navigateToCategoryTransactions,
         navigateToBudget,
         navigateToBill,
+        saveDataNow,
         resetToDefaultData,
         clearAllData,
         exportDatabaseJSON,

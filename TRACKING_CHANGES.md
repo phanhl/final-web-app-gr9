@@ -1324,6 +1324,54 @@ Qua quét toàn diện mã nguồn, phát hiện và đã xử lý các vị tr�
 | 5 | `src/components/BudgetsView.tsx` | **[CHỈNH SỬA]** | Bổ sung thanh trượt Dự phòng, thẻ thống kê số tiền, nút preset và liên kết tới Hũ dự phòng khẩn cấp. |
 | 6 | `TRACKING_CHANGES.md` | **[CHỈNH SỬA]** | Ghi nhận chi tiết lần chỉnh sửa 22. |
 
+---
+
+# [LẦN CHỈNH SỬA 23] - KHẮC PHỤC TRIỆT ĐỂ LỖI LƯU & TẢI DỮ LIỆU (PERSISTENCE & CACHE FIX)
+
+### 1. Nguyên Nhân Sự Cố
+* **Vấn đề phát hiện:**
+  1. Khi người dùng chỉnh sửa hoặc thêm dữ liệu (ví dụ: mục tiêu tích lũy "cưới vợ", hóa đơn, kế hoạch thu nhập ngân sách), khi tải lại trang hoặc khởi động lại ứng dụng thì dữ liệu có nguy cơ bị reset hoặc không hiển thị dữ liệu mới nhất.
+  2. Tuyến API `src/app/api/storage/route.ts` thiếu khai báo `export const dynamic = 'force-dynamic'` và `revalidate = 0`, khiến Next.js App Router và trình duyệt tự động cache kết quả của hàm `GET /api/storage`. Khi F5 tải lại trang, trình duyệt nhận kết quả cache cũ thay vì đọc dữ liệu mới nhất từ tệp `data/database.json`.
+  3. Hàm `fetch('/api/storage')` trong `AppContext.tsx` không có cấu hình `cache: 'no-store'`, khiến HTTP cache của trình duyệt trả về bản ghi cũ.
+  4. Cơ chế đồng bộ giữa `localStorage` và `server disk` trước đây ưu tiên cứng phía server mà không so sánh mốc thời gian `updatedAt`, dẫn đến trường hợp dữ liệu mới vừa lưu trong trình duyệt bị dữ liệu cũ ghi đè.
+  5. Trong màn hình Kế hoạch ngân sách phân bổ thu nhập (`BudgetsView.tsx`), việc điều chỉnh thanh trượt diễn ra ngầm mà không có nút bấm "Lưu kế hoạch" và không có huy hiệu trạng thái lưu, khiến người dùng không biết dữ liệu đã được lưu thành công hay chưa.
+
+---
+
+### 2. Các Giải Pháp Triển Khai Toàn Diện
+
+1. **Vô hiệu hóa bộ nhớ đệm HTTP cho API Storage (`src/app/api/storage/route.ts`):**
+   - Thêm `export const dynamic = 'force-dynamic';` và `export const revalidate = 0;`.
+   - Bổ sung tiêu đề phản hồi:
+     `'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'`.
+   - Đảm bảo 100% các yêu cầu đọc dữ liệu luôn truy xuất trực tiếp từ tệp `data/database.json` theo thời gian thực.
+
+2. **Cơ chế so khớp phiên bản mới nhất theo `updatedAt` (`src/context/AppContext.tsx`):**
+   - Đính kèm nhãn thời gian `updatedAt: new Date().toISOString()` vào mọi payload lưu trữ.
+   - Khi ứng dụng khởi động (`loadData`), tự động lấy dữ liệu từ cả Server Disk và `localStorage`, so sánh mốc thời gian `updatedAt` để luôn chọn bộ dữ liệu tươi mới nhất, đảm bảo tuyệt đối không bao giờ làm mất dữ liệu của người dùng.
+   - Thêm hàm `saveDataNow(): Promise<boolean>` hỗ trợ lưu tức thời theo yêu cầu mà không phải chờ debounce.
+
+3. **Bổ sung Nút "Lưu Kế hoạch Ngân sách" & Đèn báo trạng thái (`src/components/BudgetsView.tsx`):**
+   - Thêm nút bấm nổi bật **"Lưu kế hoạch ngân sách"** ngay dưới các thanh trượt phân bổ (Thiết yếu, Mong muốn, Tích lũy, Dự phòng).
+   - Khi bấm lưu: gọi trực tiếp `saveDataNow()` và hiển thị thông báo tích xanh `✓ Đã lưu thành công vào hệ thống!`.
+   - Hiển thị chỉ báo trạng thái: `Đã đồng bộ lên ổ đĩa` với chấm xanh trực quan.
+
+4. **Đồng bộ cơ sở dữ liệu người dùng (`data/database.json`):**
+   - Tích hợp và lưu giữ toàn bộ dữ liệu người dùng vừa tạo (mục tiêu hũ "cưới vợ", các giao dịch thanh toán hóa đơn ngày 18/9, cấu hình ngân sách và các khoản nợ cần trả trong giả lập).
+
+---
+
+### 3. Danh Sách Các Tệp Đã Thay Đổi
+
+| STT | Tệp tin | Trạng thái | Mô tả tóm tắt |
+|---|---|---|---|
+| 1 | `src/app/api/storage/route.ts` | **[CHỈNH SỬA]** | Thiết lập `force-dynamic`, `revalidate = 0`, header `no-store` chống cache cũ. |
+| 2 | `src/context/AppContext.tsx` | **[CHỈNH SỬA]** | Tự động so sánh `updatedAt` chọn dữ liệu mới nhất; bổ sung hàm `saveDataNow`. |
+| 3 | `src/components/BudgetsView.tsx` | **[CHỈNH SỬA]** | Thêm nút "Lưu kế hoạch ngân sách" với phản hồi thành công và nhãn trạng thái lưu. |
+| 4 | `data/database.json` | **[CHỈNH SỬA]** | Đồng bộ toàn bộ dữ liệu mới nhất của người dùng. |
+| 5 | `TRACKING_CHANGES.md` | **[CHỈNH SỬA]** | Ghi nhận chi tiết lần chỉnh sửa 23. |
+
+
 
 
 

@@ -23,6 +23,8 @@ import {
   X,
   Target,
   ReceiptText,
+  Save,
+  Check,
 } from 'lucide-react';
 import { formatCurrency, calculateBudgetStatuses, formatNumberWithDots } from '@/lib/utils';
 import { IconHelper } from './IconHelper';
@@ -50,11 +52,15 @@ export const BudgetsView: React.FC = () => {
     navTargetBudgetId,
     setNavTargetBudgetId,
     navigateToCategoryTransactions,
+    saveDataNow,
+    serverSyncStatus,
   } = useApp();
 
   const [activeSubTab, setActiveSubTab] = useState<'CATEGORY_BUDGETS' | 'PLANNER' | 'SAVINGS_GOALS'>(
     'CATEGORY_BUDGETS'
   );
+  const [isSavingPlanner, setIsSavingPlanner] = useState(false);
+  const [plannerSavedToast, setPlannerSavedToast] = useState(false);
 
   // Modals
   const [budgetModalOpen, setBudgetModalOpen] = useState(false);
@@ -653,6 +659,50 @@ export const BudgetsView: React.FC = () => {
                     className="w-full accent-amber-500"
                   />
                   <span className="text-[11px] text-slate-400">Quỹ khẩn cấp, y tế, sửa xe, rủi ro phát sinh</span>
+                </div>
+
+                {/* Save Button & Status feedback */}
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2">
+                  <button
+                    type="button"
+                    disabled={isSavingPlanner}
+                    onClick={async () => {
+                      setIsSavingPlanner(true);
+                      const ok = await saveDataNow();
+                      setIsSavingPlanner(false);
+                      if (ok) {
+                        setPlannerSavedToast(true);
+                        setTimeout(() => setPlannerSavedToast(false), 3500);
+                      }
+                    }}
+                    className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center space-x-2 transition-all shadow-sm ${
+                      plannerSavedToast
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white'
+                    }`}
+                  >
+                    {plannerSavedToast ? (
+                      <>
+                        <Check className="w-4 h-4 text-white" />
+                        <span>Đã lưu thành công vào hệ thống!</span>
+                      </>
+                    ) : isSavingPlanner ? (
+                      <span>Đang lưu dữ liệu...</span>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        <span>Lưu kế hoạch ngân sách</span>
+                      </>
+                    )}
+                  </button>
+
+                  <div className="flex items-center justify-between text-[11px] text-slate-400 px-1">
+                    <span>Trạng thái lưu trữ:</span>
+                    <span className="flex items-center space-x-1 font-semibold text-emerald-600 dark:text-emerald-400">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                      <span>{serverSyncStatus === 'synced' ? 'Đã đồng bộ lên ổ đĩa' : serverSyncStatus === 'syncing' ? 'Đang đồng bộ...' : 'Đã lưu cục bộ'}</span>
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
