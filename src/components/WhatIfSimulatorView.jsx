@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
-import { Sparkles, TrendingUp, Sliders, Zap, Gauge, CheckCircle2, AlertTriangle, Plus, Trash2, FileSpreadsheet, CreditCard, Building2, RefreshCw, X, Wallet, } from 'lucide-react';
+import { Sparkles, TrendingUp, Sliders, Zap, CheckCircle2, AlertTriangle, Plus, Trash2, FileSpreadsheet, CreditCard, Building2, X, Wallet, } from 'lucide-react';
 import { formatCurrency, formatNumberWithDots } from '@/lib/utils';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, } from 'recharts';
 import * as XLSX from 'xlsx';
@@ -53,9 +53,6 @@ export const WhatIfSimulatorView = () => {
     const [newLoanDebt, setNewLoanDebt] = useState('');
     const [newLoanPayment, setNewLoanPayment] = useState('');
     const [newLoanRate, setNewLoanRate] = useState('0');
-    // 4. BENCHMARK AUDIT STATE
-    const [isBenchmarking, setIsBenchmarking] = useState(false);
-    const [benchmarkResult, setBenchmarkResult] = useState(null);
     // Danh sách các mục người dùng đã chọn để cắt giảm
     const selectedCuts = useMemo(() => {
         return spendingCategories.filter((c) => c.isSelected);
@@ -251,27 +248,6 @@ export const WhatIfSimulatorView = () => {
         const ws = XLSX.utils.json_to_sheet(tableData);
         XLSX.utils.book_append_sheet(wb, ws, 'Du_Bao_Chi_Tiet_What_If');
         XLSX.writeFile(wb, `Bang-Chi-Tiet-Mo-Phong-What-If-${projectionMonths}T.xlsx`);
-    };
-    // Run live benchmark simulation
-    const runBenchmark = () => {
-        setIsBenchmarking(true);
-        const t0 = performance.now();
-        // Giả lập tính toán phức tạp trên 1.000 records
-        let dummy = 0;
-        for (let i = 0; i < 60000; i++) {
-            dummy += Math.sqrt(i) * Math.sin(i);
-        }
-        const t1 = performance.now();
-        const measuredOptimized = Math.max(1.5, Math.round((t1 - t0) * 10) / 10);
-        setTimeout(() => {
-            setBenchmarkResult({
-                unoptimizedMs: 184.5,
-                optimizedMs: measuredOptimized,
-                throughput: 2840,
-                recordsTested: 1250,
-            });
-            setIsBenchmarking(false);
-        }, 350);
     };
     return (<div className="space-y-6 pb-16">
       {/* 1. HERO BANNER */}
@@ -877,72 +853,6 @@ export const WhatIfSimulatorView = () => {
                 </tr>))}
             </tbody>
           </table>
-        </div>
-      </div>
-
-      {/* 5. LIVE PERFORMANCE BENCHMARK INSPECTOR */}
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold">
-              <Gauge className="w-5 h-5"/>
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-slate-800 dark:text-white">
-                {t('whatif.perfAuditTitle', 'Kiểm Tra Hiệu Năng & Benchmark Kỹ Thuật (Live Performance Audit)')}
-              </h3>
-              <p className="text-xs text-slate-400">
-                {t('whatif.perfAuditDesc', 'Chứng minh khả năng tính toán aggregation tốc độ cao trên 1.000+ giao dịch theo yêu cầu đồ án')}
-              </p>
-            </div>
-          </div>
-
-          <button onClick={runBenchmark} disabled={isBenchmarking} className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors">
-            <RefreshCw className={`w-3.5 h-3.5 ${isBenchmarking ? 'animate-spin' : ''}`}/>
-            <span>{isBenchmarking ? t('whatif.benchmarking', 'Đang đo đạc...') : t('whatif.runBenchmark', 'Chạy Benchmark Kiểm Tra')}</span>
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-          <div className="p-4 rounded-2xl bg-rose-50/60 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/40">
-            <div className="flex items-center justify-between font-bold text-rose-700 dark:text-rose-300 mb-2">
-              <span>{t('whatif.beforeOpt', 'Chưa Tối Ưu (Before)')}</span>
-              <span className="text-[10px] px-2 py-0.5 bg-rose-200 dark:bg-rose-900 rounded-full">
-                Full Table Scan
-              </span>
-            </div>
-            <p className="text-2xl font-black text-rose-600 mt-1">184.5 ms</p>
-            <p className="text-[11px] text-slate-500 mt-1">Throughput: ~180 requests/sec</p>
-            <p className="text-[10px] text-rose-600/80 mt-1">{t('whatif.beforeDesc', 'Khi kéo thanh trượt: Bị lag, nghẽn request')}</p>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40">
-            <div className="flex items-center justify-between font-bold text-emerald-700 dark:text-emerald-300 mb-2">
-              <span>{t('whatif.afterOpt', 'Sau Tối Ưu (After)')}</span>
-              <span className="text-[10px] px-2 py-0.5 bg-emerald-200 dark:bg-emerald-900 rounded-full">
-                Index + Cache
-              </span>
-            </div>
-            <p className="text-2xl font-black text-emerald-600 mt-1">
-              {benchmarkResult ? `${benchmarkResult.optimizedMs} ms` : '1.8 ms'}
-            </p>
-            <p className="text-[11px] text-slate-500 mt-1">Throughput: ~2.840 requests/sec</p>
-            <p className="text-[10px] text-emerald-600 font-semibold mt-1">
-              {t('whatif.afterMetrics', 'Nhanh hơn gấp 102 lần • 60 FPS mượt mà')}
-            </p>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40">
-            <div className="flex items-center justify-between font-bold text-blue-700 dark:text-blue-300 mb-2">
-              <span>{t('whatif.techniquesApplied', '3 Kỹ Thuật Cốt Lõi Đã Áp Dụng')}</span>
-              <CheckCircle2 className="w-4 h-4 text-blue-600"/>
-            </div>
-            <ul className="space-y-1 text-slate-600 dark:text-slate-300 text-[11px]">
-              <li>✓ {t('whatif.techDebounce', 'Debounce 150ms ở Frontend triệt tiêu spam API')}</li>
-              <li>✓ <strong>Compound Index</strong>: `{`userId, date, category`}`</li>
-              <li>✓ {t('whatif.techDataset', 'Dataset In-place Mutation trên Recharts')}</li>
-            </ul>
-          </div>
         </div>
       </div>
 
