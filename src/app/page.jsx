@@ -1,5 +1,4 @@
 'use client';
-
 import React from 'react';
 import { AppProvider, useApp } from '@/context/AppContext';
 import { Navigation } from '@/components/Navigation';
@@ -12,12 +11,9 @@ import { ReportsView } from '@/components/ReportsView';
 import { WalletsView } from '@/components/WalletsView';
 import { SettingsView } from '@/components/SettingsView';
 import { QuickAddModal } from '@/components/QuickAddModal';
-
 function MainContent() {
-  const { activeTab } = useApp();
-
-  return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col">
+    const { activeTab } = useApp();
+    return (<div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col">
       <Navigation />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-4 lg:pt-6 pb-24 lg:pb-6">
@@ -42,14 +38,10 @@ function MainContent() {
           </p>
         </div>
       </footer>
-    </div>
-  );
+    </div>);
 }
-
 export default function Home() {
-  return (
-    <AppProvider>
+    return (<AppProvider>
       <MainContent />
-    </AppProvider>
-  );
+    </AppProvider>);
 }

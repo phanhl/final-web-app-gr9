@@ -1,30 +1,20 @@
 import './globals.css';
 import React from 'react';
-import type { Viewport } from 'next';
-
 export const metadata = {
-  title: 'FinTrack Pro - Quản lý chi tiêu',
-  description: 'Hệ thống quản lý tài chính cá nhân toàn diện, thông minh và hiện đại',
+    title: 'FinTrack Pro - Quản lý chi tiêu',
+    description: 'Hệ thống quản lý tài chính cá nhân toàn diện, thông minh và hiện đại',
 };
-
-export const viewport: Viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-  viewportFit: 'cover',
+export const viewport = {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+    viewportFit: 'cover',
 };
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <html lang="vi" suppressHydrationWarning>
+export default function RootLayout({ children, }) {
+    return (<html lang="vi" suppressHydrationWarning>
       <head>
-        <script
-          dangerouslySetInnerHTML={{
+        <script dangerouslySetInnerHTML={{
             __html: `
               try {
                 const theme = localStorage.getItem('fintrack_theme') || 'system';
@@ -36,12 +26,10 @@ export default function RootLayout({
                 }
               } catch (e) {}
             `,
-          }}
-        />
+        }}/>
       </head>
       <body className="min-h-screen bg-app text-primary antialiased">
         {children}
       </body>
-    </html>
-  );
+    </html>);
 }
