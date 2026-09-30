@@ -1,13 +1,13 @@
 'use client';
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
-import { Plus, ArrowRightLeft, Banknote, Building2, CreditCard, PiggyBank, Edit2, Trash2, DollarSign, X, ArrowLeft, ArrowDownLeft, ArrowUpRight, TrendingUp, TrendingDown, Search, Receipt, Inbox, } from 'lucide-react';
+import { Plus, ArrowRightLeft, Banknote, Building2, CreditCard, PiggyBank, Edit2, Trash2, DollarSign, X, ArrowLeft, ArrowDownLeft, ArrowUpRight, TrendingUp, TrendingDown, Search, Receipt, Inbox, FileSpreadsheet } from 'lucide-react';
 import { formatCurrency, formatDate, formatNumberWithDots } from '@/lib/utils';
 import { IconHelper } from './IconHelper';
 import { VIETNAMESE_BANKS } from '@/lib/mock-data';
 import { ReceiptModal } from './ReceiptModal';
 export const WalletsView = () => {
-    const { wallets, transactions, financialSummary, addWallet, editWallet, deleteWallet, deleteTransaction, recalculateWalletBalances, openQuickAdd, t, tCategory, tWalletType, language, } = useApp();
+    const { wallets, transactions, financialSummary, addWallet, editWallet, deleteWallet, deleteTransaction, recalculateWalletBalances, openQuickAdd, openStatementModal, t, tCategory, tWalletType, language, } = useApp();
     // Selected Wallet for viewing detailed cash flow
     const [selectedWalletId, setSelectedWalletId] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -106,6 +106,15 @@ export const WalletsView = () => {
         }
         setWalletModalOpen(false);
         setEditingWallet(null);
+    };
+    const handleDeleteWalletWithConfirm = (w) => {
+        if (!w) return;
+        if (confirm(`${t('wallets.deleteWalletConfirm', 'Bạn có chắc muốn xóa ví')} "${w.name}"? Toàn bộ giao dịch liên quan đến ví này cũng sẽ được xóa khỏi hệ thống để không làm sai lệch thu chi.`)) {
+            deleteWallet(w.id);
+            if (selectedWalletId === w.id) {
+                setSelectedWalletId(null);
+            }
+        }
     };
     const selectedWallet = wallets.find((w) => w.id === selectedWalletId);
     // If a wallet is selected, compute its transactions & summary
@@ -207,6 +216,16 @@ export const WalletsView = () => {
                 <button onClick={(e) => handleStartEditWallet(selectedWallet, e)} className="flex items-center space-x-1.5 px-3.5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold transition-colors cursor-pointer">
                   <Edit2 className="w-4 h-4"/>
                   <span>{t('wallets.editBtn', 'Sửa ví')}</span>
+                </button>
+
+                <button onClick={() => openStatementModal(selectedWallet.id)} className="flex items-center space-x-1.5 px-3.5 py-2 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-200 dark:border-blue-800/60 text-blue-700 dark:text-blue-300 rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer" title="Tải sao kê ngân hàng cho ví này">
+                  <FileSpreadsheet className="w-4 h-4 text-blue-600 dark:text-blue-400"/>
+                  <span>Tải sao kê</span>
+                </button>
+
+                <button onClick={() => handleDeleteWalletWithConfirm(selectedWallet)} className="flex items-center space-x-1.5 px-3.5 py-2 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold transition-colors cursor-pointer" title="Xóa ví và toàn bộ giao dịch liên quan">
+                  <Trash2 className="w-4 h-4"/>
+                  <span>{t('wallets.deleteBtn', 'Xóa ví')}</span>
                 </button>
               </div>
             </div>
@@ -485,11 +504,7 @@ export const WalletsView = () => {
                 </h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {cashWallets.map((w) => (<WalletCard key={w.id} wallet={w} onViewDetail={() => setSelectedWalletId(w.id)} onEdit={(e) => handleStartEditWallet(w, e)} onDelete={(e) => {
-                    if (confirm(`${t('wallets.deleteWalletConfirm', 'Bạn có chắc muốn xóa ví')} ${w.name}?`)) {
-                        deleteWallet(w.id);
-                    }
-                }}/>))}
+                {cashWallets.map((w) => (<WalletCard key={w.id} wallet={w} onViewDetail={() => setSelectedWalletId(w.id)} onEdit={(e) => handleStartEditWallet(w, e)} onDelete={() => handleDeleteWalletWithConfirm(w)}/>))}
               </div>
             </div>
 
@@ -502,11 +517,7 @@ export const WalletsView = () => {
                 </h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {bankWallets.map((w) => (<WalletCard key={w.id} wallet={w} onViewDetail={() => setSelectedWalletId(w.id)} onEdit={(e) => handleStartEditWallet(w, e)} onDelete={(e) => {
-                    if (confirm(`${t('wallets.deleteWalletConfirm', 'Bạn có chắc muốn xóa ví')} ${w.name}?`)) {
-                        deleteWallet(w.id);
-                    }
-                }}/>))}
+                {bankWallets.map((w) => (<WalletCard key={w.id} wallet={w} onViewDetail={() => setSelectedWalletId(w.id)} onEdit={(e) => handleStartEditWallet(w, e)} onDelete={() => handleDeleteWalletWithConfirm(w)}/>))}
               </div>
             </div>
 
@@ -519,11 +530,7 @@ export const WalletsView = () => {
                 </h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {creditWallets.map((w) => (<WalletCard key={w.id} wallet={w} onViewDetail={() => setSelectedWalletId(w.id)} onEdit={(e) => handleStartEditWallet(w, e)} onDelete={(e) => {
-                    if (confirm(`${t('wallets.deleteWalletConfirm', 'Bạn có chắc muốn xóa ví')} ${w.name}?`)) {
-                        deleteWallet(w.id);
-                    }
-                }}/>))}
+                {creditWallets.map((w) => (<WalletCard key={w.id} wallet={w} onViewDetail={() => setSelectedWalletId(w.id)} onEdit={(e) => handleStartEditWallet(w, e)} onDelete={() => handleDeleteWalletWithConfirm(w)}/>))}
               </div>
             </div>
 
@@ -536,11 +543,7 @@ export const WalletsView = () => {
                 </h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {savingsWallets.map((w) => (<WalletCard key={w.id} wallet={w} onViewDetail={() => setSelectedWalletId(w.id)} onEdit={(e) => handleStartEditWallet(w, e)} onDelete={(e) => {
-                    if (confirm(`${t('wallets.deleteWalletConfirm', 'Bạn có chắc muốn xóa ví')} ${w.name}?`)) {
-                        deleteWallet(w.id);
-                    }
-                }}/>))}
+                {savingsWallets.map((w) => (<WalletCard key={w.id} wallet={w} onViewDetail={() => setSelectedWalletId(w.id)} onEdit={(e) => handleStartEditWallet(w, e)} onDelete={() => handleDeleteWalletWithConfirm(w)}/>))}
               </div>
             </div>
           </div>

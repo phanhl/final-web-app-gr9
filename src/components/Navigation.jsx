@@ -122,7 +122,7 @@ export const Navigation = () => {
                 <span className="font-extrabold text-lg tracking-tight text-slate-900 dark:text-white">
                   FinTrack Pro
                 </span>
-                <span className="hidden sm:inline-block px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 rounded-full border border-emerald-200 dark:border-emerald-800">
+                <span className="hidden sm:inline-block px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 rounded border border-emerald-200 dark:border-emerald-800">
                   {t('app.tagline', 'Quản lý chi tiêu')}
                 </span>
               </div>
@@ -132,7 +132,7 @@ export const Navigation = () => {
             </div>
           </div>
 
-          <div className="hidden md:flex items-center space-x-4 bg-slate-50 dark:bg-slate-800/80 px-4 py-1.5 rounded-full border border-slate-100 dark:border-slate-700/80 text-xs">
+          <div className="hidden md:flex items-center space-x-4 bg-slate-50 dark:bg-slate-800/80 px-4 py-1.5 rounded-lg border border-slate-100 dark:border-slate-700/80 text-xs">
             <div>
               <span className="text-slate-500 dark:text-slate-400 mr-1.5">
                 {t('app.availableBalance', 'Số dư khả dụng:')}

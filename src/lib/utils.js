@@ -109,6 +109,90 @@ export function getLocalDateString(d = new Date()) {
     const day = String(d.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
 }
+
+/**
+ * Trích xuất YYYY-MM-DD theo giờ địa phương, không bị lùi ngày do UTC
+ */
+export function toLocalDateKey(dateStr) {
+    if (!dateStr) return '';
+    if (typeof dateStr === 'string' && (dateStr.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(dateStr))) {
+        const d = new Date(dateStr);
+        if (!isNaN(d.getTime())) {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+    }
+    return String(dateStr).split('T')[0];
+}
+
+/**
+ * Chuyển đổi timestamp thành định dạng YYYY-MM-DDTHH:mm cho input datetime-local
+ * Giữ nguyên chính xác giờ địa phương của người dùng, không bị lệch múi giờ.
+ */
+export function toLocalDateTimeInput(dateInput) {
+    if (!dateInput) {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const d = String(now.getDate()).padStart(2, '0');
+        const hh = String(now.getHours()).padStart(2, '0');
+        const mm = String(now.getMinutes()).padStart(2, '0');
+        return `${y}-${m}-${d}T${hh}:${mm}`;
+    }
+
+    if (typeof dateInput === 'string' && (dateInput.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(dateInput))) {
+        const d = new Date(dateInput);
+        if (!isNaN(d.getTime())) {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            const hh = String(d.getHours()).padStart(2, '0');
+            const mm = String(d.getMinutes()).padStart(2, '0');
+            return `${y}-${m}-${day}T${hh}:${mm}`;
+        }
+    }
+
+    if (typeof dateInput === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(dateInput)) {
+        return dateInput.slice(0, 16);
+    }
+
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) return '';
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return `${y}-${m}-${day}T${hh}:${mm}`;
+}
+
+/**
+ * Chuẩn hóa giá trị từ input datetime-local hoặc date picker để lưu trữ theo giờ địa phương
+ * Định dạng: 'YYYY-MM-DDTHH:mm:ss' (Local ISO, không gắn Z để tránh bị lùi múi giờ)
+ */
+export function normalizeSaveDate(dateInput) {
+    if (!dateInput) {
+        return toLocalDateTimeInput() + ':00';
+    }
+    if (typeof dateInput === 'string') {
+        if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(dateInput)) {
+            return `${dateInput}:00`;
+        }
+        if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(dateInput)) {
+            return dateInput;
+        }
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
+            const now = new Date();
+            const hh = String(now.getHours()).padStart(2, '0');
+            const mm = String(now.getMinutes()).padStart(2, '0');
+            const ss = String(now.getSeconds()).padStart(2, '0');
+            return `${dateInput}T${hh}:${mm}:${ss}`;
+        }
+    }
+    return toLocalDateTimeInput(dateInput) + ':00';
+}
 export function formatDisplayDate(dateStr) {
     if (!dateStr)
         return '';
@@ -160,14 +244,19 @@ export function calculateFinancialSummary(wallets, transactions, monthStr = '202
         .reduce((sum, w) => sum + w.balance, 0);
     // Net assets (Tổng tài sản) = Tiền mặt + Ngân hàng + Tiết kiệm - Dư nợ thẻ
     const totalAssets = availableBalance + totalSavings - totalCreditDebt;
-    // Monthly transactions
-    const currentMonthTxs = transactions.filter((t) => t.date.startsWith(monthStr));
+    // Monthly transactions - strictly up to today (no future transactions exist)
+    const todayKey = getLocalDateString();
+    const currentMonthTxs = transactions.filter((t) => {
+        const d = toLocalDateKey(t.date);
+        return d.startsWith(monthStr) && d <= todayKey;
+    });
     const monthlyIncome = currentMonthTxs
         .filter((t) => t.type === 'INCOME')
         .reduce((sum, t) => sum + t.amount, 0);
     const monthlyExpense = currentMonthTxs
         .filter((t) => t.type === 'EXPENSE')
         .reduce((sum, t) => sum + t.amount, 0);
+
     const netSavingsThisMonth = monthlyIncome - monthlyExpense;
     const savingsRate = monthlyIncome > 0 ? Math.max(0, Math.round((netSavingsThisMonth / monthlyIncome) * 100)) : 0;
     return {
@@ -182,7 +271,11 @@ export function calculateFinancialSummary(wallets, transactions, monthStr = '202
     };
 }
 export function calculateBudgetStatuses(budgets, transactions, monthStr = '2026-09') {
-    const currentMonthExpenses = transactions.filter((t) => t.type === 'EXPENSE' && t.date.startsWith(monthStr));
+    const todayKey = getLocalDateString();
+    const currentMonthExpenses = transactions.filter((t) => {
+        const d = toLocalDateKey(t.date);
+        return t.type === 'EXPENSE' && d.startsWith(monthStr) && d <= todayKey;
+    });
     return budgets.map((b) => {
         const spent = currentMonthExpenses
             .filter((t) => t.categoryId === b.categoryId)

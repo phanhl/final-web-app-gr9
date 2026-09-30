@@ -747,7 +747,7 @@ export const WhatIfSimulatorView = () => {
     formatter={(val) => formatCurrency(Number(val))} contentStyle={{
             backgroundColor: '#0f172a',
             borderColor: '#334155',
-            borderRadius: '12px',
+            borderRadius: '4px',
             color: '#fff',
             fontSize: '11px',
         }}/>

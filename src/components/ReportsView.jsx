@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { BarChart3, PieChart as PieChartIcon, TrendingUp, Calendar, FileSpreadsheet, FileText, } from 'lucide-react';
-import { formatCurrency, formatDate, exportToCSV, exportToExcel, formatCompactNumber, formatMonthLabel, } from '@/lib/utils';
+import { formatCurrency, formatDate, exportToCSV, exportToExcel, formatCompactNumber, formatMonthLabel, toLocalDateKey, } from '@/lib/utils';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis, AreaChart, Area, } from 'recharts';
 const pieChartColors = ['#f97316', '#ec4899', '#8b5cf6', '#0ea5e9', '#eab308', '#10b981', '#64748b', '#ef4444'];
 export const ReportsView = () => {
@@ -18,7 +18,7 @@ export const ReportsView = () => {
     // Filter transactions according to selected period
     const filteredTxs = useMemo(() => {
         return transactions.filter((tx) => {
-            const txDate = tx.date.split('T')[0];
+            const txDate = toLocalDateKey(tx.date);
             if (selectedPeriod === 'ALL') {
                 return true;
             }
@@ -97,7 +97,7 @@ export const ReportsView = () => {
             monthList.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
         }
         return monthList.map((mo) => {
-            const monthTxs = transactions.filter((t) => t.date.startsWith(mo));
+            const monthTxs = transactions.filter((t) => toLocalDateKey(t.date).startsWith(mo));
             const inc = monthTxs.filter((t) => t.type === 'INCOME').reduce((s, t) => s + t.amount, 0);
             const exp = monthTxs.filter((t) => t.type === 'EXPENSE').reduce((s, t) => s + t.amount, 0);
             return {
@@ -112,10 +112,10 @@ export const ReportsView = () => {
     const dailyBreakdownData = useMemo(() => {
         if (selectedPeriod === 'ALL' || selectedPeriod === 'THIS_YEAR' || selectedPeriod === 'CUSTOM')
             return [];
-        const monthTxs = transactions.filter((t) => t.date.startsWith(selectedPeriod));
+        const monthTxs = transactions.filter((t) => toLocalDateKey(t.date).startsWith(selectedPeriod));
         const dayMap = {};
         monthTxs.forEach((t) => {
-            const dStr = t.date.split('T')[0];
+            const dStr = toLocalDateKey(t.date);
             const dayLabel = `${dStr.slice(8, 10)}/${dStr.slice(5, 7)}`;
             if (!dayMap[dayLabel]) {
                 dayMap[dayLabel] = { Thu: 0, Chi: 0, dateStr: dStr };
@@ -589,7 +589,7 @@ export const ReportsView = () => {
     formatter={(val) => formatCurrency(Number(val))} contentStyle={{
             backgroundColor: '#1e293b',
             borderColor: '#334155',
-            borderRadius: '12px',
+            borderRadius: '4px',
             color: '#fff',
             fontSize: '12px',
         }}/>

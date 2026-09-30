@@ -1,12 +1,12 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
-import { X, Upload, Plus, AlertTriangle } from 'lucide-react';
+import { X, Upload, Plus, AlertTriangle, FileSpreadsheet } from 'lucide-react';
 import { POPULAR_TAGS } from '@/lib/mock-data';
 import { IconHelper } from './IconHelper';
-import { formatCurrency, checkWalletSufficientFunds, getWalletAvailableBalance, numberToVietnameseWords, formatNumberWithDots } from '@/lib/utils';
+import { formatCurrency, checkWalletSufficientFunds, getWalletAvailableBalance, numberToVietnameseWords, formatNumberWithDots, toLocalDateTimeInput, normalizeSaveDate, toLocalDateKey, getLocalDateString } from '@/lib/utils';
 export const QuickAddModal = () => {
-    const { quickAddOpen, setQuickAddOpen, quickAddDefaultType, quickAddDefaultWalletId, wallets, categories, currentMonth, setCurrentMonth, addTransaction, language, t, tCategory, tWalletType, } = useApp();
+    const { quickAddOpen, setQuickAddOpen, quickAddDefaultType, quickAddDefaultWalletId, openStatementModal, wallets, categories, currentMonth, setCurrentMonth, addTransaction, language, t, tCategory, tWalletType, } = useApp();
     const [type, setType] = useState('EXPENSE');
     const [amount, setAmount] = useState('');
     const [categoryId, setCategoryId] = useState('');
@@ -25,7 +25,7 @@ export const QuickAddModal = () => {
                 ? quickAddDefaultWalletId
                 : (wallets[0]?.id || '');
             setWalletId(targetWalletId);
-            setDate(new Date().toISOString().slice(0, 16));
+            setDate(toLocalDateTimeInput());
             setNote('');
             setTags([]);
             setReceiptImage(undefined);
@@ -75,7 +75,12 @@ export const QuickAddModal = () => {
             alert(fundValidation.errorMessage || 'Số dư ví không đủ để thực hiện giao dịch!');
             return;
         }
-        const txDate = new Date(date || Date.now()).toISOString();
+        const txDate = normalizeSaveDate(date);
+        const todayKey = getLocalDateString();
+        if (toLocalDateKey(txDate) > todayKey) {
+            alert(t('qa.noFutureDate', 'Không thể tạo giao dịch cho ngày trong tương lai (chưa đến ngày)! Vui lòng chọn ngày hôm nay hoặc trước đó.'));
+            return;
+        }
         const txMonth = txDate.slice(0, 7);
         if (txMonth && txMonth !== currentMonth) {
             setCurrentMonth(txMonth);
@@ -98,7 +103,7 @@ export const QuickAddModal = () => {
     };
     const filteredCategories = categories.filter((c) => c.type === (type === 'INCOME' ? 'INCOME' : 'EXPENSE'));
     return (<div className="fixed inset-0 z-50 flex items-end lg:items-center justify-center bg-black/60 backdrop-blur-sm overflow-hidden">
-      <div className="relative w-full max-w-xl lg:max-w-2xl bg-white dark:bg-slate-900 lg:rounded-2xl lg:my-6 rounded-t-3xl shadow-2xl overflow-hidden max-h-[92vh] lg:max-h-[85vh] flex flex-col border border-transparent dark:border-slate-800">
+      <div className="relative w-full max-w-xl lg:max-w-2xl bg-white dark:bg-slate-900 lg:rounded-2xl lg:my-6 rounded-t-xl shadow-2xl overflow-hidden max-h-[92vh] lg:max-h-[85vh] flex flex-col border border-transparent dark:border-slate-800">
         {/* Modal Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
           <div className="flex items-center gap-2">
@@ -114,7 +119,27 @@ export const QuickAddModal = () => {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-5 space-y-5 overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto">
+          {/* Lối tắt tải sao kê ngân hàng */}
+          <div className="flex items-center justify-between p-2.5 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl border border-emerald-200 dark:border-emerald-800/60">
+            <div className="flex items-center gap-2">
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span className="text-xs text-emerald-900 dark:text-emerald-200 font-medium">
+                Có file sao kê Excel / CSV từ ngân hàng?
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setQuickAddOpen(false);
+                openStatementModal(walletId);
+              }}
+              className="text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:text-emerald-800 dark:hover:text-emerald-200 underline cursor-pointer shrink-0"
+            >
+              Tải sao kê lên ➜
+            </button>
+          </div>
+
           {/* Type switcher */}
           <div className="grid grid-cols-2 gap-1 bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-xl">
             <button type="button" onClick={() => {
@@ -239,7 +264,7 @@ export const QuickAddModal = () => {
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
                 {t('qa.dateTime', 'Ngày & Giờ')}
               </label>
-              <input type="datetime-local" value={date} onChange={(e) => setDate(e.target.value)} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"/>
+              <input type="datetime-local" max={toLocalDateTimeInput()} value={date} onChange={(e) => setDate(e.target.value)} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"/>
             </div>
 
             <div>

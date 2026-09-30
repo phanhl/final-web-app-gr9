@@ -11,6 +11,7 @@ import { ReportsView } from '@/components/ReportsView';
 import { WalletsView } from '@/components/WalletsView';
 import { SettingsView } from '@/components/SettingsView';
 import { QuickAddModal } from '@/components/QuickAddModal';
+import { BankStatementModal } from '@/components/BankStatementModal';
 function MainContent() {
     const { activeTab } = useApp();
     return (<div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col">
@@ -28,6 +29,7 @@ function MainContent() {
       </main>
 
       <QuickAddModal />
+      <BankStatementModal />
 
       {/* Footer chỉ hiện trên desktop */}
       <footer className="hidden lg:block border-t border-slate-100 dark:border-slate-800/80 bg-white/50 dark:bg-slate-900/50 py-6 text-center text-xs text-slate-500 dark:text-slate-400 print:hidden">

@@ -2,13 +2,13 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Search, Filter, ArrowDownLeft, ArrowUpRight, ArrowRightLeft, Calendar, FileSpreadsheet, Plus, Edit2, Trash2, FileCheck, X, Upload, BarChart3, AlertTriangle, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, } from 'lucide-react';
-import { formatCurrency, formatDate, exportToCSV, exportToExcel, formatNumberWithDots, formatMonthLabel } from '@/lib/utils';
+import { formatCurrency, formatDate, exportToCSV, exportToExcel, formatNumberWithDots, formatMonthLabel, toLocalDateTimeInput, normalizeSaveDate, toLocalDateKey, getLocalDateString } from '@/lib/utils';
 import { POPULAR_TAGS } from '@/lib/mock-data';
 import { ReceiptModal } from './ReceiptModal';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, } from 'recharts';
 const pieChartColors = ['#f97316', '#ec4899', '#8b5cf6', '#0ea5e9', '#eab308', '#10b981', '#64748b', '#ef4444'];
 export const TransactionsView = () => {
-    const { transactions, wallets, categories, budgets, financialSummary, currentMonth, availableMonths, openQuickAdd, deleteTransaction, navTargetCategoryId, setNavTargetCategoryId, language, t, tCategory, tWalletType, } = useApp();
+    const { transactions, wallets, categories, budgets, financialSummary, currentMonth, availableMonths, openQuickAdd, openStatementModal, deleteTransaction, navTargetCategoryId, setNavTargetCategoryId, language, t, tCategory, tWalletType, } = useApp();
     const [showCharts, setShowCharts] = useState(true);
     // Search & Filters State
     const [searchTerm, setSearchTerm] = useState('');
@@ -62,10 +62,14 @@ export const TransactionsView = () => {
     }, [searchTerm, selectedType, selectedWallet, selectedCategory, selectedTag, startDate, endDate, selectedMonth]);
     // Filter logic
     const filteredTransactions = useMemo(() => {
+        const todayKey = getLocalDateString();
         return transactions.filter((tx) => {
+            // Never show transactions from the future (chưa đến ngày thì không có giao dịch)
+            if (toLocalDateKey(tx.date) > todayKey)
+                return false;
             // Month filter (applied when no custom date range is specified)
             if (selectedMonth !== 'ALL' && !startDate && !endDate) {
-                if (!tx.date.startsWith(selectedMonth))
+                if (!toLocalDateKey(tx.date).startsWith(selectedMonth))
                     return false;
             }
             // Type
@@ -84,12 +88,12 @@ export const TransactionsView = () => {
                 return false;
             // Date Range
             if (startDate) {
-                const txDate = tx.date.split('T')[0];
+                const txDate = toLocalDateKey(tx.date);
                 if (txDate < startDate)
                     return false;
             }
             if (endDate) {
-                const txDate = tx.date.split('T')[0];
+                const txDate = toLocalDateKey(tx.date);
                 if (txDate > endDate)
                     return false;
             }
@@ -251,7 +255,7 @@ export const TransactionsView = () => {
     const groupedTransactions = useMemo(() => {
         const groups = {};
         visibleTransactions.forEach((tx) => {
-            const dateKey = tx.date.split('T')[0];
+            const dateKey = toLocalDateKey(tx.date);
             if (!groups[dateKey]) {
                 groups[dateKey] = [];
             }
@@ -321,6 +325,11 @@ export const TransactionsView = () => {
           <button onClick={() => exportToExcel(filteredTransactions, budgets, wallets, financialSummary)} className="flex items-center space-x-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors cursor-pointer" title="Excel">
             <FileSpreadsheet className="w-4 h-4"/>
             <span>{t('tx.exportExcel', 'Xuất Excel (.xlsx)')}</span>
+          </button>
+
+          <button onClick={() => openStatementModal()} className="flex items-center space-x-1.5 px-3.5 py-2 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-300 dark:border-emerald-700/60 text-emerald-700 dark:text-emerald-300 rounded-xl text-xs font-bold shadow-sm transition-colors cursor-pointer" title="Tải file sao kê ngân hàng Excel / CSV để cộng trừ tự động">
+            <Upload className="w-4 h-4 text-emerald-600 dark:text-emerald-400"/>
+            <span>{t('tx.importStatement', 'Tải sao kê lên')}</span>
           </button>
 
           <button onClick={() => openQuickAdd('EXPENSE')} className="flex items-center space-x-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors cursor-pointer">
@@ -714,6 +723,7 @@ export const TransactionsView = () => {
               <option value="ALL">{t('tx.allTypes', 'Tất cả loại giao dịch')}</option>
               <option value="EXPENSE">{t('qa.expense', 'Khoản chi')}</option>
               <option value="INCOME">{t('qa.income', 'Khoản thu')}</option>
+              <option value="TRANSFER">{t('tx.transfer', 'Chuyển tiền nội bộ')}</option>
             </select>
           </div>
 
@@ -751,12 +761,12 @@ export const TransactionsView = () => {
         {/* Tag Pills */}
         {allTags.length > 0 && (<div className="flex items-center space-x-1.5 overflow-x-auto no-scrollbar pt-1">
             <span className="text-[11px] font-semibold text-slate-400 shrink-0">{t('qa.tags', 'Nhãn')}:</span>
-            <button onClick={() => setSelectedTag('ALL')} className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium shrink-0 transition-colors ${selectedTag === 'ALL'
+            <button onClick={() => setSelectedTag('ALL')} className={`px-2.5 py-0.5 rounded text-[11px] font-medium shrink-0 transition-colors ${selectedTag === 'ALL'
                 ? 'bg-blue-600 text-white'
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
               {t('common.all', 'Tất cả')}
             </button>
-            {allTags.map((tag) => (<button key={tag} onClick={() => setSelectedTag(tag)} className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium shrink-0 transition-colors ${selectedTag === tag
+            {allTags.map((tag) => (<button key={tag} onClick={() => setSelectedTag(tag)} className={`px-2.5 py-0.5 rounded text-[11px] font-medium shrink-0 transition-colors ${selectedTag === tag
                     ? 'bg-blue-600 text-white'
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'}`}>
                 #{tag}
@@ -771,7 +781,7 @@ export const TransactionsView = () => {
             <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
               {t('tx.listTitle', 'Danh sách giao dịch')}
             </h3>
-            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
               {filteredTransactions.length > visibleCount
             ? `${visibleTransactions.length} / ${filteredTransactions.length}`
             : `${filteredTransactions.length}`}
@@ -828,12 +838,19 @@ export const TransactionsView = () => {
                       </div>
 
                       <div className="truncate">
-                        <div className="flex items-center space-x-2">
+                        <div className="flex flex-wrap items-center gap-1.5">
                           <span className="font-bold text-sm text-slate-900 dark:text-white truncate">
                             {tx.type === 'TRANSFER'
                     ? `${t('tx.transferTo', 'Chuyển sang:')} ${tx.toWalletName || t('nav.wallets', 'Ví')}`
                     : tCategory(tx.categoryName || 'Khác')}
                           </span>
+
+                          {/* Transfer Badge (Blue) */}
+                          {tx.type === 'TRANSFER' && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                              {t('tx.transferBadge', 'Chuyển tiền nội bộ')}
+                            </span>
+                          )}
 
                           {/* Receipt Badge */}
                           {tx.receiptImage && (<button onClick={() => setReceiptToView(tx.receiptImage || null)} className="flex items-center space-x-1 px-1.5 py-0.5 bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 rounded text-[10px] font-bold hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors cursor-pointer" title="Receipt">
@@ -946,17 +963,21 @@ const EditTransactionModal = ({ isOpen, onClose, transaction, }) => {
     const [amount, setAmount] = useState(0);
     const [categoryId, setCategoryId] = useState('');
     const [walletId, setWalletId] = useState('');
+    const [toWalletId, setToWalletId] = useState('');
+    const [fee, setFee] = useState(0);
     const [date, setDate] = useState('');
     const [note, setNote] = useState('');
     const [tags, setTags] = useState([]);
     const [receiptImage, setReceiptImage] = useState(undefined);
     useEffect(() => {
         if (transaction) {
-            setType(transaction.type === 'INCOME' ? 'INCOME' : 'EXPENSE');
+            setType(transaction.type || 'EXPENSE');
             setAmount(transaction.amount);
             setCategoryId(transaction.categoryId || '');
             setWalletId(transaction.walletId || (wallets[0]?.id ?? ''));
-            setDate(transaction.date ? transaction.date.slice(0, 16) : new Date().toISOString().slice(0, 16));
+            setToWalletId(transaction.toWalletId || (wallets.find((w) => w.id !== transaction.walletId)?.id || wallets[0]?.id || ''));
+            setFee(transaction.fee || 0);
+            setDate(toLocalDateTimeInput(transaction.date));
             setNote(transaction.note || '');
             setTags(transaction.tags || []);
             setReceiptImage(transaction.receiptImage);
@@ -987,16 +1008,30 @@ const EditTransactionModal = ({ isOpen, onClose, transaction, }) => {
             alert(t('qa.invalidAmount', 'Vui lòng nhập số tiền hợp lệ'));
             return;
         }
+        if (type === 'TRANSFER' && walletId === toWalletId) {
+            alert('Ví nhận phải khác ví chuyển!');
+            return;
+        }
         const selectedWallet = wallets.find((w) => w.id === walletId);
+        const selectedToWallet = wallets.find((w) => w.id === toWalletId);
         const selectedCategory = categories.find((c) => c.id === categoryId);
+        const savedDate = normalizeSaveDate(date);
+        const todayKey = getLocalDateString();
+        if (toLocalDateKey(savedDate) > todayKey) {
+            alert(t('tx.noFutureDate', 'Không thể đặt ngày giao dịch trong tương lai (chưa đến ngày)! Vui lòng chọn ngày hôm nay hoặc trước đó.'));
+            return;
+        }
         const success = editTransaction(transaction.id, {
             type,
             amount: Number(amount),
-            categoryId,
-            categoryName: selectedCategory?.name || tCategory('Khác'),
+            categoryId: type === 'TRANSFER' ? 'cat-transfer' : categoryId,
+            categoryName: type === 'TRANSFER' ? 'Chuyển khoản nội bộ' : (selectedCategory?.name || tCategory('Khác')),
             walletId,
             walletName: selectedWallet?.name,
-            date: new Date(date).toISOString(),
+            toWalletId: type === 'TRANSFER' ? toWalletId : undefined,
+            toWalletName: type === 'TRANSFER' ? (selectedToWallet?.name || 'Ví nhận') : undefined,
+            fee: type === 'TRANSFER' ? Number(fee) || 0 : 0,
+            date: savedDate,
             note,
             tags,
             receiptImage,
@@ -1025,19 +1060,32 @@ const EditTransactionModal = ({ isOpen, onClose, transaction, }) => {
         </div>
 
         <div className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
-          {/* Type Selector */}
-          <div className="grid grid-cols-2 gap-2 bg-slate-100 dark:bg-slate-800/60 p-1.5 rounded-xl">
-            <button type="button" onClick={() => setType('EXPENSE')} className={`py-2 text-sm font-semibold rounded-lg transition-all cursor-pointer ${type === 'EXPENSE'
+          {/* Type Selector (3 tabs) */}
+          <div className="grid grid-cols-3 gap-2 bg-slate-100 dark:bg-slate-800/60 p-1.5 rounded-xl">
+            <button type="button" onClick={() => setType('EXPENSE')} className={`py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all cursor-pointer ${type === 'EXPENSE'
             ? 'bg-rose-500 text-white shadow-sm'
             : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>
               {t('qa.expense', 'Khoản chi')}
             </button>
-            <button type="button" onClick={() => setType('INCOME')} className={`py-2 text-sm font-semibold rounded-lg transition-all cursor-pointer ${type === 'INCOME'
+            <button type="button" onClick={() => setType('INCOME')} className={`py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all cursor-pointer ${type === 'INCOME'
             ? 'bg-emerald-500 text-white shadow-sm'
             : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>
               {t('qa.income', 'Khoản thu')}
             </button>
+            <button type="button" onClick={() => setType('TRANSFER')} className={`py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all cursor-pointer ${type === 'TRANSFER'
+            ? 'bg-blue-600 text-white shadow-sm'
+            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>
+              {t('tx.transfer', 'Chuyển tiền')}
+            </button>
           </div>
+
+          {/* Explanation if TRANSFER */}
+          {type === 'TRANSFER' && (<div className="p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/50 rounded-xl text-xs text-blue-700 dark:text-blue-300">
+              <p className="font-semibold">💡 Khoản tiền màu xanh (Chuyển tiền nội bộ):</p>
+              <p className="mt-0.5">
+                Đây là giao dịch luân chuyển giữa các ví của bạn. Khoản này hiển thị màu xanh dương vì không làm thay đổi tổng tài sản ròng và không tính vào doanh thu / chi phí sinh hoạt.
+              </p>
+            </div>)}
 
           {/* Amount */}
           <div>
@@ -1059,38 +1107,70 @@ const EditTransactionModal = ({ isOpen, onClose, transaction, }) => {
             </div>
           </div>
 
-          {/* Wallet & Category */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                {t('qa.wallet', 'Ví thanh toán')}
-              </label>
-              <select value={walletId} onChange={(e) => setWalletId(e.target.value)} className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm">
-                {wallets.map((w) => (<option key={w.id} value={w.id}>
-                    {w.name} ({tWalletType(w.type)})
-                  </option>))}
-              </select>
-            </div>
+          {/* Wallet & Category / Source & Dest */}
+          {type === 'TRANSFER' ? (<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                  Ví chuyển (Nguồn)
+                </label>
+                <select value={walletId} onChange={(e) => setWalletId(e.target.value)} className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm">
+                  {wallets.map((w) => (<option key={w.id} value={w.id}>
+                      {w.name} ({tWalletType(w.type)})
+                    </option>))}
+                </select>
+              </div>
 
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                {t('qa.category', 'Danh mục')}
-              </label>
-              <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm">
-                <option value="">-- {t('qa.selectCategory', 'Chọn danh mục')} --</option>
-                {filteredCategories.map((c) => (<option key={c.id} value={c.id}>
-                    {tCategory(c.name)}
-                  </option>))}
-              </select>
-            </div>
-          </div>
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                  Ví nhận (Đích)
+                </label>
+                <select value={toWalletId} onChange={(e) => setToWalletId(e.target.value)} className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm">
+                  {wallets.map((w) => (<option key={w.id} value={w.id}>
+                      {w.name} ({tWalletType(w.type)})
+                    </option>))}
+                </select>
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                  Phí chuyển khoản (VNĐ)
+                </label>
+                <input type="text" inputMode="numeric" value={fee ? formatNumberWithDots(fee) : ''} onChange={(e) => {
+                const cleaned = e.target.value.replace(/\D/g, '');
+                setFee(cleaned ? Number(cleaned) : 0);
+            }} placeholder="0" className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"/>
+              </div>
+            </div>) : (<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                  {t('qa.wallet', 'Ví thanh toán')}
+                </label>
+                <select value={walletId} onChange={(e) => setWalletId(e.target.value)} className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm">
+                  {wallets.map((w) => (<option key={w.id} value={w.id}>
+                      {w.name} ({tWalletType(w.type)})
+                    </option>))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                  {t('qa.category', 'Danh mục')}
+                </label>
+                <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm">
+                  <option value="">-- {t('qa.selectCategory', 'Chọn danh mục')} --</option>
+                  {filteredCategories.map((c) => (<option key={c.id} value={c.id}>
+                      {tCategory(c.name)}
+                    </option>))}
+                </select>
+              </div>
+            </div>)}
 
           {/* Date & Time */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
               {t('qa.date', 'Thời gian giao dịch')}
             </label>
-            <input type="datetime-local" value={date} onChange={(e) => setDate(e.target.value)} className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"/>
+            <input type="datetime-local" max={toLocalDateTimeInput()} value={date} onChange={(e) => setDate(e.target.value)} className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"/>
           </div>
 
           {/* Note */}

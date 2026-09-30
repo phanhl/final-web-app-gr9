@@ -1,7 +1,7 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { INITIAL_WALLETS, INITIAL_TRANSACTIONS, INITIAL_BUDGETS, INITIAL_BILLS, INITIAL_GOALS, INITIAL_PLANNER, DEFAULT_CATEGORIES, INITIAL_SIMULATOR_CONFIG, } from '@/lib/mock-data';
-import { calculateFinancialSummary, checkWalletSufficientFunds, formatCurrency, getLocalDateString } from '@/lib/utils';
+import { calculateFinancialSummary, checkWalletSufficientFunds, formatCurrency, getLocalDateString, toLocalDateKey, normalizeSaveDate } from '@/lib/utils';
 import { translate, translateCategory, translateWalletType } from '@/lib/i18n';
 const AppContext = createContext(undefined);
 const STORAGE_KEY = 'quan_ly_chi_tieu_data_v2';
@@ -19,6 +19,8 @@ export const AppProvider = ({ children }) => {
     const [quickAddOpen, setQuickAddOpen] = useState(false);
     const [quickAddDefaultType, setQuickAddDefaultType] = useState('EXPENSE');
     const [quickAddDefaultWalletId, setQuickAddDefaultWalletId] = useState(undefined);
+    const [statementModalOpen, setStatementModalOpen] = useState(false);
+    const [statementDefaultWalletId, setStatementDefaultWalletId] = useState(undefined);
     const [serverSyncStatus, setServerSyncStatus] = useState('synced');
     // User Profile
     const [userProfile, setUserProfile] = useState({
@@ -225,8 +227,10 @@ export const AppProvider = ({ children }) => {
             return;
         if (d.wallets)
             setWallets(d.wallets);
-        if (d.transactions)
-            setTransactions(d.transactions);
+        if (d.transactions) {
+            const cleanTxs = d.transactions.filter(t => (Number(t.amount) || 0) < 100_000_000_000);
+            setTransactions(cleanTxs);
+        }
         if (d.categories)
             setCategories(d.categories);
         if (d.budgets)
@@ -314,6 +318,9 @@ export const AppProvider = ({ children }) => {
                 const saved = localStorage.getItem(STORAGE_KEY);
                 if (saved) {
                     localData = JSON.parse(saved);
+                    if (localData && Array.isArray(localData.transactions)) {
+                        localData.transactions = localData.transactions.filter(t => (Number(t.amount) || 0) < 100_000_000_000);
+                    }
                 }
             }
             catch (e) {
@@ -535,6 +542,14 @@ export const AppProvider = ({ children }) => {
         setQuickAddDefaultWalletId(defaultWalletId);
         setQuickAddOpen(true);
     };
+    const openStatementModal = (defaultWalletId) => {
+        setStatementDefaultWalletId(defaultWalletId);
+        setStatementModalOpen(true);
+    };
+    const closeStatementModal = () => {
+        setStatementModalOpen(false);
+        setStatementDefaultWalletId(undefined);
+    };
     // Financial summary
     const financialSummary = calculateFinancialSummary(wallets, transactions, currentMonth);
     // Available distinct months from all transactions + currentMonth
@@ -553,6 +568,13 @@ export const AppProvider = ({ children }) => {
         });
         return Array.from(set).sort((a, b) => b.localeCompare(a));
     }, [transactions, currentMonth]);
+    // Helper: Determine if transaction date is effective as of today (wall-clock local date)
+    const isTxEffective = (dateStr) => {
+        if (!dateStr) return true;
+        const txDateKey = toLocalDateKey(dateStr);
+        const todayKey = getLocalDateString();
+        return txDateKey <= todayKey;
+    };
     // Add Transaction
     const addTransaction = (tx) => {
         // 1. Validate funds for EXPENSE and TRANSFER to prevent negative balance
@@ -567,79 +589,192 @@ export const AppProvider = ({ children }) => {
         }
         const id = `tx-${Date.now()}`;
         const createdAt = new Date().toISOString();
+        const txDate = tx.date ? normalizeSaveDate(tx.date) : normalizeSaveDate();
+        const todayKey = getLocalDateString();
+        if (toLocalDateKey(txDate) > todayKey) {
+            alert('Không thể ghi nhận giao dịch cho ngày trong tương lai (chưa đến ngày)!');
+            return false;
+        }
         const newTx = {
             ...tx,
+            date: txDate,
             id,
             createdAt,
         };
-        // Update wallet balances with credit card logic & non-negative floor
-        setWallets((prevWallets) => prevWallets.map((w) => {
-            if (tx.type === 'EXPENSE' && w.id === tx.walletId) {
-                if (w.type === 'CREDIT') {
-                    return { ...w, balance: w.balance + tx.amount };
-                }
-                return { ...w, balance: Math.max(0, w.balance - tx.amount) };
-            }
-            if (tx.type === 'INCOME' && w.id === tx.walletId) {
-                if (w.type === 'CREDIT') {
-                    return { ...w, balance: Math.max(0, w.balance - tx.amount) };
-                }
-                return { ...w, balance: w.balance + tx.amount };
-            }
-            if (tx.type === 'TRANSFER') {
-                if (w.id === tx.walletId) {
+        // Update wallet balances with mathematical integrity (no artificial clamping)
+        // ONLY update wallet balance if the transaction date has arrived (date <= today)
+        if (isTxEffective(newTx.date)) {
+            setWallets((prevWallets) => prevWallets.map((w) => {
+                if (newTx.type === 'EXPENSE' && w.id === newTx.walletId) {
                     if (w.type === 'CREDIT') {
-                        return { ...w, balance: w.balance + (tx.amount + (tx.fee || 0)) };
+                        return { ...w, balance: w.balance + newTx.amount };
                     }
-                    return { ...w, balance: Math.max(0, w.balance - (tx.amount + (tx.fee || 0))) };
+                    return { ...w, balance: w.balance - newTx.amount };
                 }
-                if (w.id === tx.toWalletId) {
+                if (newTx.type === 'INCOME' && w.id === newTx.walletId) {
                     if (w.type === 'CREDIT') {
-                        return { ...w, balance: Math.max(0, w.balance - tx.amount) };
+                        return { ...w, balance: w.balance - newTx.amount };
                     }
-                    return { ...w, balance: w.balance + tx.amount };
+                    return { ...w, balance: w.balance + newTx.amount };
                 }
+                if (newTx.type === 'TRANSFER') {
+                    if (w.id === newTx.walletId) {
+                        if (w.type === 'CREDIT') {
+                            return { ...w, balance: w.balance + (newTx.amount + (newTx.fee || 0)) };
+                        }
+                        return { ...w, balance: w.balance - (newTx.amount + (newTx.fee || 0)) };
+                    }
+                    if (w.id === newTx.toWalletId) {
+                        if (w.type === 'CREDIT') {
+                            return { ...w, balance: w.balance - newTx.amount };
+                        }
+                        return { ...w, balance: w.balance + newTx.amount };
+                    }
+                }
+                return w;
+            }));
+        }
+        setTransactions((prev) => [newTx, ...prev]);
+        return true;
+    };
+    // Import Bank Statement Transactions in Batch
+    const importBankStatementTransactions = ({
+        transactionsToImport,
+        walletId,
+        balanceAdjustmentMode = 'NET_CHANGE',
+        exactClosingBalance = null,
+    }) => {
+        if (!transactionsToImport || transactionsToImport.length === 0) {
+            return { success: false, message: 'Không có giao dịch nào được chọn để nạp' };
+        }
+        const targetWallet = wallets.find((w) => w.id === walletId);
+        if (!targetWallet) {
+            return { success: false, message: 'Không tìm thấy ví tương ứng' };
+        }
+
+        let totalIncome = 0;
+        let totalExpense = 0;
+
+        const newTxList = transactionsToImport.map((tx, idx) => {
+            const amount = Number(tx.amount) || 0;
+            if (tx.type === 'INCOME') totalIncome += amount;
+            if (tx.type === 'EXPENSE') totalExpense += amount;
+
+            return {
+                id: `tx-st-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
+                type: tx.type,
+                amount,
+                categoryId: tx.categoryId,
+                categoryName: tx.categoryName,
+                walletId: targetWallet.id,
+                walletName: targetWallet.name,
+                date: tx.date || new Date().toISOString(),
+                note: tx.note || 'Sao kê ngân hàng',
+                tags: Array.isArray(tx.tags) && tx.tags.length > 0 ? tx.tags : ['Sao kê'],
+                createdAt: new Date().toISOString(),
+            };
+        });
+
+        const netChange = totalIncome - totalExpense;
+        const oldBalance = targetWallet.balance;
+        let newBalance = oldBalance;
+
+        if (balanceAdjustmentMode === 'SET_EXACT' && exactClosingBalance !== null && !isNaN(Number(exactClosingBalance))) {
+            newBalance = Math.max(0, Number(exactClosingBalance));
+        } else {
+            if (targetWallet.type === 'CREDIT') {
+                newBalance = Math.max(0, oldBalance + totalExpense - totalIncome);
+            } else {
+                newBalance = Math.max(0, oldBalance + netChange);
+            }
+        }
+
+        setWallets((prev) => prev.map((w) => {
+            if (w.id === targetWallet.id) {
+                return { ...w, balance: newBalance };
             }
             return w;
         }));
-        setTransactions((prev) => [newTx, ...prev]);
-        return true;
+
+        setTransactions((prev) => [...newTxList, ...prev]);
+
+        if (newTxList.length > 0) {
+            const latestTxMonth = newTxList[0].date.slice(0, 7);
+            if (latestTxMonth && /^\d{4}-\d{2}$/.test(latestTxMonth)) {
+                setCurrentMonth(latestTxMonth);
+            }
+        }
+
+        return {
+            success: true,
+            count: newTxList.length,
+            totalIncome,
+            totalExpense,
+            walletName: targetWallet.name,
+        };
     };
     // Edit Transaction
     const editTransaction = (id, updated) => {
         const oldTx = transactions.find((t) => t.id === id);
         if (!oldTx)
             return false;
-        // Rollback old transaction on wallets
+        const newTx = { ...oldTx, ...updated };
+        if (newTx.date) {
+            newTx.date = normalizeSaveDate(newTx.date);
+        }
+        const todayKey = getLocalDateString();
+        if (toLocalDateKey(newTx.date) > todayKey) {
+            alert('Không thể đặt ngày giao dịch trong tương lai (chưa đến ngày)!');
+            return false;
+        }
+        if (newTx.type === 'TRANSFER') {
+            if (newTx.walletId === newTx.toWalletId) {
+                alert('Ví nhận phải khác ví chuyển!');
+                return false;
+            }
+            const destW = wallets.find((w) => w.id === newTx.toWalletId);
+            newTx.toWalletName = destW?.name || newTx.toWalletName;
+        } else {
+            delete newTx.toWalletId;
+            delete newTx.toWalletName;
+            newTx.fee = 0;
+        }
+
+        const oldEffective = isTxEffective(oldTx.date);
+        const newEffective = isTxEffective(newTx.date);
+
+        // Rollback old transaction on wallets ONLY if it was effective as of today
         let adjustedWallets = [...wallets];
-        adjustedWallets = adjustedWallets.map((w) => {
-            if (oldTx.type === 'EXPENSE' && w.id === oldTx.walletId) {
-                if (w.type === 'CREDIT')
-                    return { ...w, balance: Math.max(0, w.balance - oldTx.amount) };
-                return { ...w, balance: w.balance + oldTx.amount };
-            }
-            if (oldTx.type === 'INCOME' && w.id === oldTx.walletId) {
-                if (w.type === 'CREDIT')
-                    return { ...w, balance: w.balance + oldTx.amount };
-                return { ...w, balance: Math.max(0, w.balance - oldTx.amount) };
-            }
-            if (oldTx.type === 'TRANSFER') {
-                if (w.id === oldTx.walletId) {
+        if (oldEffective) {
+            adjustedWallets = adjustedWallets.map((w) => {
+                if (oldTx.type === 'EXPENSE' && w.id === oldTx.walletId) {
                     if (w.type === 'CREDIT')
-                        return { ...w, balance: Math.max(0, w.balance - (oldTx.amount + (oldTx.fee || 0))) };
-                    return { ...w, balance: w.balance + (oldTx.amount + (oldTx.fee || 0)) };
+                        return { ...w, balance: w.balance - oldTx.amount };
+                    return { ...w, balance: w.balance + oldTx.amount };
                 }
-                if (w.id === oldTx.toWalletId) {
+                if (oldTx.type === 'INCOME' && w.id === oldTx.walletId) {
                     if (w.type === 'CREDIT')
                         return { ...w, balance: w.balance + oldTx.amount };
-                    return { ...w, balance: Math.max(0, w.balance - oldTx.amount) };
+                    return { ...w, balance: w.balance - oldTx.amount };
                 }
-            }
-            return w;
-        });
-        const newTx = { ...oldTx, ...updated };
-        // Validate new transaction funds against rolled-back wallets
-        if (newTx.type === 'EXPENSE' || newTx.type === 'TRANSFER') {
+                if (oldTx.type === 'TRANSFER') {
+                    if (w.id === oldTx.walletId) {
+                        if (w.type === 'CREDIT')
+                            return { ...w, balance: w.balance - (oldTx.amount + (oldTx.fee || 0)) };
+                        return { ...w, balance: w.balance + (oldTx.amount + (oldTx.fee || 0)) };
+                    }
+                    if (w.id === oldTx.toWalletId) {
+                        if (w.type === 'CREDIT')
+                            return { ...w, balance: w.balance + oldTx.amount };
+                        return { ...w, balance: w.balance - oldTx.amount };
+                    }
+                }
+                return w;
+            });
+        }
+
+        // Validate new transaction funds against rolled-back wallets if effective
+        if (newEffective && (newTx.type === 'EXPENSE' || newTx.type === 'TRANSFER')) {
             const sourceW = adjustedWallets.find((w) => w.id === newTx.walletId);
             const fee = newTx.type === 'TRANSFER' ? (newTx.fee || 0) : 0;
             const validation = checkWalletSufficientFunds(sourceW, newTx.amount, fee);
@@ -648,32 +783,35 @@ export const AppProvider = ({ children }) => {
                 return false;
             }
         }
-        // Apply new transaction to wallets
-        adjustedWallets = adjustedWallets.map((w) => {
-            if (newTx.type === 'EXPENSE' && w.id === newTx.walletId) {
-                if (w.type === 'CREDIT')
-                    return { ...w, balance: w.balance + newTx.amount };
-                return { ...w, balance: Math.max(0, w.balance - newTx.amount) };
-            }
-            if (newTx.type === 'INCOME' && w.id === newTx.walletId) {
-                if (w.type === 'CREDIT')
-                    return { ...w, balance: Math.max(0, w.balance - newTx.amount) };
-                return { ...w, balance: w.balance + newTx.amount };
-            }
-            if (newTx.type === 'TRANSFER') {
-                if (w.id === newTx.walletId) {
+
+        // Apply new transaction to wallets ONLY if it is effective as of today
+        if (newEffective) {
+            adjustedWallets = adjustedWallets.map((w) => {
+                if (newTx.type === 'EXPENSE' && w.id === newTx.walletId) {
                     if (w.type === 'CREDIT')
-                        return { ...w, balance: w.balance + (newTx.amount + (newTx.fee || 0)) };
-                    return { ...w, balance: Math.max(0, w.balance - (newTx.amount + (newTx.fee || 0))) };
+                        return { ...w, balance: w.balance + newTx.amount };
+                    return { ...w, balance: w.balance - newTx.amount };
                 }
-                if (w.id === newTx.toWalletId) {
+                if (newTx.type === 'INCOME' && w.id === newTx.walletId) {
                     if (w.type === 'CREDIT')
-                        return { ...w, balance: Math.max(0, w.balance - newTx.amount) };
+                        return { ...w, balance: w.balance - newTx.amount };
                     return { ...w, balance: w.balance + newTx.amount };
                 }
-            }
-            return w;
-        });
+                if (newTx.type === 'TRANSFER') {
+                    if (w.id === newTx.walletId) {
+                        if (w.type === 'CREDIT')
+                            return { ...w, balance: w.balance + (newTx.amount + (newTx.fee || 0)) };
+                        return { ...w, balance: w.balance - (newTx.amount + (newTx.fee || 0)) };
+                    }
+                    if (w.id === newTx.toWalletId) {
+                        if (w.type === 'CREDIT')
+                            return { ...w, balance: w.balance - newTx.amount };
+                        return { ...w, balance: w.balance + newTx.amount };
+                    }
+                }
+                return w;
+            });
+        }
         setWallets(adjustedWallets);
         setTransactions((prev) => prev.map((t) => (t.id === id ? newTx : t)));
         return true;
@@ -683,32 +821,34 @@ export const AppProvider = ({ children }) => {
         const oldTx = transactions.find((t) => t.id === id);
         if (!oldTx)
             return;
-        // Rollback wallet balance safely
-        setWallets((prevWallets) => prevWallets.map((w) => {
-            if (oldTx.type === 'EXPENSE' && w.id === oldTx.walletId) {
-                if (w.type === 'CREDIT')
-                    return { ...w, balance: Math.max(0, w.balance - oldTx.amount) };
-                return { ...w, balance: w.balance + oldTx.amount };
-            }
-            if (oldTx.type === 'INCOME' && w.id === oldTx.walletId) {
-                if (w.type === 'CREDIT')
-                    return { ...w, balance: w.balance + oldTx.amount };
-                return { ...w, balance: Math.max(0, w.balance - oldTx.amount) };
-            }
-            if (oldTx.type === 'TRANSFER') {
-                if (w.id === oldTx.walletId) {
+        // Rollback wallet balance safely if transaction was effective as of today
+        if (isTxEffective(oldTx.date)) {
+            setWallets((prevWallets) => prevWallets.map((w) => {
+                if (oldTx.type === 'EXPENSE' && w.id === oldTx.walletId) {
                     if (w.type === 'CREDIT')
-                        return { ...w, balance: Math.max(0, w.balance - (oldTx.amount + (oldTx.fee || 0))) };
-                    return { ...w, balance: w.balance + (oldTx.amount + (oldTx.fee || 0)) };
+                        return { ...w, balance: w.balance - oldTx.amount };
+                    return { ...w, balance: w.balance + oldTx.amount };
                 }
-                if (w.id === oldTx.toWalletId) {
+                if (oldTx.type === 'INCOME' && w.id === oldTx.walletId) {
                     if (w.type === 'CREDIT')
                         return { ...w, balance: w.balance + oldTx.amount };
-                    return { ...w, balance: Math.max(0, w.balance - oldTx.amount) };
+                    return { ...w, balance: w.balance - oldTx.amount };
                 }
-            }
-            return w;
-        }));
+                if (oldTx.type === 'TRANSFER') {
+                    if (w.id === oldTx.walletId) {
+                        if (w.type === 'CREDIT')
+                            return { ...w, balance: w.balance - (oldTx.amount + (oldTx.fee || 0)) };
+                        return { ...w, balance: w.balance + (oldTx.amount + (oldTx.fee || 0)) };
+                    }
+                    if (w.id === oldTx.toWalletId) {
+                        if (w.type === 'CREDIT')
+                            return { ...w, balance: w.balance + oldTx.amount };
+                        return { ...w, balance: w.balance - oldTx.amount };
+                    }
+                }
+                return w;
+            }));
+        }
         setTransactions((prev) => prev.filter((t) => t.id !== id));
     };
     // Wallets
@@ -725,6 +865,11 @@ export const AppProvider = ({ children }) => {
     };
     const deleteWallet = (id) => {
         setWallets((prev) => prev.filter((w) => w.id !== id));
+        // Also remove transactions associated with this deleted wallet to prevent orphaned entries
+        setTransactions((prev) => prev.filter((tx) => tx.walletId !== id && tx.toWalletId !== id));
+        // Unbind any bills or goals associated with this wallet
+        setBills((prev) => prev.map((b) => b.walletId === id ? { ...b, walletId: undefined } : b));
+        setGoals((prev) => prev.map((g) => g.walletId === id ? { ...g, walletId: undefined } : g));
     };
     const transferFunds = (fromWalletId, toWalletId, amount, fee, note) => {
         if (fromWalletId === toWalletId) {
@@ -741,34 +886,39 @@ export const AppProvider = ({ children }) => {
         return addTransaction({
             type: 'TRANSFER',
             amount,
-            fee,
+            fee: fee || 0,
             walletId: fromWalletId,
             walletName: fromW?.name,
             toWalletId,
             toWalletName: toW?.name,
-            date: new Date().toISOString(),
+            date: normalizeSaveDate(),
             note: note || `Chuyển khoản từ ${fromW?.name || 'Ví'} sang ${toW?.name || 'Ví'}`,
             tags: ['Chuyển khoản nội bộ'],
         });
     };
     // Recalculate wallet balances safely from history
     const recalculateWalletBalances = () => {
+        const todayKey = getLocalDateString();
         setWallets((prevWallets) => {
             return prevWallets.map((w) => {
-                let currentBal = w.initialBalance;
+                let currentBal = w.initialBalance || 0;
                 const sortedTxs = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
                 for (const tx of sortedTxs) {
+                    // Do not count future transactions towards current balance
+                    if (toLocalDateKey(tx.date) > todayKey) {
+                        continue;
+                    }
                     if (tx.type === 'EXPENSE' && tx.walletId === w.id) {
                         if (w.type === 'CREDIT') {
                             currentBal += tx.amount;
                         }
                         else {
-                            currentBal = Math.max(0, currentBal - tx.amount);
+                            currentBal -= tx.amount;
                         }
                     }
                     else if (tx.type === 'INCOME' && tx.walletId === w.id) {
                         if (w.type === 'CREDIT') {
-                            currentBal = Math.max(0, currentBal - tx.amount);
+                            currentBal -= tx.amount;
                         }
                         else {
                             currentBal += tx.amount;
@@ -780,12 +930,12 @@ export const AppProvider = ({ children }) => {
                                 currentBal += tx.amount + (tx.fee || 0);
                             }
                             else {
-                                currentBal = Math.max(0, currentBal - (tx.amount + (tx.fee || 0)));
+                                currentBal -= (tx.amount + (tx.fee || 0));
                             }
                         }
                         else if (tx.toWalletId === w.id) {
                             if (w.type === 'CREDIT') {
-                                currentBal = Math.max(0, currentBal - tx.amount);
+                                currentBal -= tx.amount;
                             }
                             else {
                                 currentBal += tx.amount;
@@ -916,7 +1066,7 @@ export const AppProvider = ({ children }) => {
             categoryName: 'Đầu tư & Tích lũy',
             walletId,
             walletName: wallet.name,
-            date: new Date().toISOString(),
+            date: normalizeSaveDate(),
             note: `Tích lũy vào hũ: ${goal.name}`,
             tags: ['Tích lũy mục tiêu'],
         });
@@ -954,7 +1104,7 @@ export const AppProvider = ({ children }) => {
             categoryName: 'Thu nhập khác',
             walletId,
             walletName: wallet.name,
-            date: new Date().toISOString(),
+            date: normalizeSaveDate(),
             note: `Rút từ hũ tích lũy: ${goal.name}`,
             tags: ['Rút hũ tiết kiệm'],
         });
@@ -1090,6 +1240,12 @@ export const AppProvider = ({ children }) => {
             quickAddDefaultType,
             quickAddDefaultWalletId,
             openQuickAdd,
+            statementModalOpen,
+            setStatementModalOpen,
+            statementDefaultWalletId,
+            openStatementModal,
+            closeStatementModal,
+            importBankStatementTransactions,
             financialSummary,
             theme,
             setTheme,

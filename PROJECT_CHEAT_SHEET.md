@@ -20,7 +20,8 @@ Mọi màn hình bạn nhìn thấy trên giao diện web đều nằm ở thư 
 | 💳 **Quản lý Ví** | `WalletsView.tsx` | Xem chi tiết thu chi từng ví, chỉnh sửa ví, danh sách ví (Tiền mặt, Ngân hàng, Thẻ tín dụng, Tiết kiệm), thống kê dòng tiền (Inflow/Outflow/Net Flow), chuyển khoản giữa các ví. |
 | ⚙️ **Cài đặt & Giao diện** | `SettingsView.tsx` | Tùy chọn Sáng/Tối/Hệ thống, Xuất/Nhập file JSON sao lưu, Xóa dữ liệu, Thông tin kiến trúc. |
 | 🧭 **Menu & Header trên cùng** | `Navigation.tsx` | Nút Sáng/Tối ☀️🌙, Chuông cảnh báo ngân sách 80%/100%, Avatar, thanh Tab điều hướng. |
-| ➕ **Modal Thêm giao dịch** | `QuickAddModal.tsx` | Hộp thoại nhập nhanh khoản thu, khoản chi, chuyển ví, đính kèm ảnh hóa đơn, gắn tag. |
+| ➕ **Modal Thêm giao dịch** | `QuickAddModal.jsx` | Hộp thoại nhập nhanh khoản thu, khoản chi, chuyển ví, đính kèm ảnh hóa đơn, gắn tag. |
+| 📥 **Tải Sao kê Ngân hàng** | `BankStatementModal.jsx` & `bank-statement-parser.js` | Tải file sao kê Excel/CSV, tự động bóc tách dòng tiền vào/ra, cộng trừ số dư, chống trùng lặp. |
 
 ---
 

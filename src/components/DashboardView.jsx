@@ -40,7 +40,7 @@ export const DashboardView = () => {
       </div>
 
       {/* Balance Card */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-500 to-emerald-700 text-white shadow-lg shadow-emerald-500/20 p-5">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-700 text-white shadow-lg shadow-emerald-500/20 p-5">
         <div className="relative z-10">
           <p className="text-sm font-medium text-emerald-100">{t('dash.netAssets', 'Tổng tài sản ròng')}</p>
           <div className="mt-1 flex items-baseline gap-2">
@@ -105,7 +105,7 @@ export const DashboardView = () => {
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-md bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
               <ArrowUpRight className="w-4 h-4"/>
             </div>
             <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
@@ -118,7 +118,7 @@ export const DashboardView = () => {
         </div>
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-full bg-rose-100 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-md bg-rose-100 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center">
               <ArrowDownLeft className="w-4 h-4"/>
             </div>
             <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
@@ -138,7 +138,7 @@ export const DashboardView = () => {
           {quickActions.map((action) => {
             const Icon = action.icon;
             return (<button key={action.label} onClick={action.onClick} className="flex flex-col items-center gap-2 group cursor-pointer">
-                <div className={`w-12 h-12 rounded-2xl ${action.color} text-white flex items-center justify-center shadow-md group-active:scale-90 transition-transform`}>
+                <div className={`w-12 h-12 rounded-lg ${action.color} text-white flex items-center justify-center shadow-md group-active:scale-90 transition-transform`}>
                   <Icon className="w-5 h-5"/>
                 </div>
                 <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">{action.label}</span>
@@ -151,7 +151,7 @@ export const DashboardView = () => {
       {hasAlerts && (<div className="space-y-2.5">
           {activeExceededBudgets.slice(0, 1).map((item) => (<div key={item.budget.id} className="w-full flex items-center justify-between gap-2 p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/40 rounded-2xl text-left transition-colors">
               <button onClick={() => setActiveTab('budgets')} className="flex items-center gap-3 flex-1 min-w-0 text-left cursor-pointer">
-                <div className="w-10 h-10 rounded-full bg-rose-500 text-white flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-md bg-rose-500 text-white flex items-center justify-center shrink-0">
                   <AlertTriangle className="w-5 h-5"/>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -173,7 +173,7 @@ export const DashboardView = () => {
 
           {activeWarningBudgets.slice(0, 1).map((item) => (<div key={item.budget.id} className="w-full flex items-center justify-between gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40 rounded-2xl text-left transition-colors">
               <button onClick={() => setActiveTab('budgets')} className="flex items-center gap-3 flex-1 min-w-0 text-left cursor-pointer">
-                <div className="w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-md bg-amber-500 text-white flex items-center justify-center shrink-0">
                   <AlertTriangle className="w-5 h-5"/>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -195,7 +195,7 @@ export const DashboardView = () => {
 
           {activeUnpaidBills.length > 0 && (<div className="w-full flex items-center justify-between gap-2 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 rounded-2xl text-left transition-colors">
               <button onClick={() => setActiveTab('bills')} className="flex items-center gap-3 flex-1 min-w-0 text-left cursor-pointer">
-                <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-md bg-blue-600 text-white flex items-center justify-center shrink-0">
                   <Wallet className="w-5 h-5"/>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -255,7 +255,7 @@ export const DashboardView = () => {
         </div>
         <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
           {recentTransactions.map((tx) => (<div key={tx.id} className="flex items-center gap-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${tx.type === 'EXPENSE'
+              <div className={`w-10 h-10 rounded-md flex items-center justify-center shrink-0 ${tx.type === 'EXPENSE'
                 ? 'bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400'
                 : tx.type === 'INCOME'
                     ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400'
@@ -267,7 +267,7 @@ export const DashboardView = () => {
                   <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
                     {tx.type === 'TRANSFER' ? `${t('tx.transferTo', 'Chuyển sang')} ${tx.toWalletName || t('nav.wallets', 'Ví')}` : tCategory(tx.categoryName || 'Khác')}
                   </p>
-                  {tx.receiptImage && (<span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-1.5 py-0.5 rounded-full">{t('bills.title', 'Hóa đơn')}</span>)}
+                  {tx.receiptImage && (<span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-1.5 py-0.5 rounded">{t('bills.title', 'Hóa đơn')}</span>)}
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
                   {formatDate(tx.date, 'full')} • {tx.walletName}
