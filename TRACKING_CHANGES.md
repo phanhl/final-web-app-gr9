@@ -4,6 +4,38 @@
 
 ---
 
+## [LẦN CHỈNH SỬA 11] - Xử lý triệt để trùng lặp khoản chi trong What-If (Ngăn trùng, Tự động gộp & Nhận diện thông minh)
+
+* **Thời gian thực hiện:** 01/10/2026
+* **Mức độ ảnh hưởng:** Module Mô phỏng What-If (`WhatIfSimulatorView.jsx`, `i18n.js`, `database.json`)
+* **Trạng thái:** ✅ Đã hoàn thành và xác minh
+
+### 1. Vấn Đề Nhận Diện
+- Người dùng phát hiện sự trùng lặp trên màn hình What-If (Bước 1): Khoản **"Ăn uống"** xuất hiện 2 lần (thẻ cũ 3.000.000 đ và thẻ mới 2.000.000 đ sau khi bấm "+ Thêm khoản chi").
+- Nguyên nhân: Trước đó khi mở modal "+ Thêm khoản chi", hệ thống luôn mặc định chọn danh mục đầu tiên trong hệ thống ("Ăn uống") mà không kiểm tra xem danh mục đó đã có sẵn trong danh sách khảo sát hay chưa. Đồng thời modal chưa chặn việc chọn danh mục đã có và chưa có cơ chế phát hiện trùng lặp.
+
+### 2. Các Thay Đổi Chi Tiết Đã Triển Khai
+1. **Tự động chọn danh mục khả dụng chưa có trong danh sách (`handleOpenAddExpense`):**
+   - Khi bấm "+ Thêm khoản chi", hệ thống tự động quét danh sách hiện tại và chọn danh mục chi tiêu mẫu đầu tiên **chưa có trong danh sách** (ví dụ: Hóa đơn & Tiện ích, Mua sắm, Sức khỏe...), không còn luôn mặc định rơi vào "Ăn uống".
+   - Nếu tất cả danh mục mẫu đều đã được thêm, modal sẽ tự động chuyển sang tab "Tự tạo tùy chỉnh".
+
+2. **Chặn trùng lặp trong dropdown danh mục mẫu:**
+   - Các danh mục đã có mặt trong danh sách khảo sát sẽ hiển thị thêm nhãn `(Đã có trong danh sách)` và bị vô hiệu hóa (`disabled`), ngăn người dùng vô tình bấm trùng.
+
+3. **Cảnh báo và hỗ trợ cộng dồn thông minh (`handleSaveExpense`):**
+   - Khi lưu khoản chi mới, nếu tên hoặc danh mục trùng với một khoản đã có:
+     * Hệ thống hiển thị hộp thoại xác nhận thân thiện hỏi người dùng có muốn **cộng dồn số tiền** vào khoản chi hiện có hay không (ví dụ: 3tr + 2tr = 5tr).
+     * Nếu người dùng đồng ý: Gộp số tiền và áp dụng cắt giảm chuẩn xác mà không tạo thêm thẻ thừa.
+
+4. **Thanh cảnh báo & Nút "Gộp các khoản trùng" (1-Click Deduplication):**
+   - Tự động quét nhóm trùng lặp (`duplicateGroups`).
+   - Nếu phát hiện danh sách đang có thẻ trùng (do dữ liệu cũ hoặc import), giao diện hiển thị thanh cảnh báo màu hổ phách kèm nút **"Gộp các khoản trùng"** để người dùng gộp toàn bộ chỉ bằng 1 cú click.
+
+5. **Đồng bộ và làm sạch cơ sở dữ liệu (`database.json`):**
+   - Đã gộp 2 khoản "Ăn uống" (3.000.000 đ + 2.000.000 đ) thành 1 khoản duy nhất 5.000.000 đ, giữ nguyên tổng chi tiêu cá nhân 16.000.000 đ/tháng.
+
+---
+
 ## [LẦN CHỈNH SỬA 10] - Tự động nhận diện ngân hàng từ bản sao kê & bắt buộc liên kết/tạo ví ngân hàng tương ứng
 
 * **Thời gian thực hiện:** 01/10/2026

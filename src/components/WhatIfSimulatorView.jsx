@@ -182,15 +182,68 @@ export const WhatIfSimulatorView = () => {
     ]);
     const finalRow = detailedMonthlyProjections[detailedMonthlyProjections.length - 1];
     const finalDelta = finalRow.netDelta;
-    // Mở modal thêm khoản chi mới
+    // Kiểm tra và tìm các nhóm khoản chi bị trùng lặp danh mục hoặc tên
+    const duplicateGroups = useMemo(() => {
+        const map = new Map();
+        spendingCategories.forEach((item) => {
+            const key = (item.categoryId && item.categoryId !== 'custom')
+                ? item.categoryId
+                : (item.categoryName || '').trim().toLowerCase();
+            if (!map.has(key)) map.set(key, []);
+            map.get(key).push(item);
+        });
+        return Array.from(map.values()).filter((group) => group.length > 1);
+    }, [spendingCategories]);
+
+    // Gộp tất cả các khoản chi bị trùng lặp lại thành một thẻ duy nhất (cộng dồn số tiền)
+    const handleMergeDuplicates = () => {
+        const mergedMap = new Map();
+        spendingCategories.forEach((item) => {
+            const key = (item.categoryId && item.categoryId !== 'custom')
+                ? item.categoryId
+                : (item.categoryName || '').trim().toLowerCase();
+            if (!mergedMap.has(key)) {
+                mergedMap.set(key, { ...item });
+            } else {
+                const existing = mergedMap.get(key);
+                existing.monthlyExpense += Number(item.monthlyExpense) || 0;
+                if (item.isSelected) {
+                    existing.isSelected = true;
+                    existing.cutPercent = Math.max(existing.cutPercent || 0, item.cutPercent || 0);
+                }
+            }
+        });
+        setSpendingCategories(Array.from(mergedMap.values()));
+    };
+
+    // Mở modal thêm khoản chi mới (tự động chọn danh mục khả dụng chưa có trong danh sách)
     const handleOpenAddExpense = () => {
         setEditingExpenseId(null);
-        setExpenseSourceType('category');
-        const defaultCat = categories.find((c) => c.type === 'EXPENSE') || categories[0];
-        setSelectedCatId(defaultCat?.id || '');
-        setCustomExpenseName(defaultCat?.name || '');
-        setCustomExpenseIcon(defaultCat?.icon || 'Utensils');
-        setCustomExpenseColor(defaultCat?.color || '#3b82f6');
+        const existingCatIds = new Set(
+            spendingCategories
+                .filter((c) => c.categoryId && c.categoryId !== 'custom')
+                .map((c) => c.categoryId)
+        );
+        const existingNames = new Set(
+            spendingCategories.map((c) => (c.categoryName || '').trim().toLowerCase())
+        );
+        const availableCat = categories.find(
+            (c) => c.type === 'EXPENSE' && !existingCatIds.has(c.id) && !existingNames.has((c.name || '').trim().toLowerCase())
+        );
+
+        if (availableCat) {
+            setExpenseSourceType('category');
+            setSelectedCatId(availableCat.id);
+            setCustomExpenseName(availableCat.name);
+            setCustomExpenseIcon(availableCat.icon || 'Utensils');
+            setCustomExpenseColor(availableCat.color || '#3b82f6');
+        } else {
+            setExpenseSourceType('custom');
+            setSelectedCatId('');
+            setCustomExpenseName('');
+            setCustomExpenseIcon('Wallet');
+            setCustomExpenseColor('#3b82f6');
+        }
         setExpenseAmount('2000000');
         setExpenseCutPercent('20');
         setExpenseApplyCut(false);
@@ -229,7 +282,7 @@ export const WhatIfSimulatorView = () => {
         }
     };
 
-    // Lưu khoản chi tiêu (thêm mới hoặc chỉnh sửa)
+    // Lưu khoản chi tiêu (thêm mới hoặc chỉnh sửa, có kiểm tra trùng lặp và hỗ trợ cộng dồn)
     const handleSaveExpense = (e) => {
         e.preventDefault();
         const amt = Number(expenseAmount) || 0;
@@ -259,6 +312,34 @@ export const WhatIfSimulatorView = () => {
             finalColor = customExpenseColor;
             finalCatId = `cat-custom-${Date.now()}`;
         }
+
+        // Kiểm tra xem đã có khoản chi nào trùng lặp chưa (trừ khoản chi đang sửa)
+        const existingDuplicate = spendingCategories.find((item) => {
+            if (editingExpenseId && item.id === editingExpenseId) return false;
+            const sameCatId = finalCatId !== 'custom' && item.categoryId === finalCatId;
+            const sameName = (item.categoryName || '').trim().toLowerCase() === finalName.trim().toLowerCase();
+            return sameCatId || sameName;
+        });
+
+        if (existingDuplicate) {
+            const confirmMsg = `${t('whatif.duplicatePrompt', 'Khoản chi')} "${tCategory(existingDuplicate.categoryName)}" ${t('whatif.duplicatePromptDesc', 'đã có sẵn trong danh sách! Bạn có muốn cộng dồn số tiền')} +${formatCurrency(amt, language)} ${t('whatif.duplicatePromptMerge', 'vào khoản chi hiện có không?')}`;
+            if (window.confirm(confirmMsg)) {
+                setSpendingCategories(spendingCategories.map((item) => {
+                    if (item.id !== existingDuplicate.id) return item;
+                    return {
+                        ...item,
+                        monthlyExpense: (item.monthlyExpense || 0) + amt,
+                        isSelected: expenseApplyCut ? true : item.isSelected,
+                        cutPercent: expenseApplyCut ? cutPct : item.cutPercent,
+                    };
+                }));
+                setExpenseModalOpen(false);
+                return;
+            } else {
+                return; // Giữ modal để người dùng đổi tên
+            }
+        }
+
         if (editingExpenseId) {
             setSpendingCategories(spendingCategories.map((item) => {
                 if (item.id !== editingExpenseId)
@@ -477,6 +558,33 @@ export const WhatIfSimulatorView = () => {
                 </button>
               </div>
             </div>
+
+            {/* Cảnh báo và hỗ trợ gộp nhanh nếu có khoản chi trùng lặp */}
+            {duplicateGroups.length > 0 && (
+              <div className="p-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center space-x-2.5 text-amber-800 dark:text-amber-200 text-xs">
+                  <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                    <AlertTriangle className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="font-bold block">
+                      {t('whatif.duplicateWarning', 'Phát hiện khoản chi bị trùng lặp danh mục. Bạn có thể gộp số tiền lại thành một khoản duy nhất.')}
+                    </span>
+                    <span className="text-[11px] text-amber-600/80 dark:text-amber-400/80">
+                      {duplicateGroups.map(g => tCategory(g[0].categoryName)).join(', ')}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleMergeDuplicates}
+                  className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-xl shadow-xs transition-colors shrink-0 flex items-center space-x-1.5 self-start sm:self-center"
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                  <span>{t('whatif.mergeDuplicates', 'Gộp các khoản trùng')}</span>
+                </button>
+              </div>
+            )}
 
             {/* Empty State */}
             {spendingCategories.length === 0 ? (
@@ -1086,8 +1194,16 @@ export const WhatIfSimulatorView = () => {
                   type="button"
                   onClick={() => {
                     setExpenseSourceType('category');
-                    const cat = categories.find((c) => c.id === selectedCatId) || categories[0];
+                    const existingCatIds = new Set(
+                      spendingCategories
+                        .filter((c) => c.categoryId && c.categoryId !== 'custom' && c.id !== editingExpenseId)
+                        .map((c) => c.categoryId)
+                    );
+                    const cat = categories.find((c) => c.type === 'EXPENSE' && !existingCatIds.has(c.id))
+                      || categories.find((c) => c.type === 'EXPENSE')
+                      || categories[0];
                     if (cat) {
+                      setSelectedCatId(cat.id);
                       setCustomExpenseName(cat.name);
                       setCustomExpenseIcon(cat.icon || 'Utensils');
                       setCustomExpenseColor(cat.color || '#3b82f6');
@@ -1127,11 +1243,16 @@ export const WhatIfSimulatorView = () => {
                   >
                     {categories
                       .filter((c) => c.type === 'EXPENSE')
-                      .map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
+                      .map((c) => {
+                        const isAlreadyAdded = spendingCategories.some(
+                          (item) => item.categoryId === c.id && item.id !== editingExpenseId
+                        );
+                        return (
+                          <option key={c.id} value={c.id} disabled={isAlreadyAdded}>
+                            {tCategory(c.name)} {isAlreadyAdded ? `(${t('whatif.alreadyInList', 'Đã có trong danh sách')})` : ''}
+                          </option>
+                        );
+                      })}
                   </select>
 
                   {/* Category Preview */}

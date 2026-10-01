@@ -43,7 +43,7 @@
     {
       "name": "Ví tay",
       "type": "CASH",
-      "balance": 0,
+      "balance": 650000,
       "initialBalance": 0,
       "currency": "VND",
       "accountNumber": "",
@@ -54,6 +54,19 @@
     }
   ],
   "transactions": [
+    {
+      "type": "INCOME",
+      "amount": 650000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820884466",
+      "walletName": "Ví tay",
+      "date": "2026-09-27T14:14:00",
+      "note": "Thu nhập khác",
+      "tags": [],
+      "id": "tx-1790820942524",
+      "createdAt": "2026-10-01T02:15:42.524Z"
+    },
     {
       "type": "EXPENSE",
       "amount": 5455,
@@ -2235,7 +2248,7 @@
     "notes": "Áp dụng quy tắc 50/30/20: 50% thiết yếu, 30% sở thích cá nhân, 20% tích lũy & quỹ khẩn cấp",
     "emergencyPercent": 10
   },
-  "currentMonth": "2026-10",
+  "currentMonth": "2026-09",
   "userProfile": {
     "name": "PanC",
     "email": "admin@fintrack.vn",
@@ -2253,7 +2266,7 @@
         "categoryName": "Ăn uống",
         "icon": "Utensils",
         "color": "#f97316",
-        "monthlyExpense": 3000000,
+        "monthlyExpense": 5000000,
         "isSelected": true,
         "cutPercent": 20
       },
@@ -2315,5 +2328,5 @@
       }
     ]
   },
-  "updatedAt": "2026-10-01T02:14:44.884Z"
+  "updatedAt": "2026-10-01T02:20:51.835Z"
 }
