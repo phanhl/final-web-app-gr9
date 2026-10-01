@@ -3,7 +3,7 @@
     {
       "name": "Tech",
       "type": "BANK",
-      "balance": 816673,
+      "balance": 832563,
       "initialBalance": 3000000,
       "currency": "VND",
       "bankName": "Techcombank",
@@ -27,18 +27,6 @@
       "createdAt": "2026-10-01T02:05:24.212Z"
     },
     {
-      "name": "Ví tay",
-      "type": "CASH",
-      "balance": 650000,
-      "initialBalance": 650000,
-      "currency": "VND",
-      "accountNumber": "",
-      "color": "#3b82f6",
-      "icon": "Banknote",
-      "id": "wal-1790820538236",
-      "createdAt": "2026-10-01T02:08:58.236Z"
-    },
-    {
       "name": "Cống hiến cho anh 7",
       "type": "CREDIT",
       "balance": 7000000,
@@ -51,9 +39,47 @@
       "icon": "CreditCard",
       "id": "wal-1790820589219",
       "createdAt": "2026-10-01T02:09:49.219Z"
+    },
+    {
+      "name": "Ví tay",
+      "type": "CASH",
+      "balance": 0,
+      "initialBalance": 0,
+      "currency": "VND",
+      "accountNumber": "",
+      "color": "#8b5cf6",
+      "icon": "Banknote",
+      "id": "wal-1790820884466",
+      "createdAt": "2026-10-01T02:14:44.466Z"
     }
   ],
   "transactions": [
+    {
+      "type": "EXPENSE",
+      "amount": 5455,
+      "categoryId": "cat-food",
+      "categoryName": "Ăn uống",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-10-01T09:12:00",
+      "note": "Ăn uống",
+      "tags": [],
+      "id": "tx-1790820779506",
+      "createdAt": "2026-10-01T02:12:59.506Z"
+    },
+    {
+      "type": "INCOME",
+      "amount": 21345,
+      "categoryId": "cat-salary",
+      "categoryName": "Lương chính",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-10-01T09:12:00",
+      "note": "Lương chính",
+      "tags": [],
+      "id": "tx-1790820770694",
+      "createdAt": "2026-10-01T02:12:50.694Z"
+    },
     {
       "id": "tx-st-1790820374604-0-45uo",
       "type": "INCOME",
@@ -2209,7 +2235,7 @@
     "notes": "Áp dụng quy tắc 50/30/20: 50% thiết yếu, 30% sở thích cá nhân, 20% tích lũy & quỹ khẩn cấp",
     "emergencyPercent": 10
   },
-  "currentMonth": "2026-01",
+  "currentMonth": "2026-10",
   "userProfile": {
     "name": "PanC",
     "email": "admin@fintrack.vn",
@@ -2289,5 +2315,5 @@
       }
     ]
   },
-  "updatedAt": "2026-10-01T02:09:49.637Z"
+  "updatedAt": "2026-10-01T02:14:44.884Z"
 }
