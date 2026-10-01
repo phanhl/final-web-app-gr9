@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Search, Filter, ArrowDownLeft, ArrowUpRight, ArrowRightLeft, Calendar, FileSpreadsheet, Plus, Edit2, Trash2, FileCheck, X, Upload, BarChart3, AlertTriangle, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, } from 'lucide-react';
-import { formatCurrency, formatDate, exportToCSV, exportToExcel, formatNumberWithDots, formatMonthLabel, toLocalDateTimeInput, normalizeSaveDate, toLocalDateKey, getLocalDateString } from '@/lib/utils';
+import { formatCurrency, formatDate, exportToCSV, exportToExcel, formatNumberWithDots, formatMonthLabel, toLocalDateTimeInput, normalizeSaveDate, toLocalDateKey, getLocalDateString, compressImage } from '@/lib/utils';
 import { POPULAR_TAGS } from '@/lib/mock-data';
 import { ReceiptModal } from './ReceiptModal';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, } from 'recharts';
@@ -1010,14 +1010,22 @@ const EditTransactionModal = ({ isOpen, onClose, transaction, }) => {
     }, [transaction, wallets]);
     if (!isOpen || !transaction)
         return null;
-    const handleImageUpload = (e) => {
+    const handleImageUpload = async (e) => {
         const file = e.target.files?.[0];
         if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setReceiptImage(reader.result);
-            };
-            reader.readAsDataURL(file);
+            try {
+                const compressed = await compressImage(file, 900, 900, 0.65);
+                if (compressed) {
+                    setReceiptImage(compressed);
+                }
+            } catch (err) {
+                console.warn('Could not compress image, fallback:', err);
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    setReceiptImage(reader.result);
+                };
+                reader.readAsDataURL(file);
+            }
         }
     };
     const handleTagToggle = (tag) => {

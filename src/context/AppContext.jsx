@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect, useRef, useCallb
 import { INITIAL_WALLETS, INITIAL_TRANSACTIONS, INITIAL_BUDGETS, INITIAL_BILLS, INITIAL_GOALS, INITIAL_PLANNER, DEFAULT_CATEGORIES, INITIAL_SIMULATOR_CONFIG, } from '@/lib/mock-data';
 import { calculateFinancialSummary, checkWalletSufficientFunds, formatCurrency, getLocalDateString, toLocalDateKey, normalizeSaveDate } from '@/lib/utils';
 import { translate, translateCategory, translateWalletType, translateTag, translateBillName, translateBillNote, translateWalletName } from '@/lib/i18n';
+import { KeyRound } from 'lucide-react';
 const AppContext = createContext(undefined);
 const STORAGE_KEY = 'quan_ly_chi_tieu_data_v2';
 export const AppProvider = ({ children }) => {
@@ -219,6 +220,37 @@ export const AppProvider = ({ children }) => {
     const lastServerUpdatedAtRef = useRef(null);
     const isSavingRef = useRef(false);
     const lastSavedDataSignatureRef = useRef('');
+
+    // Security & PIN Guard (Fix Issue 1 & 2: Ngrok API Exposure & Storage Authentication)
+    const [security, setSecurity] = useState({ pinEnabled: false, hasPin: false });
+    const [appPin, setAppPinState] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('fintrack_pin') || '';
+        }
+        return '';
+    });
+    const appPinRef = useRef(appPin);
+    const setAppPin = (pin) => {
+        appPinRef.current = pin;
+        setAppPinState(pin);
+        if (typeof window !== 'undefined') {
+            if (pin) localStorage.setItem('fintrack_pin', pin);
+            else localStorage.removeItem('fintrack_pin');
+        }
+    };
+    const [isPinLocked, setIsPinLocked] = useState(false);
+    const [pinUnlockError, setPinUnlockError] = useState('');
+
+    const getApiHeaders = useCallback((extra = {}) => {
+        const pin = appPinRef.current || (typeof window !== 'undefined' ? localStorage.getItem('fintrack_pin') || '' : '');
+        return {
+            'Cache-Control': 'no-cache, no-store',
+            Pragma: 'no-cache',
+            'x-app-pin': pin,
+            ...extra,
+        };
+    }, []);
+
     const computeDataSignature = (data) => {
         return JSON.stringify({
             wallets: data.wallets || [],
@@ -231,8 +263,10 @@ export const AppProvider = ({ children }) => {
             currentMonth: data.currentMonth || '',
             userProfile: data.userProfile || {},
             simulatorConfig: data.simulatorConfig || {},
+            security: data.security ? { pinEnabled: Boolean(data.security.pinEnabled) } : {},
         });
     };
+
     // Centralized server data applicator
     const applyServerData = useCallback((d) => {
         if (!d)
@@ -263,6 +297,12 @@ export const AppProvider = ({ children }) => {
             setUserProfile(d.userProfile);
         if (d.simulatorConfig)
             setSimulatorConfig(d.simulatorConfig);
+        if (d.security) {
+            setSecurity({
+                pinEnabled: Boolean(d.security.pinEnabled),
+                hasPin: Boolean(d.security.hasPin || d.security.pinCode),
+            });
+        }
         if (d.updatedAt) {
             lastServerUpdatedAtRef.current = d.updatedAt;
         }
@@ -275,19 +315,93 @@ export const AppProvider = ({ children }) => {
             console.warn('Failed to update localStorage cache:', e);
         }
     }, []);
-    // Manual or automatic pull from server
-    const syncDataFromServer = useCallback(async () => {
+
+    // Verify PIN and unlock app
+    const verifyAndUnlockApp = async (enteredPin) => {
         try {
             const res = await fetch('/api/storage', {
                 cache: 'no-store',
                 headers: {
                     'Cache-Control': 'no-cache, no-store',
                     Pragma: 'no-cache',
+                    'x-app-pin': enteredPin,
                 },
             });
             if (res.ok) {
                 const result = await res.json();
                 if (result.success && result.data) {
+                    setAppPin(enteredPin);
+                    setIsPinLocked(false);
+                    setPinUnlockError('');
+                    applyServerData(result.data);
+                    setServerSyncStatus('synced');
+                    return { success: true };
+                }
+            }
+            setPinUnlockError(language === 'en' ? 'Incorrect PIN code!' : 'Mã PIN bảo mật không chính xác!');
+            return { success: false, error: 'Mã PIN không đúng' };
+        } catch (err) {
+            setPinUnlockError(err.message);
+            return { success: false, error: err.message };
+        }
+    };
+
+    // Update Security Settings (PIN enable / code)
+    const updateSecuritySettings = async ({ pinEnabled, pinCode }) => {
+        const newPin = pinCode !== undefined ? pinCode : appPinRef.current;
+        const currentData = {
+            wallets,
+            transactions,
+            categories,
+            budgets,
+            bills,
+            goals,
+            planner,
+            currentMonth,
+            userProfile,
+            simulatorConfig,
+            security: {
+                pinEnabled,
+                pinCode: newPin,
+            },
+        };
+        try {
+            const res = await fetch('/api/storage', {
+                method: 'POST',
+                headers: getApiHeaders({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify(currentData),
+            });
+            if (res.ok) {
+                setAppPin(newPin);
+                setSecurity({
+                    pinEnabled,
+                    hasPin: Boolean(newPin),
+                });
+                return { success: true };
+            }
+            const errRes = await res.json();
+            return { success: false, error: errRes.error };
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    };
+
+    // Manual or automatic pull from server
+    const syncDataFromServer = useCallback(async () => {
+        try {
+            const res = await fetch('/api/storage', {
+                cache: 'no-store',
+                headers: getApiHeaders(),
+            });
+            if (res.status === 401) {
+                setIsPinLocked(true);
+                setServerSyncStatus('offline');
+                return false;
+            }
+            if (res.ok) {
+                const result = await res.json();
+                if (result.success && result.data) {
+                    setIsPinLocked(false);
                     applyServerData(result.data);
                     setServerSyncStatus('synced');
                     return true;
@@ -301,7 +415,8 @@ export const AppProvider = ({ children }) => {
             setServerSyncStatus('offline');
             return false;
         }
-    }, [applyServerData]);
+    }, [applyServerData, getApiHeaders]);
+
     // Initial load: prioritize server disk as single source of truth across all devices
     useEffect(() => {
         let isSubscribed = true;
@@ -310,15 +425,15 @@ export const AppProvider = ({ children }) => {
             try {
                 const res = await fetch('/api/storage', {
                     cache: 'no-store',
-                    headers: {
-                        'Cache-Control': 'no-cache, no-store',
-                        Pragma: 'no-cache',
-                    },
+                    headers: getApiHeaders(),
                 });
-                if (res.ok) {
+                if (res.status === 401) {
+                    if (isSubscribed) setIsPinLocked(true);
+                } else if (res.ok) {
                     const result = await res.json();
                     if (result.success && result.data) {
                         serverData = result.data;
+                        if (isSubscribed) setIsPinLocked(false);
                     }
                 }
             }
@@ -362,7 +477,7 @@ export const AppProvider = ({ children }) => {
         return () => {
             isSubscribed = false;
         };
-    }, [applyServerData]);
+    }, [applyServerData, getApiHeaders]);
     // Real-time polling & focus/visibility sync across multi-devices (Phone <-> PC)
     useEffect(() => {
         if (!mounted)
@@ -376,14 +491,17 @@ export const AppProvider = ({ children }) => {
                 isChecking = true;
                 const res = await fetch('/api/storage', {
                     cache: 'no-store',
-                    headers: {
-                        'Cache-Control': 'no-cache, no-store',
-                        Pragma: 'no-cache',
-                    },
+                    headers: getApiHeaders(),
                 });
+                if (res.status === 401) {
+                    setIsPinLocked(true);
+                    setServerSyncStatus('offline');
+                    return;
+                }
                 if (res.ok) {
                     const result = await res.json();
                     if (result.success && result.data) {
+                        setIsPinLocked(false);
                         const serverUpdatedAt = result.data.updatedAt;
                         // If server timestamp differs from our last applied state
                         if (serverUpdatedAt && serverUpdatedAt !== lastServerUpdatedAtRef.current) {
@@ -425,7 +543,7 @@ export const AppProvider = ({ children }) => {
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             window.removeEventListener('focus', handleFocus);
         };
-    }, [mounted, applyServerData]);
+    }, [mounted, applyServerData, getApiHeaders]);
     // Auto-save local changes to server disk
     useEffect(() => {
         if (!mounted)
@@ -465,14 +583,22 @@ export const AppProvider = ({ children }) => {
             try {
                 const res = await fetch('/api/storage', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: getApiHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify(payload),
                 });
+                if (res.status === 401) {
+                    setIsPinLocked(true);
+                    setServerSyncStatus('offline');
+                    return;
+                }
                 if (res.ok) {
                     const result = await res.json();
                     lastSavedDataSignatureRef.current = currentSignature;
                     if (result.updatedAt) {
                         lastServerUpdatedAtRef.current = result.updatedAt;
+                    }
+                    if (result.data?.transactions && result.data.transactions.length !== transactions.length) {
+                        setTransactions(result.data.transactions);
                     }
                     setServerSyncStatus('synced');
                 }
@@ -492,7 +618,7 @@ export const AppProvider = ({ children }) => {
             clearTimeout(timer);
             isSavingRef.current = false;
         };
-    }, [mounted, wallets, transactions, categories, budgets, bills, goals, planner, currentMonth, userProfile, simulatorConfig]);
+    }, [mounted, wallets, transactions, categories, budgets, bills, goals, planner, currentMonth, userProfile, simulatorConfig, getApiHeaders]);
     // Immediate save on demand
     const saveDataNow = async () => {
         const currentData = {
@@ -523,14 +649,22 @@ export const AppProvider = ({ children }) => {
         try {
             const res = await fetch('/api/storage', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getApiHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify(payload),
             });
+            if (res.status === 401) {
+                setIsPinLocked(true);
+                setServerSyncStatus('offline');
+                return false;
+            }
             if (res.ok) {
                 const result = await res.json();
                 lastSavedDataSignatureRef.current = currentSignature;
                 if (result.updatedAt) {
                     lastServerUpdatedAtRef.current = result.updatedAt;
+                }
+                if (result.data?.transactions && result.data.transactions.length !== transactions.length) {
+                    setTransactions(result.data.transactions);
                 }
                 setServerSyncStatus('synced');
                 return true;
@@ -656,7 +790,7 @@ export const AppProvider = ({ children }) => {
         balanceAdjustmentMode = 'NET_CHANGE',
         exactClosingBalance = null,
     }) => {
-        if (!transactionsToImport || transactionsToImport.length === 0) {
+        if (!transactionsToImport || !Array.isArray(transactionsToImport) || transactionsToImport.length === 0) {
             return { success: false, message: 'Không có giao dịch nào được chọn để nạp' };
         }
         const targetWallet = wallets.find((w) => w.id === walletId);
@@ -664,28 +798,66 @@ export const AppProvider = ({ children }) => {
             return { success: false, message: 'Không tìm thấy ví tương ứng' };
         }
 
+        // FIX ISSUE 9: Full validation of imported bank statement rows
+        const defaultIncCat = categories.find((c) => c.type === 'INCOME') || { id: 'cat-salary', name: 'Lương & Thu nhập' };
+        const defaultExpCat = categories.find((c) => c.type === 'EXPENSE') || { id: 'cat-other-exp', name: 'Chi phí khác' };
+        const todayKey = getLocalDateString();
+
         let totalIncome = 0;
         let totalExpense = 0;
+        const newTxList = [];
 
-        const newTxList = transactionsToImport.map((tx, idx) => {
-            const amount = Number(tx.amount) || 0;
-            if (tx.type === 'INCOME') totalIncome += amount;
-            if (tx.type === 'EXPENSE') totalExpense += amount;
+        for (let idx = 0; idx < transactionsToImport.length; idx++) {
+            const rawTx = transactionsToImport[idx];
+            if (!rawTx || typeof rawTx !== 'object') continue;
 
-            return {
+            const amount = Number(rawTx.amount);
+            // Amount must be positive number > 0 and reasonable (< 100 billion)
+            if (isNaN(amount) || amount <= 0 || !isFinite(amount) || amount > 100_000_000_000) {
+                continue;
+            }
+
+            const type = (rawTx.type === 'INCOME' || rawTx.type === 'EXPENSE') ? rawTx.type : 'EXPENSE';
+
+            // Resolve valid category
+            let categoryId = rawTx.categoryId;
+            let categoryName = rawTx.categoryName;
+            const foundCat = categories.find((c) => c.id === categoryId);
+            if (foundCat) {
+                categoryName = foundCat.name;
+            } else {
+                const fallback = type === 'INCOME' ? defaultIncCat : defaultExpCat;
+                categoryId = fallback.id;
+                categoryName = fallback.name;
+            }
+
+            // Cap future dates to today
+            let txDate = rawTx.date ? normalizeSaveDate(rawTx.date) : normalizeSaveDate();
+            if (toLocalDateKey(txDate) > todayKey) {
+                txDate = `${todayKey}T12:00:00`;
+            }
+
+            if (type === 'INCOME') totalIncome += amount;
+            if (type === 'EXPENSE') totalExpense += amount;
+
+            newTxList.push({
                 id: `tx-st-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
-                type: tx.type,
+                type,
                 amount,
-                categoryId: tx.categoryId,
-                categoryName: tx.categoryName,
+                categoryId,
+                categoryName,
                 walletId: targetWallet.id,
                 walletName: targetWallet.name,
-                date: tx.date || new Date().toISOString(),
-                note: tx.note || 'Sao kê ngân hàng',
-                tags: Array.isArray(tx.tags) && tx.tags.length > 0 ? tx.tags : ['Sao kê'],
+                date: txDate,
+                note: (rawTx.note || 'Sao kê ngân hàng').trim().slice(0, 300),
+                tags: Array.isArray(rawTx.tags) && rawTx.tags.length > 0 ? rawTx.tags : ['Sao kê'],
                 createdAt: new Date().toISOString(),
-            };
-        });
+            });
+        }
+
+        if (newTxList.length === 0) {
+            return { success: false, message: 'Tất cả các dòng sao kê đều có số tiền không hợp lệ hoặc bằng 0' };
+        }
 
         const netChange = totalIncome - totalExpense;
         const oldBalance = targetWallet.balance;
@@ -878,8 +1050,49 @@ export const AppProvider = ({ children }) => {
     };
     const deleteWallet = (id) => {
         setWallets((prev) => prev.filter((w) => w.id !== id));
-        // Also remove transactions associated with this deleted wallet to prevent orphaned entries
-        setTransactions((prev) => prev.filter((tx) => tx.walletId !== id && tx.toWalletId !== id));
+        // FIX ISSUE 5: Safely handle transfer transactions so counterpart wallets do not lose balance integrity
+        setTransactions((prev) => {
+            const nextTxs = [];
+            for (const tx of prev) {
+                if (tx.type === 'TRANSFER') {
+                    if (tx.walletId === id && tx.toWalletId && tx.toWalletId !== id) {
+                        // The remaining wallet (toWalletId) received money -> keep as INCOME
+                        nextTxs.push({
+                            ...tx,
+                            type: 'INCOME',
+                            walletId: tx.toWalletId,
+                            walletName: tx.toWalletName,
+                            toWalletId: undefined,
+                            toWalletName: undefined,
+                            fee: 0,
+                            note: `${tx.note || 'Chuyển tiền'} [Nhận từ ví đã xóa]`,
+                            tags: Array.isArray(tx.tags) ? [...tx.tags, 'Ví đã xóa'] : ['Ví đã xóa'],
+                        });
+                        continue;
+                    }
+                    if (tx.toWalletId === id && tx.walletId && tx.walletId !== id) {
+                        // The remaining wallet (walletId) sent money -> keep as EXPENSE
+                        nextTxs.push({
+                            ...tx,
+                            type: 'EXPENSE',
+                            toWalletId: undefined,
+                            toWalletName: undefined,
+                            fee: 0,
+                            amount: (tx.amount || 0) + (tx.fee || 0),
+                            note: `${tx.note || 'Chuyển tiền'} [Chuyển tới ví đã xóa]`,
+                            tags: Array.isArray(tx.tags) ? [...tx.tags, 'Ví đã xóa'] : ['Ví đã xóa'],
+                        });
+                        continue;
+                    }
+                }
+                // Transactions belonging exclusively to the deleted wallet are dropped
+                if (tx.walletId === id || tx.toWalletId === id) {
+                    continue;
+                }
+                nextTxs.push(tx);
+            }
+            return nextTxs;
+        });
         // Unbind any bills or goals associated with this wallet
         setBills((prev) => prev.map((b) => b.walletId === id ? { ...b, walletId: undefined } : b));
         setGoals((prev) => prev.map((g) => g.walletId === id ? { ...g, walletId: undefined } : g));
@@ -994,29 +1207,25 @@ export const AppProvider = ({ children }) => {
     const payBill = (billId, walletId, customPaidDate) => {
         const bill = bills.find((b) => b.id === billId);
         if (!bill)
-            return;
+            return false;
         const targetWallet = wallets.find((w) => w.id === walletId) || wallets[0];
+        if (!targetWallet) {
+            alert('Không tìm thấy ví thanh toán!');
+            return false;
+        }
         const validation = checkWalletSufficientFunds(targetWallet, bill.amount, 0, language);
         if (!validation.isValid) {
             alert(validation.errorMessage || (language === 'en' ? `Insufficient balance in wallet ${targetWallet?.name} to pay this bill!` : `Số dư ví ${targetWallet?.name} không đủ để thanh toán hóa đơn này!`));
-            return;
+            return false;
         }
         const billCategory = categories.find((c) => c.id === bill.categoryId);
         const paidDate = customPaidDate || getLocalDateString();
-        // 1. Mark bill as PAID
-        setBills((prev) => prev.map((b) => b.id === billId
-            ? {
-                ...b,
-                status: 'PAID',
-                lastPaidDate: paidDate,
-                walletId,
-            }
-            : b));
-        // 2. Automatically record transaction (addTransaction will deduct wallet balance safely)
+
+        // FIX ISSUE 7: Record transaction FIRST before updating bill state
         const now = new Date();
         const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
         const txDate = `${paidDate}T${timeStr}`;
-        addTransaction({
+        const txRes = addTransaction({
             type: 'EXPENSE',
             amount: bill.amount,
             categoryId: bill.categoryId,
@@ -1027,6 +1236,21 @@ export const AppProvider = ({ children }) => {
             note: `Thanh toán hóa đơn: ${bill.name}`,
             tags: ['Hóa đơn định kỳ'],
         });
+
+        if (!txRes) {
+            return false;
+        }
+
+        // Mark bill as PAID only after transaction was confirmed
+        setBills((prev) => prev.map((b) => b.id === billId
+            ? {
+                ...b,
+                status: 'PAID',
+                lastPaidDate: paidDate,
+                walletId: targetWallet.id,
+            }
+            : b));
+        return true;
     };
     // Goals
     const addGoal = (goal) => {
@@ -1048,14 +1272,31 @@ export const AppProvider = ({ children }) => {
         const goal = goals.find((g) => g.id === goalId);
         const wallet = wallets.find((w) => w.id === walletId);
         if (!goal || !wallet)
-            return;
+            return false;
         // Check if wallet has sufficient funds
         const validation = checkWalletSufficientFunds(wallet, amount, 0, language);
         if (!validation.isValid) {
             alert(validation.errorMessage || (language === 'en' ? `Insufficient balance in wallet ${wallet.name} for this goal!` : `Số dư ví ${wallet.name} không đủ để tích lũy vào mục tiêu!`));
-            return;
+            return false;
         }
-        // Add to goal
+
+        // FIX ISSUE 8: Record transaction FIRST before mutating goal
+        const txRes = addTransaction({
+            type: 'EXPENSE',
+            amount,
+            categoryId: 'cat-invest-exp',
+            categoryName: 'Đầu tư & Tích lũy',
+            walletId,
+            walletName: wallet.name,
+            date: normalizeSaveDate(),
+            note: `Tích lũy vào hũ: ${goal.name}`,
+            tags: ['Tích lũy mục tiêu'],
+        });
+
+        if (!txRes) {
+            return false;
+        }
+
         const newHistoryItem = {
             id: `gh-${Date.now()}`,
             date: getLocalDateString(),
@@ -1068,32 +1309,38 @@ export const AppProvider = ({ children }) => {
             ? {
                 ...g,
                 currentAmount: g.currentAmount + amount,
-                history: [newHistoryItem, ...g.history],
+                history: [newHistoryItem, ...(g.history || [])],
             }
             : g));
-        // Log transaction - addTransaction already safely deducts from wallet without double-counting
-        addTransaction({
-            type: 'EXPENSE',
-            amount,
-            categoryId: 'cat-invest-exp',
-            categoryName: 'Đầu tư & Tích lũy',
-            walletId,
-            walletName: wallet.name,
-            date: normalizeSaveDate(),
-            note: `Tích lũy vào hũ: ${goal.name}`,
-            tags: ['Tích lũy mục tiêu'],
-        });
+        return true;
     };
     const withdrawFromGoal = (goalId, amount, walletId, note) => {
         const goal = goals.find((g) => g.id === goalId);
         const wallet = wallets.find((w) => w.id === walletId);
         if (!goal || !wallet)
-            return;
+            return false;
         if (amount > goal.currentAmount) {
             alert(`Số tiền rút (${formatCurrency(amount)}) vượt quá số dư hiện có trong mục tiêu (${formatCurrency(goal.currentAmount)})!`);
-            return;
+            return false;
         }
-        // Deduct from goal
+
+        // FIX ISSUE 8: Record transaction FIRST before mutating goal
+        const txRes = addTransaction({
+            type: 'INCOME',
+            amount,
+            categoryId: 'cat-other-inc',
+            categoryName: 'Thu nhập khác',
+            walletId,
+            walletName: wallet.name,
+            date: normalizeSaveDate(),
+            note: `Rút từ hũ tích lũy: ${goal.name}`,
+            tags: ['Rút hũ tiết kiệm'],
+        });
+
+        if (!txRes) {
+            return false;
+        }
+
         const newHistoryItem = {
             id: `gh-${Date.now()}`,
             date: getLocalDateString(),
@@ -1106,21 +1353,10 @@ export const AppProvider = ({ children }) => {
             ? {
                 ...g,
                 currentAmount: Math.max(0, g.currentAmount - amount),
-                history: [newHistoryItem, ...g.history],
+                history: [newHistoryItem, ...(g.history || [])],
             }
             : g));
-        // Log income transaction - addTransaction already safely adds to wallet without double-counting
-        addTransaction({
-            type: 'INCOME',
-            amount,
-            categoryId: 'cat-other-inc',
-            categoryName: 'Thu nhập khác',
-            walletId,
-            walletName: wallet.name,
-            date: normalizeSaveDate(),
-            note: `Rút từ hũ tích lũy: ${goal.name}`,
-            tags: ['Rút hũ tiết kiệm'],
-        });
+        return true;
     };
     // Backup & Reset
     const resetToDefaultData = async () => {
@@ -1148,8 +1384,8 @@ export const AppProvider = ({ children }) => {
         try {
             await fetch('/api/storage', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(defaultData),
+                headers: getApiHeaders({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify({ ...defaultData, isReset: true }),
             });
             setServerSyncStatus('synced');
         }
@@ -1204,9 +1440,10 @@ export const AppProvider = ({ children }) => {
         link.click();
         URL.revokeObjectURL(link.href);
     };
-    const importDatabaseJSON = (jsonStr) => {
+    const importDatabaseJSON = async (jsonStr) => {
         try {
             const data = JSON.parse(jsonStr);
+            if (!data || typeof data !== 'object') return false;
             if (data.wallets && Array.isArray(data.wallets))
                 setWallets(data.wallets);
             if (data.transactions && Array.isArray(data.transactions))
@@ -1227,6 +1464,13 @@ export const AppProvider = ({ children }) => {
             }
             if (data.simulatorConfig)
                 setSimulatorConfig(data.simulatorConfig);
+            
+            // Sync to server disk
+            await fetch('/api/storage', {
+                method: 'POST',
+                headers: getApiHeaders({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify({ ...data, isReset: true, updatedAt: new Date().toISOString() }),
+            });
             return true;
         }
         catch (e) {
@@ -1321,8 +1565,58 @@ export const AppProvider = ({ children }) => {
             clearAllData,
             exportDatabaseJSON,
             importDatabaseJSON,
+            security,
+            appPin,
+            isPinLocked,
+            pinUnlockError,
+            verifyAndUnlockApp,
+            updateSecuritySettings,
         }}>
       {children}
+      {isPinLocked && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4">
+          <div className="max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-7 text-center space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/30">
+              <KeyRound className="w-8 h-8" />
+            </div>
+            <div>
+              <h3 className="text-xl font-black text-slate-900 dark:text-white">
+                {language === 'en' ? 'App Access PIN Required' : 'Yêu Cầu Mã PIN Bảo Mật'}
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                {language === 'en'
+                  ? 'FinTrack is protected against unauthorized access. Please enter your PIN code to unlock.'
+                  : 'FinTrack đang được bảo vệ chống truy cập trái phép qua mạng. Vui lòng nhập mã PIN bảo mật để mở khóa dữ liệu.'}
+              </p>
+            </div>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              const pinVal = e.target.pinInput.value.trim();
+              if (pinVal) await verifyAndUnlockApp(pinVal);
+            }} className="space-y-4">
+              <input
+                name="pinInput"
+                type="password"
+                maxLength={8}
+                autoFocus
+                placeholder="••••"
+                className="w-full text-center text-3xl tracking-widest font-black py-3 px-4 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-2xl dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {pinUnlockError && (
+                <p className="text-xs font-bold text-rose-500">
+                  {pinUnlockError}
+                </p>
+              )}
+              <button
+                type="submit"
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-2xl shadow-lg shadow-blue-500/25 transition-all"
+              >
+                {language === 'en' ? 'Unlock FinTrack' : 'Mở Khóa Ứng Dụng'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </AppContext.Provider>);
 };
 export const useApp = () => {

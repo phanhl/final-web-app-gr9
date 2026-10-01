@@ -555,3 +555,119 @@ export function formatWalletOptionLabel(wallet, language = 'vi') {
     }
     return `${wallet.name} (${formatCurrency(wallet.balance, language)})`;
 }
+
+// -------------------------------------------------------------
+// BILL & CYCLE HELPERS (Fixes Issue 6 & 12: Cycle Reset & Month/Year boundaries)
+// -------------------------------------------------------------
+export function isBillPaidForCycle(bill, referenceDate = new Date()) {
+    if (!bill || bill.status !== 'PAID' || !bill.lastPaidDate) return false;
+    const ref = referenceDate instanceof Date ? referenceDate : new Date(referenceDate);
+    if (isNaN(ref.getTime())) return false;
+
+    const paid = new Date(bill.lastPaidDate);
+    if (isNaN(paid.getTime())) return false;
+
+    const freq = (bill.frequency || 'MONTHLY').toUpperCase();
+    if (freq === 'MONTHLY') {
+        return paid.getFullYear() === ref.getFullYear() && paid.getMonth() === ref.getMonth();
+    }
+    if (freq === 'QUARTERLY') {
+        const refQuarter = Math.floor(ref.getMonth() / 3);
+        const paidQuarter = Math.floor(paid.getMonth() / 3);
+        return paid.getFullYear() === ref.getFullYear() && refQuarter === paidQuarter;
+    }
+    if (freq === 'YEARLY') {
+        return paid.getFullYear() === ref.getFullYear();
+    }
+    return paid.getFullYear() === ref.getFullYear() && paid.getMonth() === ref.getMonth();
+}
+
+export function getBillDueInfo(bill, referenceDate = new Date()) {
+    const ref = referenceDate instanceof Date ? new Date(referenceDate.getTime()) : new Date(referenceDate);
+    ref.setHours(0, 0, 0, 0);
+
+    const year = ref.getFullYear();
+    const month = ref.getMonth();
+    const dueDay = Math.min(31, Math.max(1, Number(bill?.dueDay) || 1));
+
+    const daysInThisMonth = new Date(year, month + 1, 0).getDate();
+    const actualDueDayThisMonth = Math.min(dueDay, daysInThisMonth);
+    const dueDateThisMonth = new Date(year, month, actualDueDayThisMonth);
+    dueDateThisMonth.setHours(0, 0, 0, 0);
+
+    const diffMs = dueDateThisMonth.getTime() - ref.getTime();
+    const diffDaysThisMonth = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+    const isPaid = isBillPaidForCycle(bill, ref);
+    if (isPaid) {
+        const nextMonth = (month + 1) % 12;
+        const nextYear = month === 11 ? year + 1 : year;
+        const daysInNextMonth = new Date(nextYear, nextMonth + 1, 0).getDate();
+        const actualDueDayNextMonth = Math.min(dueDay, daysInNextMonth);
+        const nextDueDate = new Date(nextYear, nextMonth, actualDueDayNextMonth);
+        nextDueDate.setHours(0, 0, 0, 0);
+        const nextDiff = Math.round((nextDueDate.getTime() - ref.getTime()) / (1000 * 60 * 60 * 24));
+        return {
+            diffDays: nextDiff,
+            dueDate: nextDueDate,
+            isPaid: true,
+            isOverdue: false,
+            isDueToday: false,
+        };
+    }
+
+    return {
+        diffDays: diffDaysThisMonth,
+        dueDate: dueDateThisMonth,
+        isPaid: false,
+        isOverdue: diffDaysThisMonth < 0,
+        isDueToday: diffDaysThisMonth === 0,
+    };
+}
+
+// -------------------------------------------------------------
+// IMAGE COMPRESSION (Fixes Issue 13: Receipt Base64 Database Bloat)
+// -------------------------------------------------------------
+export async function compressImage(file, maxWidth = 900, maxHeight = 900, quality = 0.65) {
+    if (typeof window === 'undefined' || !file) return null;
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const rawResult = e.target?.result;
+            if (!rawResult || typeof rawResult !== 'string') {
+                resolve(null);
+                return;
+            }
+            const img = new Image();
+            img.onload = () => {
+                let width = img.width;
+                let height = img.height;
+                if (width > maxWidth || height > maxHeight) {
+                    if (width / height > maxWidth / maxHeight) {
+                        height = Math.round((height * maxWidth) / width);
+                        width = maxWidth;
+                    } else {
+                        width = Math.round((width * maxHeight) / height);
+                        height = maxHeight;
+                    }
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    resolve(rawResult);
+                    return;
+                }
+                ctx.drawImage(img, 0, 0, width, height);
+                const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                resolve(compressedDataUrl);
+            };
+            img.onerror = () => resolve(rawResult);
+            img.src = rawResult;
+        };
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(file);
+    });
+}
+

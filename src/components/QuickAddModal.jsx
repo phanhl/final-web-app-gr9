@@ -13,7 +13,8 @@ import {
   toLocalDateTimeInput,
   normalizeSaveDate,
   toLocalDateKey,
-  getLocalDateString
+  getLocalDateString,
+  compressImage
 } from '@/lib/utils';
 
 export const QuickAddModal = () => {
@@ -105,14 +106,22 @@ export const QuickAddModal = () => {
     }
   };
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setReceiptImage(reader.result);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressed = await compressImage(file, 900, 900, 0.65);
+        if (compressed) {
+          setReceiptImage(compressed);
+        }
+      } catch (err) {
+        console.warn('Could not compress image, fallback:', err);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setReceiptImage(reader.result);
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 

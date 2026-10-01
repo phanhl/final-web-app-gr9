@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { CalendarCheck, Plus, CheckCircle2, Edit2, Trash2, Check, RotateCcw, X, Bell, } from 'lucide-react';
-import { formatCurrency, formatNumberWithDots, getLocalDateString, formatDisplayDate } from '@/lib/utils';
+import { formatCurrency, formatNumberWithDots, getLocalDateString, formatDisplayDate, isBillPaidForCycle, getBillDueInfo } from '@/lib/utils';
 export const BillsView = () => {
     const { bills, wallets, categories, addBill, editBill, deleteBill, payBill, navTargetBillId, setNavTargetBillId, billToAutoPayId, setBillToAutoPayId, t, tCategory, tWalletType, tBillName, tBillNote, tWalletName, language, } = useApp();
     const [billModalOpen, setBillModalOpen] = useState(false);
@@ -17,6 +17,7 @@ export const BillsView = () => {
     const [billReminderDays, setBillReminderDays] = useState('3');
     const [billStatus, setBillStatus] = useState('UNPAID');
     const [billLastPaidDate, setBillLastPaidDate] = useState(getLocalDateString());
+    const [billPayWalletId, setBillPayWalletId] = useState(wallets[0]?.id || '');
     // Pay Modal State
     const [payModalOpen, setPayModalOpen] = useState(false);
     const [billToPay, setBillToPay] = useState(null);
@@ -62,14 +63,17 @@ export const BillsView = () => {
     }, []);
     const today = currentDateInfo.day;
     const formattedToday = currentDateInfo.formatted;
-    // KPI Calculations
+    // KPI Calculations (Fix Issue 6: Dynamically computed by cycle)
     const totalBillsAmount = bills.reduce((sum, b) => sum + b.amount, 0);
-    const paidBills = bills.filter((b) => b.status === 'PAID');
-    const unpaidBills = bills.filter((b) => b.status === 'UNPAID');
+    const paidBills = bills.filter((b) => isBillPaidForCycle(b));
+    const unpaidBills = bills.filter((b) => !isBillPaidForCycle(b));
     const totalPaid = paidBills.reduce((sum, b) => sum + b.amount, 0);
     const totalUnpaid = unpaidBills.reduce((sum, b) => sum + b.amount, 0);
-    // Upcoming or Overdue reminder
-    const upcomingBills = unpaidBills.filter((b) => (b.dueDay - today) <= (b.reminderDaysBefore ?? 3));
+    // Upcoming or Overdue reminder (Fix Issue 12: Calendar Date Math)
+    const upcomingBills = unpaidBills.filter((b) => {
+        const info = getBillDueInfo(b);
+        return info.diffDays <= (b.reminderDaysBefore ?? 3);
+    });
     const handleSaveBill = (e) => {
         e.preventDefault();
         const amountNum = Number(billAmount);
@@ -79,6 +83,9 @@ export const BillsView = () => {
             return;
         }
         const cat = categories.find((c) => c.id === billCategory);
+        const wasAlreadyPaid = editingBill ? isBillPaidForCycle(editingBill) : false;
+        let targetBillId = editingBill?.id;
+
         if (editingBill) {
             editBill(editingBill.id, {
                 name: billName,
@@ -94,7 +101,7 @@ export const BillsView = () => {
             });
         }
         else {
-            addBill({
+            const newBill = {
                 name: billName,
                 amount: amountNum,
                 categoryId: billCategory,
@@ -105,8 +112,16 @@ export const BillsView = () => {
                 lastPaidDate: billStatus === 'PAID' ? (billLastPaidDate || getLocalDateString()) : undefined,
                 note: billNote,
                 reminderDaysBefore: Number(billReminderDays) || 3,
-            });
+            };
+            addBill(newBill);
+            targetBillId = newBill.id;
         }
+
+        // FIX ISSUE 7: If marked as PAID in modal and not yet paid for this cycle, record transaction
+        if (billStatus === 'PAID' && !wasAlreadyPaid && targetBillId) {
+            payBill(targetBillId, billPayWalletId || wallets[0]?.id, billLastPaidDate || getLocalDateString());
+        }
+
         setBillModalOpen(false);
         setEditingBill(null);
     };
@@ -191,12 +206,12 @@ export const BillsView = () => {
               <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
                 {upcomingBills
                 .map((b) => {
-                const diff = b.dueDay - today;
-                const diffLabel = diff === 0
+                const info = getBillDueInfo(b);
+                const diffLabel = info.isDueToday
                     ? t('bill.dueToday', 'Đến hạn hôm nay!')
-                    : diff < 0
-                        ? t('bill.daysOverdue', 'Quá hạn {days} ngày!').replace('{days}', String(Math.abs(diff)))
-                        : t('bill.dueInDays', 'Cần đóng trong {days} ngày').replace('{days}', String(diff));
+                    : info.isOverdue
+                        ? t('bill.daysOverdue', 'Quá hạn {days} ngày!').replace('{days}', String(Math.abs(info.diffDays)))
+                        : t('bill.dueInDays', 'Cần đóng trong {days} ngày').replace('{days}', String(info.diffDays));
                 const bName = tBillName ? tBillName(b.name) : b.name;
                 return `${bName} (${formatCurrency(b.amount)} - ${diffLabel})`;
             })
@@ -218,8 +233,9 @@ export const BillsView = () => {
 
         <div className="divide-y divide-slate-100 dark:divide-slate-800">
           {bills.map((bill) => {
-            const isPaid = bill.status === 'PAID';
-            const daysLeft = bill.dueDay - today;
+            const isPaid = isBillPaidForCycle(bill);
+            const dueInfo = getBillDueInfo(bill);
+            const daysLeft = dueInfo.diffDays;
             const isHighlighted = navTargetBillId === bill.id;
             return (<div key={bill.id} id={`bill-card-${bill.id}`} className={`p-5 transition-all flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 ${isHighlighted
                     ? 'ring-4 ring-blue-500/80 dark:ring-blue-400/80 bg-blue-50/60 dark:bg-blue-950/30 rounded-xl'
@@ -244,9 +260,9 @@ export const BillsView = () => {
                         </span>)}
                       {isPaid ? (<span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
                           {t('bill.paidDate', 'Đã trả ngày')} {formatDisplayDate(bill.lastPaidDate, language)}
-                        </span>) : daysLeft < 0 ? (<span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300">
+                        </span>) : dueInfo.isOverdue ? (<span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300">
                           {t('bill.daysOverdue', 'Quá hạn {days} ngày!').replace('{days}', String(Math.abs(daysLeft)))}
-                        </span>) : daysLeft === 0 ? (<span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 animate-pulse">
+                        </span>) : dueInfo.isDueToday ? (<span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 animate-pulse">
                           {t('bill.dueToday', 'Hôm nay đến hạn!')}
                         </span>) : daysLeft <= (bill.reminderDaysBefore ?? 3) ? (<span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300">
                           {t('bill.dueInDays', 'Cần đóng trong {days} ngày').replace('{days}', String(daysLeft))}
@@ -431,11 +447,25 @@ export const BillsView = () => {
                   </select>
                 </div>
 
-                {billStatus === 'PAID' && (<div>
-                    <label className="block text-[11px] font-medium text-slate-500 mb-1">
-                      {t('bill.paidDateOptional', 'Ngày đã thanh toán (có thể điều chỉnh tùy ý):')}
-                    </label>
-                    <input type="date" value={billLastPaidDate} onChange={(e) => setBillLastPaidDate(e.target.value)} className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-semibold dark:text-white"/>
+                {billStatus === 'PAID' && (<div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-500 mb-1">
+                        {t('bill.paymentWallet', 'Ví thanh toán (tự động tạo giao dịch chi phí):')}
+                      </label>
+                      <select value={billPayWalletId} onChange={(e) => setBillPayWalletId(e.target.value)} className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-xs font-bold dark:text-white">
+                        {wallets.map((w) => (
+                          <option key={w.id} value={w.id}>
+                            {w.name} ({formatCurrency(w.balance)})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-500 mb-1">
+                        {t('bill.paidDateOptional', 'Ngày đã thanh toán (có thể điều chỉnh tùy ý):')}
+                      </label>
+                      <input type="date" value={billLastPaidDate} onChange={(e) => setBillLastPaidDate(e.target.value)} className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-semibold dark:text-white"/>
+                    </div>
                   </div>)}
               </div>
 
