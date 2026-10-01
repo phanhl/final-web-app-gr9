@@ -17,20 +17,34 @@ export const QuickAddModal = () => {
     const [receiptImage, setReceiptImage] = useState(undefined);
     useEffect(() => {
         if (quickAddOpen) {
-            setType(quickAddDefaultType === 'INCOME' ? 'INCOME' : 'EXPENSE');
+            const currentType = quickAddDefaultType === 'INCOME' ? 'INCOME' : 'EXPENSE';
+            setType(currentType);
             setAmount('');
-            const defaultCat = categories.find((c) => c.type === (quickAddDefaultType === 'INCOME' ? 'INCOME' : 'EXPENSE'));
+            const defaultCat = categories.find((c) => c.type === currentType);
             setCategoryId(defaultCat?.id || '');
-            const targetWalletId = (quickAddDefaultWalletId && wallets.some((w) => w.id === quickAddDefaultWalletId))
-                ? quickAddDefaultWalletId
-                : (wallets[0]?.id || '');
+            const availableAssetWallets = wallets.filter((w) => w.type !== 'CREDIT' && w.type !== 'SAVINGS');
+            const availableSpendableCreditWallets = wallets.filter((w) => w.type === 'CREDIT' && w.creditLimit && w.creditLimit > 0);
+            const candidateWallets = currentType === 'INCOME' ? availableAssetWallets : [...availableAssetWallets, ...availableSpendableCreditWallets];
+            let targetWalletId = '';
+            if (quickAddDefaultWalletId && candidateWallets.some((w) => w.id === quickAddDefaultWalletId)) {
+                targetWalletId = quickAddDefaultWalletId;
+            }
+            else if (availableAssetWallets.length > 0) {
+                targetWalletId = availableAssetWallets[0].id;
+            }
+            else if (candidateWallets.length > 0) {
+                targetWalletId = candidateWallets[0].id;
+            }
+            else {
+                targetWalletId = wallets[0]?.id || '';
+            }
             setWalletId(targetWalletId);
             setDate(toLocalDateTimeInput());
             setNote('');
             setTags([]);
             setReceiptImage(undefined);
         }
-    }, [quickAddOpen, quickAddDefaultType, categories, wallets]);
+    }, [quickAddOpen, quickAddDefaultType, quickAddDefaultWalletId, categories, wallets]);
     if (!quickAddOpen)
         return null;
     const handleQuickAmount = (val) => {
@@ -57,6 +71,8 @@ export const QuickAddModal = () => {
     };
     const selectedWallet = wallets.find((w) => w.id === walletId);
     const selectedCategory = categories.find((c) => c.id === categoryId);
+    const assetWallets = wallets.filter((w) => w.type !== 'CREDIT' && w.type !== 'SAVINGS');
+    const creditWallets = wallets.filter((w) => w.type === 'CREDIT');
     const numAmount = Number(amount) || 0;
     const fundValidation = checkWalletSufficientFunds(selectedWallet, numAmount, 0);
     const availableBalance = getWalletAvailableBalance(selectedWallet);
@@ -157,6 +173,10 @@ export const QuickAddModal = () => {
             const cat = categories.find((c) => c.type === 'INCOME');
             if (cat)
                 setCategoryId(cat.id);
+            if (selectedWallet?.type === 'CREDIT' || selectedWallet?.type === 'SAVINGS') {
+                const firstAsset = wallets.find((w) => w.type !== 'CREDIT' && w.type !== 'SAVINGS');
+                if (firstAsset) setWalletId(firstAsset.id);
+            }
         }} className={`py-2.5 text-sm font-semibold rounded-lg transition-all cursor-pointer ${type === 'INCOME'
             ? 'bg-emerald-500 text-white shadow'
             : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>
@@ -207,17 +227,81 @@ export const QuickAddModal = () => {
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  {t('qa.payWallet', 'Ví thanh toán')} <span className="text-rose-500">*</span>
+                  {type === 'INCOME' ? t('qa.receiveWallet', 'Ví nhận tiền') : t('qa.payWallet', 'Ví thanh toán')} <span className="text-rose-500">*</span>
                 </label>
-                {selectedWallet && (<span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                    {t('qa.availableBalance', 'Khả dụng')}: {formatCurrency(availableBalance)}
-                  </span>)}
+                {selectedWallet && (
+                  <span className={`text-[11px] font-bold ${
+                    selectedWallet.type === 'CREDIT'
+                      ? 'text-purple-600 dark:text-purple-400'
+                      : 'text-emerald-600 dark:text-emerald-400'
+                  }`}>
+                    {selectedWallet.type === 'CREDIT' ? (
+                      <>
+                        <span className="text-slate-400 font-normal">{t('wallets.currentDebt', 'Dư nợ')}:</span>{' '}
+                        <span className="text-rose-600 font-extrabold">{formatCurrency(selectedWallet.balance, language)}</span>
+                        {selectedWallet.creditLimit > 0 && (
+                          <>
+                            {' • '}
+                            <span className="text-slate-400 font-normal">{t('qa.availableBalance', 'Khả dụng')}:</span>{' '}
+                            <span className="text-purple-600 dark:text-purple-400 font-bold">{formatCurrency(availableBalance, language)}</span>
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      <>{t('qa.availableBalance', 'Khả dụng')}: {formatCurrency(availableBalance, language)}</>
+                    )}
+                  </span>
+                )}
               </div>
-              <select value={walletId} onChange={(e) => setWalletId(e.target.value)} className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm font-semibold">
-                {wallets.map((w) => (<option key={w.id} value={w.id}>
-                    {w.name} ({formatCurrency(w.balance)})
-                  </option>))}
+              <select
+                value={walletId}
+                onChange={(e) => setWalletId(e.target.value)}
+                className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm font-semibold"
+              >
+                {type === 'INCOME' ? (
+                  assetWallets.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name} ({t('qa.availableBalance', 'Khả dụng')}: {formatCurrency(w.balance, language)})
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <optgroup label={`💰 ${t('wallets.assetGroup', 'Ví & Tài khoản tiền thật (Tiền có sẵn)')}`}>
+                      {assetWallets.map((w) => (
+                        <option key={w.id} value={w.id}>
+                          {w.name} ({formatCurrency(w.balance, language)})
+                        </option>
+                      ))}
+                    </optgroup>
+                    {creditWallets.length > 0 && (
+                      <optgroup label={`💳 ${t('wallets.creditGroupLabel', 'Thẻ tín dụng & Khoản nợ (Dư nợ)')}`}>
+                        {creditWallets.map((w) => {
+                          const hasLimit = w.creditLimit && w.creditLimit > 0;
+                          const remainingLimit = hasLimit ? Math.max(0, w.creditLimit - w.balance) : 0;
+                          return (
+                            <option key={w.id} value={w.id} disabled={!hasLimit}>
+                              {w.name} {hasLimit
+                                ? `[${t('wallets.remainingCreditLimit', 'Hạn mức còn')}: ${formatCurrency(remainingLimit, language)} • ${t('wallets.currentDebt', 'Dư nợ')}: ${formatCurrency(w.balance, language)}]`
+                                : `[${t('wallets.currentDebt', 'Dư nợ')}: ${formatCurrency(w.balance, language)} - ${t('wallets.pureDebtLabel', 'Khoản nợ, không thể chi tiêu')}]`
+                              }
+                            </option>
+                          );
+                        })}
+                      </optgroup>
+                    )}
+                  </>
+                )}
               </select>
+
+              {/* Cảnh báo giải thích nếu đang xem thẻ tín dụng / khoản nợ thuần túy */}
+              {selectedWallet?.type === 'CREDIT' && (!selectedWallet.creditLimit || selectedWallet.creditLimit <= 0) && (
+                <div className="mt-2 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-[11px] text-amber-800 dark:text-amber-300 flex items-start gap-2">
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                  <span>
+                    {t('qa.pureDebtNotice', 'Đây là khoản dư nợ thuần túy (không có hạn mức thẻ để chi tiêu). Để thanh toán giảm khoản nợ này, vui lòng dùng chức năng Chuyển tiền từ ví tiền mặt hoặc ngân hàng.')}
+                  </span>
+                </div>
+              )}
             </div>
 
             <div>

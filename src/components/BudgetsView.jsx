@@ -923,7 +923,7 @@ export const BudgetsView = () => {
                   {isDepositMode ? t('budget.sourceWallet', 'Trừ từ Ví nguồn') : t('budget.destWallet', 'Chuyển về Ví đích')}
                 </label>
                 <select value={depositWalletId} onChange={(e) => setDepositWalletId(e.target.value)} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm dark:text-white">
-                  {wallets.map((w) => (<option key={w.id} value={w.id}>
+                  {wallets.filter((w) => w.type !== 'CREDIT').map((w) => (<option key={w.id} value={w.id}>
                       {w.name} ({formatCurrency(w.balance)})
                     </option>))}
                 </select>

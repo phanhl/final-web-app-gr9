@@ -464,3 +464,18 @@ export function formatMonthLabel(monthStr, language = 'vi') {
     }
     return `Tháng ${m}/${y}`;
 }
+
+export function formatWalletOptionLabel(wallet, language = 'vi') {
+    if (!wallet) return '';
+    if (wallet.type === 'CREDIT') {
+        const debtLabel = language === 'en' ? 'Debt' : 'Dư nợ';
+        const limitLabel = language === 'en' ? 'Remaining limit' : 'Hạn mức còn';
+        const noLimitLabel = language === 'en' ? 'Liability, cannot spend' : 'Khoản nợ, không thể chi tiêu';
+        if (wallet.creditLimit && wallet.creditLimit > 0) {
+            const avail = Math.max(0, wallet.creditLimit - wallet.balance);
+            return `${wallet.name} [${limitLabel}: ${formatCurrency(avail, language)} • ${debtLabel}: ${formatCurrency(wallet.balance, language)}]`;
+        }
+        return `${wallet.name} [${debtLabel}: ${formatCurrency(wallet.balance, language)} - ${noLimitLabel}]`;
+    }
+    return `${wallet.name} (${formatCurrency(wallet.balance, language)})`;
+}

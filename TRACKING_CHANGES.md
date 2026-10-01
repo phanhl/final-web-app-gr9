@@ -4,6 +4,38 @@
 
 ---
 
+## [LẦN CHỈNH SỬA 12] - Tách bạch Dư nợ / Thẻ tín dụng khỏi Ví thanh toán tiền thật, chống hiểu nhầm tài sản
+
+* **Thời gian thực hiện:** 01/10/2026
+* **Mức độ ảnh hưởng:** Module Thêm giao dịch & Quản lý ví (`QuickAddModal.jsx`, `TransactionsView.jsx`, `BillsView.jsx`, `BudgetsView.jsx`, `utils.js`, `i18n.js`)
+* **Trạng thái:** ✅ Đã hoàn thành và xác minh
+
+### 1. Vấn Đề & Phản Hồi Từ Người Dùng
+- **Phản hồi:** "Nếu đã là dư nợ thì ko nên để ở mục ví thế này dễ gây hiểu nhầm cho người dùng là tiền mình có mà ko rõ nguyên nhân".
+- **Nguyên nhân gốc rễ:**
+  1. Trong modal Thêm giao dịch (`QuickAddModal`), trường "VÍ THANH TOÁN" trước đây gộp chung tất cả các ví vào một danh sách phẳng và hiển thị `{w.name} ({formatCurrency(w.balance)})`.
+  2. Ví dụ thẻ tín dụng hoặc khoản nợ `Cống hiến cho anh 7` có dư nợ 7.000.000 đ thì lại hiển thị trơ trọi thành `Cống hiến cho anh 7 (7.000.000 đ)`, khiến người dùng tưởng rằng mình đang có 7 triệu trong ví.
+  3. Nhưng khi chọn ví này để chi tiêu thì hệ thống lại báo `Khả dụng: 0 đ` và văng cảnh báo đỏ `Vượt quá hạn mức khả dụng... còn 0 đ`, gây mâu thuẫn và khó hiểu cho người dùng.
+  4. Ở tab "Khoản thu", thẻ tín dụng/khoản nợ cũng bị đưa vào danh sách chọn "Ví nhận tiền" trong khi nợ không thể là nơi nhận thu nhập.
+
+### 2. Các Thay Đổi Chi Tiết Đã Triển Khai
+1. **Phân nhóm rõ ràng theo bản chất tài chính (`optgroup`):**
+   - **Nhóm 1:** `💰 Ví & Tài khoản tiền thật (Tiền có sẵn)`: Tech, MB, Ví tay... hiển thị số dư thực tế có thể chi tiêu.
+   - **Nhóm 2:** `💳 Thẻ tín dụng & Khoản nợ (Dư nợ)`:
+     * Với thẻ tín dụng có hạn mức chi tiêu (`creditLimit > 0`): Hiển thị rõ `[Hạn mức còn: ... • Dư nợ: ...]`.
+     * Với khoản nợ thuần túy / không có hạn mức thẻ (như khoản nợ ngoài "Cống hiến cho anh 7"): Hiển thị rõ `[Dư nợ: 7.000.000 đ - Khoản nợ, không thể chi tiêu]` và bị **vô hiệu hóa (`disabled`)**, ngăn chọn làm ví thanh toán chi tiêu.
+2. **Khóa thẻ tín dụng / khoản nợ khỏi tab Khoản Thu (Income):**
+   - Khi chọn tab "Khoản thu", trường chuyển thành "Ví nhận tiền" và **hoàn toàn loại bỏ các khoản nợ / thẻ tín dụng**, chỉ cho phép nhận tiền vào tiền mặt hoặc tài khoản ngân hàng.
+   - Tự động chuyển ví hợp lệ nếu người dùng đang đứng ở thẻ nợ rồi bấm sang tab Khoản thu.
+3. **Cảnh báo và giải thích trực quan (Header & Alert Notice):**
+   - Khi xem thẻ tín dụng, nhãn phía trên hiển thị rõ: `Dư nợ: X.XXX.XXX đ` (màu đỏ) thay vì "Khả dụng".
+   - Nếu là khoản nợ thuần túy không có hạn mức, hiển thị hộp hướng dẫn màu hổ phách: *"Đây là khoản dư nợ thuần túy (không có hạn mức thẻ để chi tiêu). Để thanh toán giảm khoản nợ này, vui lòng dùng chức năng Chuyển tiền từ ví tiền mặt hoặc ngân hàng."*
+4. **Chuẩn hóa trên toàn bộ ứng dụng:**
+   - Cập nhật đồng bộ tại `QuickAddModal.jsx`, `TransactionsView.jsx` (modal sửa giao dịch, chuyển tiền trả nợ thẻ), `BillsView.jsx` (thanh toán hóa đơn) và `BudgetsView.jsx`.
+   - Bổ sung hàm tiện ích `formatWalletOptionLabel` tại `src/lib/utils.js`.
+
+---
+
 ## [LẦN CHỈNH SỬA 11] - Xử lý triệt để trùng lặp khoản chi trong What-If (Ngăn trùng, Tự động gộp & Nhận diện thông minh)
 
 * **Thời gian thực hiện:** 01/10/2026

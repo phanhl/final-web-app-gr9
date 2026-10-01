@@ -487,9 +487,21 @@ export const BillsView = () => {
                   {t('bill.deductFromWallet', 'Trừ tiền từ Ví / Tài khoản:')}
                 </label>
                 <select value={payWalletId} onChange={(e) => setPayWalletId(e.target.value)} className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold dark:text-white">
-                  {wallets.map((w) => (<option key={w.id} value={w.id}>
-                      {w.name} ({t('qa.availableBalance', 'Khả dụng')}: {formatCurrency(w.balance)})
-                    </option>))}
+                  {wallets.map((w) => {
+                    const isCredit = w.type === 'CREDIT';
+                    const hasLimit = isCredit && w.creditLimit && w.creditLimit > 0;
+                    const avail = isCredit ? Math.max(0, (w.creditLimit || 0) - w.balance) : w.balance;
+                    return (
+                      <option key={w.id} value={w.id} disabled={isCredit && !hasLimit}>
+                        {w.name} {isCredit 
+                          ? (hasLimit 
+                              ? `[${t('wallets.remainingCreditLimit', 'Hạn mức còn')}: ${formatCurrency(avail)} • Dư nợ: ${formatCurrency(w.balance)}]`
+                              : `[Dư nợ: ${formatCurrency(w.balance)} - Khoản nợ, không thể chi tiêu]`)
+                          : `(Khả dụng: ${formatCurrency(avail)})`
+                        }
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 

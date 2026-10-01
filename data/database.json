@@ -29,7 +29,7 @@
     {
       "name": "Cống hiến cho anh 7",
       "type": "CREDIT",
-      "balance": 7000000,
+      "balance": 1999500,
       "initialBalance": 7000000,
       "currency": "VND",
       "bankName": "ACB Bank",
@@ -54,6 +54,19 @@
     }
   ],
   "transactions": [
+    {
+      "type": "INCOME",
+      "amount": 5000500,
+      "categoryId": "cat-salary",
+      "categoryName": "Lương chính",
+      "walletId": "wal-1790820589219",
+      "walletName": "Cống hiến cho anh 7",
+      "date": "2026-10-01T09:41:00",
+      "note": "Lương chính",
+      "tags": [],
+      "id": "tx-1790822698132",
+      "createdAt": "2026-10-01T02:44:58.132Z"
+    },
     {
       "type": "INCOME",
       "amount": 650000,
@@ -2243,12 +2256,12 @@
   "planner": {
     "monthlyIncome": 32000000,
     "needsPercent": 50,
-    "wantsPercent": 25,
-    "savingsPercent": 15,
+    "wantsPercent": 24,
+    "savingsPercent": 14,
     "notes": "Áp dụng quy tắc 50/30/20: 50% thiết yếu, 30% sở thích cá nhân, 20% tích lũy & quỹ khẩn cấp",
-    "emergencyPercent": 10
+    "emergencyPercent": 12
   },
-  "currentMonth": "2026-09",
+  "currentMonth": "2026-10",
   "userProfile": {
     "name": "PanC",
     "email": "admin@fintrack.vn",
@@ -2328,5 +2341,5 @@
       }
     ]
   },
-  "updatedAt": "2026-10-01T02:20:51.835Z"
+  "updatedAt": "2026-10-01T02:59:03.086Z"
 }

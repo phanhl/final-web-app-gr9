@@ -1114,8 +1114,8 @@ const EditTransactionModal = ({ isOpen, onClose, transaction, }) => {
                   Ví chuyển (Nguồn)
                 </label>
                 <select value={walletId} onChange={(e) => setWalletId(e.target.value)} className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm">
-                  {wallets.map((w) => (<option key={w.id} value={w.id}>
-                      {w.name} ({tWalletType(w.type)})
+                  {wallets.filter((w) => w.type !== 'CREDIT').map((w) => (<option key={w.id} value={w.id}>
+                      {w.name} ({formatCurrency(w.balance)})
                     </option>))}
                 </select>
               </div>
@@ -1126,7 +1126,7 @@ const EditTransactionModal = ({ isOpen, onClose, transaction, }) => {
                 </label>
                 <select value={toWalletId} onChange={(e) => setToWalletId(e.target.value)} className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm">
                   {wallets.map((w) => (<option key={w.id} value={w.id}>
-                      {w.name} ({tWalletType(w.type)})
+                      {w.name} {w.type === 'CREDIT' ? `[Thanh toán trả nợ - Dư nợ: ${formatCurrency(w.balance)}]` : `(${formatCurrency(w.balance)})`}
                     </option>))}
                 </select>
               </div>
@@ -1143,12 +1143,31 @@ const EditTransactionModal = ({ isOpen, onClose, transaction, }) => {
             </div>) : (<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                  {t('qa.wallet', 'Ví thanh toán')}
+                  {type === 'INCOME' ? t('qa.receiveWallet', 'Ví nhận tiền') : t('qa.wallet', 'Ví thanh toán')}
                 </label>
-                <select value={walletId} onChange={(e) => setWalletId(e.target.value)} className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm">
-                  {wallets.map((w) => (<option key={w.id} value={w.id}>
-                      {w.name} ({tWalletType(w.type)})
-                    </option>))}
+                <select value={walletId} onChange={(e) => setWalletId(e.target.value)} className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm font-semibold">
+                  {type === 'INCOME' ? (
+                    wallets.filter((w) => w.type !== 'CREDIT').map((w) => (
+                      <option key={w.id} value={w.id}>
+                        {w.name} ({formatCurrency(w.balance)})
+                      </option>
+                    ))
+                  ) : (
+                    wallets.map((w) => {
+                      const isCredit = w.type === 'CREDIT';
+                      const hasLimit = isCredit && w.creditLimit && w.creditLimit > 0;
+                      const avail = isCredit ? Math.max(0, (w.creditLimit || 0) - w.balance) : w.balance;
+                      return (
+                        <option key={w.id} value={w.id} disabled={isCredit && !hasLimit}>
+                          {w.name} {isCredit
+                            ? (hasLimit
+                                ? `[Hạn mức còn: ${formatCurrency(avail)} • Dư nợ: ${formatCurrency(w.balance)}]`
+                                : `[Dư nợ: ${formatCurrency(w.balance)} - Khoản nợ, không thể chi tiêu]`)
+                            : `(${formatCurrency(w.balance)})`}
+                        </option>
+                      );
+                    })
+                  )}
                 </select>
               </div>
 
