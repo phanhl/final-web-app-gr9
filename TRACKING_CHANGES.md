@@ -4,6 +4,79 @@
 
 ---
 
+## [LẦN CHỈNH SỬA 10] - Tự động nhận diện ngân hàng từ bản sao kê & bắt buộc liên kết/tạo ví ngân hàng tương ứng
+
+* **Thời gian thực hiện:** 01/10/2026
+* **Mức độ ảnh hưởng:** Module Nhập sao kê ngân hàng (`bank-statement-parser.js`, `BankStatementModal.jsx`, `AppContext.jsx`)
+* **Trạng thái:** ✅ Đã hoàn thành và xác minh
+
+### 1. Vấn Đề & Yêu Cầu
+- **Yêu cầu của người dùng:**
+  1. Tự động phân biệt/nhận diện tệp sao kê tải lên thuộc ngân hàng nào (Techcombank, Vietcombank, MB Bank, VPBank, ACB, BIDV, VietinBank, TPBank, VIB, Agribank, Sacombank, Timo...).
+  2. Nguyên tắc dòng tiền chính xác: Sao kê của ngân hàng nào thì các giao dịch chi tiêu/thu nhập phải được trừ/cộng trực tiếp vào đúng ví của ngân hàng đó.
+  3. Bắt buộc tạo ví nếu chưa có: Nếu hệ thống chưa có ví ngân hàng tương ứng với bản sao kê, hệ thống phải yêu cầu người dùng tạo và thêm ví ngân hàng đó trước, ngăn chặn việc nhập nhầm lẫn vào ví tiền mặt hoặc ví của ngân hàng khác.
+
+### 2. Các Thay Đổi Chi Tiết Đã Triển Khai
+1. **Bộ nhận diện ngân hàng thông minh (`src/lib/bank-statement-parser.js`):**
+   - Định nghĩa từ điển `SUPPORTED_BANKS` với 14+ ngân hàng phổ biến tại Việt Nam kèm mã nhận diện, từ khóa, tên đầy đủ, biểu tượng và màu sắc thương hiệu.
+   - Xây dựng hàm `detectBankAndAccount(file, rows, workbook)` quét qua tiêu đề tệp, tên sheet, 35 dòng đầu (metadata sao kê), ghi chú giao dịch và biểu thức Regex để trích xuất:
+     * Tên & mã ngân hàng phát hành sao kê (`detectedBank`).
+     * Số tài khoản ngân hàng (`detectedAccountNumber`).
+     * Tên chủ tài khoản (`detectedAccountHolder`).
+   - Cập nhật hàm `downloadSampleStatementTemplate()` tạo file sao kê mẫu chuẩn Techcombank có sẵn số tài khoản `19038899887766` để kiểm thử ngay.
+
+2. **Cập nhật trả về id ví mới trong AppContext (`src/context/AppContext.jsx`):**
+   - Cập nhật hàm `addWallet` để trả về đối tượng `newWallet` vừa tạo, cho phép các modal bắt lấy ID và liên kết tự động ngay lập tức mà không cần chờ reload.
+
+3. **Giao diện & Luồng kiểm soát chặt chẽ (`src/components/BankStatementModal.jsx`):**
+   - Tự động khớp ví (`findMatchingWalletForBank`):
+     * Khớp chính xác theo số tài khoản (`accountNumber`).
+     * Hoặc khớp theo mã ngân hàng (`bankCode`) / tên ngân hàng (`bankName`).
+     * Hoặc khớp theo tên hiển thị của ví.
+   - **Xử lý 3 kịch bản nhận diện:**
+     * **Trường hợp 1 - Đã có ví tương ứng (`MATCHED`):** Khóa tự động vào đúng ví ngân hàng đó; hiển thị thẻ xanh thông báo đã nhận diện chuẩn xác kèm tên ví, số tài khoản và số dư hiện tại.
+     * **Trường hợp 2 - Chưa có ví tương ứng (`NOT_FOUND`):** Hiển thị cảnh báo màu hổ phách yêu cầu bắt buộc tạo ví ngân hàng; cung cấp nút **"Tạo nhanh ví [Tên ngân hàng]"** (1-click) tự điền sẵn tên ngân hàng, số tài khoản nhận diện và số dư ban đầu, hoặc nút **"Tự thiết lập ví"** để tùy biến thêm.
+     * **Trường hợp 3 - File sao kê thông dụng không rõ ngân hàng (`MANUAL`):** Cho phép người dùng chủ động chọn ví đích từ danh sách.
+   - **Bảo vệ toàn vẹn dữ liệu giao dịch:**
+     * Nút "Xác nhận nhập giao dịch" bị vô hiệu hóa (disabled) nếu chưa tạo hoặc chưa chọn đúng ví ngân hàng, hiển thị thông báo hướng dẫn rõ ràng.
+     * Đảm bảo mọi giao dịch chi tiêu sẽ trừ tiền trực tiếp vào đúng ví ngân hàng đó, thu nhập cộng vào đúng ví ngân hàng đó.
+
+---
+
+## [LẦN CHỈNH SỬA 09] - Tùy biến toàn diện danh mục chi tiêu trong mô phỏng What-If (Thêm mới, Xóa bỏ, Chỉnh sửa, Khôi phục)
+
+* **Thời gian thực hiện:** 01/10/2026
+* **Mức độ ảnh hưởng:** Module Mô phỏng What-If (`WhatIfSimulatorView.jsx`, `i18n.js`)
+* **Trạng thái:** ✅ Đã hoàn thành và xác minh
+
+### 1. Vấn Đề & Yêu Cầu
+- Người dùng phản hồi: Danh mục khảo sát tiêu dùng tại Bước 1 ("1. Tiêu Dùng Cá Nhân & Tùy Chọn Cắt Giảm") của What-If trước đây bị cố định 9 khoản mặc định, người dùng không thể xóa bớt các khoản không phù hợp hoặc thêm các khoản chi tiêu thực tế của riêng mình.
+- Yêu cầu: Cho phép tùy chỉnh linh hoạt: thêm mới các khoản chi tiêu, xóa bỏ các khoản chi bất kỳ, chỉnh sửa thông tin khoản chi và khôi phục về danh mục mẫu khi cần.
+
+### 2. Các Thay Đổi Chi Tiết Đã Triển Khai
+1. **Thêm mới khoản chi tiêu linh hoạt (`+ Thêm khoản chi`):**
+   - Hỗ trợ 2 chế độ:
+     * **Chọn từ danh mục mẫu:** Chọn từ danh mục chi tiêu hệ thống với icon và màu đồng bộ.
+     * **Tự tạo tùy chỉnh:** Cho phép nhập tên khoản chi bất kỳ (ví dụ: *Nuôi thú cưng, Tiền gửi về quê, Bảo hiểm nhân thọ, Học tiếng Anh...*), chọn biểu tượng đại diện từ bảng 16 icon trực quan và bảng 10 màu nhận diện.
+   - Nhập mức chi tiêu hàng tháng với định dạng số phân cách dấu chấm và các nút chọn nhanh (500k, 1Tr, 2Tr, 3Tr, 5Tr, 10Tr).
+   - Tùy chọn bật/tắt áp dụng cắt giảm ngay trong kịch bản kèm thanh kéo % tỷ lệ giảm.
+
+2. **Xóa bỏ khoản chi tiêu (`Trash2`):**
+   - Bổ sung nút xóa trực tiếp trên từng thẻ chi tiêu tại Bước 1 kèm hộp thoại xác nhận an toàn.
+   - Tự động đồng bộ và tính toán lại toàn bộ dòng tiền, bảng dự phóng từng tháng và biểu đồ tài sản What-If.
+
+3. **Chỉnh sửa khoản chi tiêu (`Pencil`):**
+   - Cho phép mở modal chỉnh sửa tên, số tiền, màu sắc, biểu tượng và tỷ lệ cắt giảm của khoản chi đã có.
+
+4. **Nút Khôi phục mặc định (`RotateCcw`):**
+   - Đặt cạnh nút thêm mới tại Bước 1, cho phép người dùng khôi phục lại 9 khoản mẫu ban đầu bất cứ lúc nào.
+   - Hiển thị giao diện trạng thái trống (Empty State) thân thiện nếu xóa hết toàn bộ các khoản.
+
+5. **Đa ngôn ngữ hóa (i18n):**
+   - Bổ sung đầy đủ các chuỗi dịch cho cả Tiếng Việt và Tiếng Anh trong `src/lib/i18n.js`.
+
+---
+
 ## [LẦN CHỈNH SỬA 08] - Bản địa hóa triệt để 100% toàn bộ hệ thống (0 chuỗi tiếng Việt sót lại)
 
 * **Thời gian thực hiện:** 18/09/2026

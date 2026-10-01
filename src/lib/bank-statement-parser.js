@@ -1,6 +1,220 @@
 import * as XLSX from 'xlsx';
 
 /**
+ * Danh sách cấu hình các ngân hàng phổ biến tại Việt Nam để tự động nhận diện sao kê
+ */
+export const SUPPORTED_BANKS = [
+    {
+        code: 'TCB',
+        name: 'Techcombank',
+        fullName: 'Ngân hàng TMCP Kỹ thương Việt Nam',
+        keywords: ['techcombank', 'tcb', 'ky thuong', 'tmcp ky thuong', 'techcom bank', 'techcombank.com.vn', 'vietnam technological and commercial'],
+        color: '#ED1C24',
+        icon: 'CreditCard',
+        accountRegex: /(?:s[oố]\s*t[aà]i\s*kho[aả]n|s[oố]\s*tk|account\s*no|acct\s*no|stk|a\/c)[\s:\.\-]+([0-9]{12,16})/i,
+    },
+    {
+        code: 'VCB',
+        name: 'Vietcombank',
+        fullName: 'Ngân hàng TMCP Ngoại thương Việt Nam',
+        keywords: ['vietcombank', 'vcb', 'ngoai thuong', 'tmcp ngoai thuong', 'vietcom bank', 'vcb.com.vn', 'foreign trade of vietnam'],
+        color: '#007A33',
+        icon: 'Building2',
+        accountRegex: /(?:s[oố]\s*t[aà]i\s*kho[aả]n|s[oố]\s*tk|account\s*no|acct\s*no|stk|a\/c)[\s:\.\-]+([0-9]{10,14})/i,
+    },
+    {
+        code: 'MBB',
+        name: 'MB Bank',
+        fullName: 'Ngân hàng TMCP Quân đội',
+        keywords: ['mb bank', 'mbbank', 'military bank', 'quan doi', 'tmcp quan doi', 'mbb', 'mbbank.com.vn'],
+        color: '#0047BA',
+        icon: 'Building2',
+        accountRegex: /(?:s[oố]\s*t[aà]i\s*kho[aả]n|s[oố]\s*tk|account\s*no|acct\s*no|stk|a\/c)[\s:\.\-]+([0-9]{9,15})/i,
+    },
+    {
+        code: 'VPB',
+        name: 'VPBank',
+        fullName: 'Ngân hàng TMCP Việt Nam Thịnh Vượng',
+        keywords: ['vpbank', 'vpb', 'viet nam thinh vuong', 'thinh vuong', 'tmcp viet nam thinh vuong', 'vp bank', 'vpbank.com.vn'],
+        color: '#00A651',
+        icon: 'CreditCard',
+        accountRegex: /(?:s[oố]\s*t[aà]i\s*kho[aả]n|s[oố]\s*tk|account\s*no|acct\s*no|stk|a\/c)[\s:\.\-]+([0-9]{8,14})/i,
+    },
+    {
+        code: 'ACB',
+        name: 'ACB Bank',
+        fullName: 'Ngân hàng TMCP Á Châu',
+        keywords: ['acb', 'a chau', 'tmcp a chau', 'asia commercial', 'acb.com.vn'],
+        color: '#005CA9',
+        icon: 'Building2',
+        accountRegex: /(?:s[oố]\s*t[aà]i\s*kho[aả]n|s[oố]\s*tk|account\s*no|acct\s*no|stk|a\/c)[\s:\.\-]+([0-9]{7,12})/i,
+    },
+    {
+        code: 'BIDV',
+        name: 'BIDV',
+        fullName: 'Ngân hàng TMCP Đầu tư và Phát triển Việt Nam',
+        keywords: ['bidv', 'dau tu va phat trien', 'tmcp dau tu va phat trien', 'bidv.com.vn'],
+        color: '#006738',
+        icon: 'Building2',
+        accountRegex: /(?:s[oố]\s*t[aà]i\s*kho[aả]n|s[oố]\s*tk|account\s*no|acct\s*no|stk|a\/c)[\s:\.\-]+([0-9]{12,16})/i,
+    },
+    {
+        code: 'CTG',
+        name: 'VietinBank',
+        fullName: 'Ngân hàng TMCP Công thương Việt Nam',
+        keywords: ['vietinbank', 'vietin', 'cong thuong', 'tmcp cong thuong', 'vietin bank', 'vietinbank.vn'],
+        color: '#005baa',
+        icon: 'Building2',
+        accountRegex: /(?:s[oố]\s*t[aà]i\s*kho[aả]n|s[oố]\s*tk|account\s*no|acct\s*no|stk|a\/c)[\s:\.\-]+([0-9]{10,16})/i,
+    },
+    {
+        code: 'TPB',
+        name: 'TPBank',
+        fullName: 'Ngân hàng TMCP Tiên Phong',
+        keywords: ['tpbank', 'tpb', 'tien phong', 'tmcp tien phong', 'tpb.com.vn'],
+        color: '#802682',
+        icon: 'CreditCard',
+        accountRegex: /(?:s[oố]\s*t[aà]i\s*kho[aả]n|s[oố]\s*tk|account\s*no|acct\s*no|stk|a\/c)[\s:\.\-]+([0-9]{8,14})/i,
+    },
+    {
+        code: 'VIB',
+        name: 'VIB',
+        fullName: 'Ngân hàng TMCP Quốc tế Việt Nam',
+        keywords: ['vib', 'quoc te', 'tmcp quoc te', 'vib.com.vn'],
+        color: '#00539B',
+        icon: 'Building2',
+        accountRegex: /(?:s[oố]\s*t[aà]i\s*kho[aả]n|s[oố]\s*tk|account\s*no|acct\s*no|stk|a\/c)[\s:\.\-]+([0-9]{9,15})/i,
+    },
+    {
+        code: 'VBA',
+        name: 'Agribank',
+        fullName: 'Ngân hàng Nông nghiệp & Phát triển Nông thôn Việt Nam',
+        keywords: ['agribank', 'nong nghiep', 'vba', 'agribank.com.vn'],
+        color: '#7b1113',
+        icon: 'Building2',
+        accountRegex: /(?:s[oố]\s*t[aà]i\s*kho[aả]n|s[oố]\s*tk|account\s*no|acct\s*no|stk|a\/c)[\s:\.\-]+([0-9]{13,16})/i,
+    },
+    {
+        code: 'STB',
+        name: 'Sacombank',
+        fullName: 'Ngân hàng TMCP Sài Gòn Thương Tín',
+        keywords: ['sacombank', 'stb', 'sai gon thuong tin', 'sacombank.com.vn'],
+        color: '#004c8f',
+        icon: 'Building2',
+        accountRegex: /(?:s[oố]\s*t[aà]i\s*kho[aả]n|s[oố]\s*tk|account\s*no|acct\s*no|stk|a\/c)[\s:\.\-]+([0-9]{10,14})/i,
+    },
+    {
+        code: 'TIMO',
+        name: 'Timo',
+        fullName: 'Ngân hàng số Timo Digital Bank',
+        keywords: ['timo', 'timo digital bank', 'timo.vn'],
+        color: '#6c24be',
+        icon: 'CreditCard',
+        accountRegex: /(?:s[oố]\s*t[aà]i\s*kho[aả]n|s[oố]\s*tk|account\s*no|acct\s*no|stk|a\/c)[\s:\.\-]+([0-9]{9,14})/i,
+    },
+    {
+        code: 'HDB',
+        name: 'HDBank',
+        fullName: 'Ngân hàng TMCP Phát triển TP.HCM',
+        keywords: ['hdbank', 'hdb', 'phat trien tphcm', 'hdbank.com.vn'],
+        color: '#d6001c',
+        icon: 'Building2',
+        accountRegex: /(?:s[oố]\s*t[aà]i\s*kho[aả]n|s[oố]\s*tk|account\s*no|acct\s*no|stk|a\/c)[\s:\.\-]+([0-9]{10,15})/i,
+    },
+    {
+        code: 'CAKE',
+        name: 'Cake by VPBank',
+        fullName: 'Ngân hàng số Cake by VPBank',
+        keywords: ['cake', 'cake by vpbank', 'ngan hang so cake'],
+        color: '#ff2882',
+        icon: 'CreditCard',
+        accountRegex: /(?:s[oố]\s*t[aà]i\s*kho[aả]n|s[oố]\s*tk|account\s*no|acct\s*no|stk|a\/c)[\s:\.\-]+([0-9]{10})/i,
+    },
+];
+
+/**
+ * Tự động phân biệt ngân hàng và số tài khoản từ tiêu đề, nội dung bảng tính và tên file
+ */
+export function detectBankAndAccount(file, rows = [], workbook = null) {
+    const rawFileName = file?.name || '';
+    const normFileName = normalizeText(rawFileName);
+
+    // Thu thập các dòng đầu file (tiêu đề, thông tin đơn vị phát hành)
+    const headerLines = [];
+    const scanLimit = Math.min(rows.length, 35);
+    for (let i = 0; i < scanLimit; i++) {
+        const row = rows[i];
+        if (Array.isArray(row)) {
+            const line = row.filter(c => c !== null && c !== undefined && c !== '').join(' ');
+            if (line.trim()) headerLines.push(line);
+        } else if (typeof row === 'string' && row.trim()) {
+            headerLines.push(row);
+        }
+    }
+    const fullHeaderText = headerLines.join('\n');
+    const normHeaderText = normalizeText(fullHeaderText);
+
+    const sheetNames = workbook?.SheetNames || [];
+    const normSheetNames = normalizeText(sheetNames.join(' '));
+
+    // Điểm số nhận diện cho từng ngân hàng
+    let bestBank = null;
+    let highestScore = 0;
+
+    for (const bank of SUPPORTED_BANKS) {
+        let score = 0;
+
+        for (const kw of bank.keywords) {
+            const normKw = normalizeText(kw);
+            if (!normKw) continue;
+
+            // 1. Khớp trong nội dung phần đầu file (điểm số cao nhất: 10)
+            if (normHeaderText.includes(normKw)) {
+                score += 10;
+            }
+
+            // 2. Khớp trong tên sheet (điểm số: 5)
+            if (normSheetNames.includes(normKw)) {
+                score += 5;
+            }
+
+            // 3. Khớp trong tên file (điểm số: 4)
+            if (normFileName.includes(normKw)) {
+                score += 4;
+            }
+        }
+
+        if (score > highestScore) {
+            highestScore = score;
+            bestBank = bank;
+        }
+    }
+
+    // Nhận diện số tài khoản từ metadata
+    let detectedAccountNumber = null;
+    let detectedAccountHolder = null;
+
+    // Quét tìm số tài khoản
+    const accMatches = fullHeaderText.match(/(?:s[oố]\s*t[aà]i\s*kho[aả]n|s[oố]\s*tk|account\s*no|acct\s*no|stk|a\/c\s*no)[\s:\.\-]+([0-9\s]{8,20})/i);
+    if (accMatches && accMatches[1]) {
+        detectedAccountNumber = accMatches[1].replace(/\s/g, '').trim();
+    }
+
+    // Quét tìm tên chủ tài khoản
+    const nameMatches = fullHeaderText.match(/(?:t[eê]n\s*ch[uủ]\s*t[aà]i\s*kho[aả]n|ch[uủ]\s*tk|t[eê]n\s*kh[aá]ch\s*h[aà]ng|account\s*name|customer\s*name)[\s:\.\-]+([^\n\r,;]{3,50})/i);
+    if (nameMatches && nameMatches[1]) {
+        detectedAccountHolder = nameMatches[1].trim();
+    }
+
+    return {
+        detectedBank: bestBank,
+        confidenceScore: highestScore,
+        detectedAccountNumber,
+        detectedAccountHolder,
+    };
+}
+
+/**
  * Các từ khóa nhận diện cột trong bảng sao kê ngân hàng
  * Sắp xếp từ cụm từ dài/chính xác đến từ ngắn để tránh khớp nhầm
  */
@@ -457,11 +671,17 @@ export async function parseBankStatementFile(file, categories = []) {
                     throw new Error('Không đọc được giao dịch hợp lệ nào từ tệp. Vui lòng kiểm tra lại định dạng tệp sao kê.');
                 }
 
+                // Nhận diện ngân hàng và thông tin tài khoản từ file
+                const bankInfo = detectBankAndAccount(file, rows, workbook);
+
                 resolve({
                     transactions: parsedTransactions,
                     detectedClosingBalance,
                     totalRows: rows.length,
                     headerRowIndex: headerRowIdx + 1,
+                    detectedBank: bankInfo.detectedBank,
+                    detectedAccountNumber: bankInfo.detectedAccountNumber,
+                    detectedAccountHolder: bankInfo.detectedAccountHolder,
                 });
             } catch (err) {
                 reject(err);
@@ -518,71 +738,29 @@ export function checkDuplicates(parsedTransactions, existingTransactions = [], t
 }
 
 /**
- * Tạo và tải xuống file Excel mẫu sao kê chuẩn
+ * Tạo và tải xuống file Excel mẫu sao kê chuẩn Techcombank với thông tin tài khoản
  */
 export function downloadSampleStatementTemplate() {
     const wb = XLSX.utils.book_new();
 
-    const sampleData = [
-        {
-            'Ngày giao dịch': '01/09/2026',
-            'Nội dung chi tiết': 'Cong ty Cong nghe chuyen khoan thanh toan Luong thang 08',
-            'Tiền ra (Ghi nợ)': '',
-            'Tiền vào (Ghi có)': 30000000,
-            'Số dư sau GD': 35500000
-        },
-        {
-            'Ngày giao dịch': '02/09/2026',
-            'Nội dung chi tiết': 'Grab ride toi cong ty',
-            'Tiền ra (Ghi nợ)': 65000,
-            'Tiền vào (Ghi có)': '',
-            'Số dư sau GD': 35435000
-        },
-        {
-            'Ngày giao dịch': '03/09/2026',
-            'Nội dung chi tiết': 'Highlands Coffee gap doi tac',
-            'Tiền ra (Ghi nợ)': 110000,
-            'Tiền vào (Ghi có)': '',
-            'Số dư sau GD': 35325000
-        },
-        {
-            'Ngày giao dịch': '05/09/2026',
-            'Nội dung chi tiết': 'Shopee thanh toan don hang do gia dung',
-            'Tiền ra (Ghi nợ)': 450000,
-            'Tiền vào (Ghi có)': '',
-            'Số dư sau GD': 34875000
-        },
-        {
-            'Ngày giao dịch': '08/09/2026',
-            'Nội dung chi tiết': 'EVN Thanh toan tien dien sinh hoat thang 8',
-            'Tiền ra (Ghi nợ)': 1250000,
-            'Tiền vào (Ghi có)': '',
-            'Số dư sau GD': 33625000
-        },
-        {
-            'Ngày giao dịch': '10/09/2026',
-            'Nội dung chi tiết': 'Thanh toan tien thue nha can ho thang 9',
-            'Tiền ra (Ghi nợ)': 6000000,
-            'Tiền vào (Ghi có)': '',
-            'Số dư sau GD': 27625000
-        },
-        {
-            'Ngày giao dịch': '15/09/2026',
-            'Nội dung chi tiết': 'Nhan thuong KPI du an quy 3',
-            'Tiền ra (Ghi nợ)': '',
-            'Tiền vào (Ghi có)': 5000000,
-            'Số dư sau GD': 32625000
-        },
-        {
-            'Ngày giao dịch': '20/09/2026',
-            'Nội dung chi tiết': 'Pharmacity mua thuoc cam sot',
-            'Tiền ra (Ghi nợ)': 180000,
-            'Tiền vào (Ghi có)': '',
-            'Số dư sau GD': 32445000
-        }
+    const sampleRows = [
+        ['NGÂN HÀNG THƯƠNG MẠI CỔ PHẦN KỸ THƯƠNG VIỆT NAM (TECHCOMBANK)'],
+        ['BẢNG SAO KÊ CHI TIẾT TÀI KHOẢN TIỀN GỬI THANH TOÁN'],
+        ['Số tài khoản: 19038899887766', '', 'Tên chủ tài khoản: NGUYEN VAN A', '', 'Loại tiền: VND'],
+        ['Kỳ sao kê: 01/09/2026 đến 30/09/2026'],
+        [''],
+        ['Ngày giao dịch', 'Nội dung chi tiết', 'Tiền ra (Ghi nợ)', 'Tiền vào (Ghi có)', 'Số dư sau GD'],
+        ['01/09/2026', 'Cong ty Cong nghe chuyen khoan thanh toan Luong thang 08', '', 30000000, 35500000],
+        ['02/09/2026', 'Grab ride toi cong ty', 65000, '', 35435000],
+        ['03/09/2026', 'Highlands Coffee gap doi tac', 110000, '', 35325000],
+        ['05/09/2026', 'Shopee thanh toan don hang do gia dung', 450000, '', 34875000],
+        ['08/09/2026', 'EVN Thanh toan tien dien sinh hoat thang 8', 1250000, '', 33625000],
+        ['10/09/2026', 'Thanh toan tien thue nha can ho thang 9', 6000000, '', 27625000],
+        ['15/09/2026', 'Nhan thuong KPI du an quy 3', '', 5000000, 32625000],
+        ['20/09/2026', 'Pharmacity mua thuoc cam sot', 180000, '', 32445000]
     ];
 
-    const ws = XLSX.utils.json_to_sheet(sampleData);
+    const ws = XLSX.utils.aoa_to_sheet(sampleRows);
 
     // Căn chỉnh độ rộng cột cho đẹp mắt
     ws['!cols'] = [
@@ -593,6 +771,6 @@ export function downloadSampleStatementTemplate() {
         { wch: 20 }, // Số dư
     ];
 
-    XLSX.utils.book_append_sheet(wb, ws, 'Sao Kê Ngân Hàng');
-    XLSX.writeFile(wb, 'Sao_Ke_Mau_FinTrack.xlsx');
+    XLSX.utils.book_append_sheet(wb, ws, 'Sao_Ke_Techcombank');
+    XLSX.writeFile(wb, 'Sao_Ke_Techcombank_Mau.xlsx');
 }

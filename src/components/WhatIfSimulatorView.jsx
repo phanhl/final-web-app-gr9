@@ -1,18 +1,19 @@
 'use client';
 import React, { useState, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
-import { Sparkles, TrendingUp, Sliders, Zap, CheckCircle2, AlertTriangle, Plus, Trash2, FileSpreadsheet, CreditCard, Building2, X, Wallet, } from 'lucide-react';
+import { Sparkles, TrendingUp, Sliders, Zap, CheckCircle2, AlertTriangle, Plus, Trash2, FileSpreadsheet, CreditCard, Building2, X, Wallet, Pencil, RotateCcw, } from 'lucide-react';
 import { formatCurrency, formatNumberWithDots } from '@/lib/utils';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, } from 'recharts';
 import * as XLSX from 'xlsx';
 import { IconHelper } from './IconHelper';
+import { DEFAULT_SPENDING_ITEMS } from '@/lib/mock-data';
 export const WhatIfSimulatorView = () => {
     const { transactions, financialSummary, categories, planner, simulatorConfig, updateSimulatorConfig, t, tCategory, tWalletType, language, } = useApp();
     // Khung thời gian mô phỏng
     const projectionMonths = simulatorConfig.projectionMonths;
     const setProjectionMonths = (val) => updateSimulatorConfig({ projectionMonths: val });
     // 1. CÁC KHOẢN TIÊU DÙNG CHI TIÊU CÁ NHÂN & LỰA CHỌN CẮT GIẢM
-    const spendingCategories = simulatorConfig.spendingCategories;
+    const spendingCategories = simulatorConfig.spendingCategories || DEFAULT_SPENDING_ITEMS;
     const setSpendingCategories = (updater) => {
         if (typeof updater === 'function') {
             updateSimulatorConfig({ spendingCategories: updater(spendingCategories) });
@@ -21,11 +22,17 @@ export const WhatIfSimulatorView = () => {
             updateSimulatorConfig({ spendingCategories: updater });
         }
     };
-    // Modal thêm danh mục tiêu dùng mới
-    const [addCutModalOpen, setAddCutModalOpen] = useState(false);
-    const [newCutCatId, setNewCutCatId] = useState(categories[0]?.id || '');
-    const [newCutExpense, setNewCutExpense] = useState('2000000');
-    const [newCutPercent, setNewCutPercent] = useState('20');
+    // Modal thêm/sửa khoản chi tiêu What-If
+    const [expenseModalOpen, setExpenseModalOpen] = useState(false);
+    const [editingExpenseId, setEditingExpenseId] = useState(null);
+    const [expenseSourceType, setExpenseSourceType] = useState('category');
+    const [selectedCatId, setSelectedCatId] = useState(categories.find((c) => c.type === 'EXPENSE')?.id || categories[0]?.id || '');
+    const [customExpenseName, setCustomExpenseName] = useState('');
+    const [customExpenseIcon, setCustomExpenseIcon] = useState('Utensils');
+    const [customExpenseColor, setCustomExpenseColor] = useState('#f97316');
+    const [expenseAmount, setExpenseAmount] = useState('2000000');
+    const [expenseCutPercent, setExpenseCutPercent] = useState('20');
+    const [expenseApplyCut, setExpenseApplyCut] = useState(false);
     // 2. KÊNH ĐẦU TƯ / GỬI TIẾT KIỆM
     const savingsAmount = simulatorConfig.savingsAmount;
     const setSavingsAmount = (val) => updateSimulatorConfig({ savingsAmount: val });
@@ -175,37 +182,128 @@ export const WhatIfSimulatorView = () => {
     ]);
     const finalRow = detailedMonthlyProjections[detailedMonthlyProjections.length - 1];
     const finalDelta = finalRow.netDelta;
-    // Thêm / Cập nhật khoản tiêu dùng và đưa vào danh sách cắt giảm
-    const handleAddExpenseCut = (e) => {
+    // Mở modal thêm khoản chi mới
+    const handleOpenAddExpense = () => {
+        setEditingExpenseId(null);
+        setExpenseSourceType('category');
+        const defaultCat = categories.find((c) => c.type === 'EXPENSE') || categories[0];
+        setSelectedCatId(defaultCat?.id || '');
+        setCustomExpenseName(defaultCat?.name || '');
+        setCustomExpenseIcon(defaultCat?.icon || 'Utensils');
+        setCustomExpenseColor(defaultCat?.color || '#3b82f6');
+        setExpenseAmount('2000000');
+        setExpenseCutPercent('20');
+        setExpenseApplyCut(false);
+        setExpenseModalOpen(true);
+    };
+
+    // Mở modal sửa khoản chi hiện có
+    const handleOpenEditExpense = (item) => {
+        setEditingExpenseId(item.id);
+        const matchedCat = categories.find((c) => c.id === item.categoryId);
+        if (matchedCat) {
+            setExpenseSourceType('category');
+            setSelectedCatId(matchedCat.id);
+        }
+        else {
+            setExpenseSourceType('custom');
+            setSelectedCatId('');
+        }
+        setCustomExpenseName(item.categoryName);
+        setCustomExpenseIcon(item.icon || 'Utensils');
+        setCustomExpenseColor(item.color || '#3b82f6');
+        setExpenseAmount(String(item.monthlyExpense || 0));
+        setExpenseCutPercent(String(item.cutPercent || 20));
+        setExpenseApplyCut(Boolean(item.isSelected));
+        setExpenseModalOpen(true);
+    };
+
+    // Khi chọn danh mục mẫu trong dropdown
+    const handleCategoryChange = (catId) => {
+        setSelectedCatId(catId);
+        const cat = categories.find((c) => c.id === catId);
+        if (cat) {
+            setCustomExpenseName(cat.name);
+            setCustomExpenseIcon(cat.icon || 'Utensils');
+            setCustomExpenseColor(cat.color || '#3b82f6');
+        }
+    };
+
+    // Lưu khoản chi tiêu (thêm mới hoặc chỉnh sửa)
+    const handleSaveExpense = (e) => {
         e.preventDefault();
-        const cat = categories.find((c) => c.id === newCutCatId);
-        if (!cat)
-            return;
-        const existingIndex = spendingCategories.findIndex((c) => c.categoryId === cat.id);
-        if (existingIndex >= 0) {
-            setSpendingCategories(spendingCategories.map((c, i) => i === existingIndex
-                ? {
-                    ...c,
-                    monthlyExpense: Number(newCutExpense) || c.monthlyExpense,
-                    cutPercent: Number(newCutPercent) || c.cutPercent,
-                    isSelected: true,
-                }
-                : c));
+        const amt = Number(expenseAmount) || 0;
+        const cutPct = Math.min(50, Math.max(0, Number(expenseCutPercent) || 0));
+        let finalName = '';
+        let finalIcon = 'Utensils';
+        let finalColor = '#3b82f6';
+        let finalCatId = 'custom';
+        if (expenseSourceType === 'category') {
+            const cat = categories.find((c) => c.id === selectedCatId);
+            if (cat) {
+                finalName = cat.name;
+                finalIcon = cat.icon || 'Utensils';
+                finalColor = cat.color || '#3b82f6';
+                finalCatId = cat.id;
+            }
+            else {
+                finalName = customExpenseName.trim() || 'Khoản chi tiêu';
+                finalIcon = customExpenseIcon;
+                finalColor = customExpenseColor;
+                finalCatId = 'custom';
+            }
+        }
+        else {
+            finalName = customExpenseName.trim() || 'Khoản chi tiêu mới';
+            finalIcon = customExpenseIcon;
+            finalColor = customExpenseColor;
+            finalCatId = `cat-custom-${Date.now()}`;
+        }
+        if (editingExpenseId) {
+            setSpendingCategories(spendingCategories.map((item) => {
+                if (item.id !== editingExpenseId)
+                    return item;
+                return {
+                    ...item,
+                    categoryName: finalName,
+                    icon: finalIcon,
+                    color: finalColor,
+                    categoryId: finalCatId,
+                    monthlyExpense: amt,
+                    cutPercent: cutPct,
+                    isSelected: expenseApplyCut,
+                };
+            }));
         }
         else {
             const newItem = {
                 id: `spend-${Date.now()}`,
-                categoryId: cat.id,
-                categoryName: cat.name,
-                icon: cat.icon,
-                color: cat.color,
-                monthlyExpense: Number(newCutExpense) || 2000000,
-                isSelected: true,
-                cutPercent: Number(newCutPercent) || 20,
+                categoryId: finalCatId,
+                categoryName: finalName,
+                icon: finalIcon,
+                color: finalColor,
+                monthlyExpense: amt,
+                isSelected: expenseApplyCut,
+                cutPercent: cutPct,
             };
             setSpendingCategories([...spendingCategories, newItem]);
         }
-        setAddCutModalOpen(false);
+        setExpenseModalOpen(false);
+    };
+
+    // Xóa khoản chi tiêu
+    const handleDeleteExpenseItem = (id, name) => {
+        const msg = `${t('whatif.confirmDeleteMsg', 'Bạn có chắc chắn muốn xóa khoản chi')} "${tCategory(name)}" ${t('whatif.confirmDeleteSuffix', 'khỏi mô phỏng What-If không?')}`;
+        if (window.confirm(msg)) {
+            setSpendingCategories(spendingCategories.filter((c) => c.id !== id));
+        }
+    };
+
+    // Khôi phục về danh mục mặc định ban đầu
+    const handleResetSpendingDefaults = () => {
+        if (window.confirm(t('whatif.confirmResetSpending', 'Khôi phục danh sách các khoản chi tiêu mặc định ban đầu?'))) {
+            setSpendingCategories(DEFAULT_SPENDING_ITEMS);
+        }
     };
     // Thêm khoản nợ vay mới
     const handleAddLoan = (e) => {
@@ -361,74 +459,165 @@ export const WhatIfSimulatorView = () => {
                     {formatCurrency(totalPersonalExpense)}{t('whatif.perMonth', '/tháng')}
                   </span>
                 </div>
-                <button onClick={() => setAddCutModalOpen(true)} className="flex items-center space-x-1 px-3 py-2 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/50 dark:hover:bg-blue-900 text-blue-600 dark:text-blue-300 font-bold text-xs rounded-xl transition-colors shrink-0">
+                <button
+                  type="button"
+                  onClick={handleResetSpendingDefaults}
+                  className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors shrink-0"
+                  title={t('whatif.resetDefaults', 'Khôi phục danh mục mặc định')}
+                >
+                  <RotateCcw className="w-4 h-4"/>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleOpenAddExpense}
+                  className="flex items-center space-x-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-sm transition-colors shrink-0"
+                >
                   <Plus className="w-3.5 h-3.5"/>
-                  <span className="hidden sm:inline">{t('whatif.addExpenseItem', 'Thêm khoản chi')}</span>
+                  <span>{t('whatif.addExpenseItem', 'Thêm khoản chi')}</span>
                 </button>
               </div>
             </div>
 
-            {/* Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-              {spendingCategories.map((item) => (<div key={item.id} className={`p-3.5 rounded-2xl transition-all border ${item.isSelected
-                ? 'border-rose-500 bg-rose-50/40 dark:bg-rose-950/20 shadow-sm ring-1 ring-rose-500/30'
-                : 'border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 hover:border-slate-300'}`}>
-                  {/* Top: Icon & Category name */}
-                  <div className="flex items-center space-x-2.5">
-                    <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white shadow-sm shrink-0" style={{ backgroundColor: item.color }}>
-                      <IconHelper name={item.icon} size={16}/>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h4 className="text-xs font-bold text-slate-800 dark:text-white truncate">
-                        {tCategory(item.categoryName)}
-                      </h4>
-                      <span className="text-[10px] text-slate-400 block">
-                        {t('whatif.personalExpense', 'Chi tiêu cá nhân')}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Badge hiển thị xuống dưới */}
-                  {item.isSelected && (<div className="mt-2 flex items-center">
-                      <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/60 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-800 inline-flex items-center gap-1.5 shadow-2xs">
-                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0 animate-pulse"/>
-                        <span>{t('whatif.cuttingBy', 'Đang giảm')} -{item.cutPercent}%</span>
-                      </span>
-                    </div>)}
-
-                  {/* Monthly expense input */}
-                  <div className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between text-xs">
-                    <span className="text-[11px] text-slate-500 font-medium">{t('whatif.spendingLevel', 'Mức tiêu dùng:')}</span>
-                    <div className="flex items-center space-x-1">
-                      <input type="text" inputMode="numeric" value={formatNumberWithDots(item.monthlyExpense)} onChange={(e) => {
-                const cleaned = e.target.value.replace(/\D/g, '');
-                const val = cleaned ? Math.max(0, Number(cleaned)) : 0;
-                setSpendingCategories(spendingCategories.map((c) => c.id === item.id ? { ...c, monthlyExpense: val } : c));
-            }} onKeyDown={(e) => {
-                if (['e', 'E', '+', '-', '.', ','].includes(e.key)) {
-                    e.preventDefault();
-                }
-            }} className="w-28 px-2 py-0.5 text-right font-extrabold text-slate-800 dark:text-white bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs focus:ring-1 focus:ring-blue-500"/>
-                      <span className="text-[11px] font-semibold text-slate-400">{t('whatif.currencyPerMonth', '₫/T')}</span>
-                    </div>
-                  </div>
-
-                  {/* Select/Deselect button */}
-                  <button type="button" onClick={() => {
-                setSpendingCategories(spendingCategories.map((c) => c.id === item.id ? { ...c, isSelected: !c.isSelected } : c));
-            }} className={`w-full mt-2.5 py-1.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition-all ${item.isSelected
-                ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-sm'
-                : 'border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-rose-300 hover:bg-rose-50/50 dark:hover:bg-rose-950/30 text-slate-700 dark:text-slate-300 hover:text-rose-600'}`}>
-                    {item.isSelected ? (<>
-                        <CheckCircle2 className="w-3.5 h-3.5 text-white"/>
-                        <span>{t('whatif.selectedCutClickCancel', 'Đang chọn cắt giảm (Bấm để hủy)')}</span>
-                      </>) : (<>
-                        <Plus className="w-3.5 h-3.5 text-rose-500"/>
-                        <span>{t('whatif.selectToCut', 'Chọn để cắt giảm')}</span>
-                      </>)}
+            {/* Empty State */}
+            {spendingCategories.length === 0 ? (
+              <div className="p-8 text-center rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30 space-y-3">
+                <div className="w-12 h-12 rounded-2xl bg-blue-100 dark:bg-blue-950/50 text-blue-600 mx-auto flex items-center justify-center">
+                  <Wallet className="w-6 h-6"/>
+                </div>
+                <h4 className="text-sm font-bold text-slate-700 dark:text-white">
+                  {t('whatif.noExpensesYet', 'Chưa có khoản chi tiêu nào trong kịch bản')}
+                </h4>
+                <p className="text-xs text-slate-400 max-w-md mx-auto">
+                  {t('whatif.noExpensesDesc', 'Bạn có thể tự thêm các khoản chi tiêu cá nhân thực tế hoặc khôi phục lại danh mục mẫu ban đầu.')}
+                </p>
+                <div className="flex items-center justify-center space-x-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={handleResetSpendingDefaults}
+                    className="px-3.5 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-xl transition-colors flex items-center space-x-1.5"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>{t('whatif.restoreDefaults', 'Khôi phục danh mục mẫu')}</span>
                   </button>
-                </div>))}
-            </div>
+                  <button
+                    type="button"
+                    onClick={handleOpenAddExpense}
+                    className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-colors flex items-center space-x-1.5 shadow-sm"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>{t('whatif.addExpenseItem', 'Thêm khoản chi')}</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Grid */
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                {spendingCategories.map((item) => (
+                  <div key={item.id} className={`p-3.5 rounded-2xl transition-all border ${item.isSelected
+                    ? 'border-rose-500 bg-rose-50/40 dark:bg-rose-950/20 shadow-sm ring-1 ring-rose-500/30'
+                    : 'border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 hover:border-slate-300'}`}>
+                    {/* Top: Icon & Category name + Edit/Delete buttons */}
+                    <div className="flex items-start justify-between gap-1.5">
+                      <div className="flex items-center space-x-2.5 min-w-0 flex-1">
+                        <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white shadow-sm shrink-0" style={{ backgroundColor: item.color }}>
+                          <IconHelper name={item.icon} size={16}/>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h4 className="text-xs font-bold text-slate-800 dark:text-white truncate" title={item.categoryName}>
+                            {tCategory(item.categoryName)}
+                          </h4>
+                          <span className="text-[10px] text-slate-400 block">
+                            {t('whatif.personalExpense', 'Chi tiêu cá nhân')}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-0.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenEditExpense(item);
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/50 rounded-lg transition-colors"
+                          title={t('whatif.editExpenseItem', 'Chỉnh sửa khoản chi')}
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteExpenseItem(item.id, item.categoryName);
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-lg transition-colors"
+                          title={t('whatif.deleteExpenseItem', 'Xóa khoản chi này')}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Badge hiển thị xuống dưới */}
+                    {item.isSelected && (
+                      <div className="mt-2 flex items-center">
+                        <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/60 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-800 inline-flex items-center gap-1.5 shadow-2xs">
+                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0 animate-pulse"/>
+                          <span>{t('whatif.cuttingBy', 'Đang giảm')} -{item.cutPercent}%</span>
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Monthly expense input */}
+                    <div className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between text-xs">
+                      <span className="text-[11px] text-slate-500 font-medium">{t('whatif.spendingLevel', 'Mức tiêu dùng:')}</span>
+                      <div className="flex items-center space-x-1">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={formatNumberWithDots(item.monthlyExpense)}
+                          onChange={(e) => {
+                            const cleaned = e.target.value.replace(/\D/g, '');
+                            const val = cleaned ? Math.max(0, Number(cleaned)) : 0;
+                            setSpendingCategories(spendingCategories.map((c) => c.id === item.id ? { ...c, monthlyExpense: val } : c));
+                          }}
+                          onKeyDown={(e) => {
+                            if (['e', 'E', '+', '-', '.', ','].includes(e.key)) {
+                              e.preventDefault();
+                            }
+                          }}
+                          className="w-28 px-2 py-0.5 text-right font-extrabold text-slate-800 dark:text-white bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs focus:ring-1 focus:ring-blue-500"
+                        />
+                        <span className="text-[11px] font-semibold text-slate-400">{t('whatif.currencyPerMonth', '₫/T')}</span>
+                      </div>
+                    </div>
+
+                    {/* Select/Deselect button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSpendingCategories(spendingCategories.map((c) => c.id === item.id ? { ...c, isSelected: !c.isSelected } : c));
+                      }}
+                      className={`w-full mt-2.5 py-1.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition-all ${item.isSelected
+                        ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-sm'
+                        : 'border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-rose-300 hover:bg-rose-50/50 dark:hover:bg-rose-950/30 text-slate-700 dark:text-slate-300 hover:text-rose-600'}`}
+                    >
+                      {item.isSelected ? (
+                        <>
+                          <CheckCircle2 className="w-3.5 h-3.5 text-white"/>
+                          <span>{t('whatif.selectedCutClickCancel', 'Đang chọn cắt giảm (Bấm để hủy)')}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-3.5 h-3.5 text-rose-500"/>
+                          <span>{t('whatif.selectToCut', 'Chọn để cắt giảm')}</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* ========================================================================= */}
@@ -489,7 +678,7 @@ export const WhatIfSimulatorView = () => {
                           <button onClick={() => {
                         setSpendingCategories(spendingCategories.map((c) => c.id === cut.id ? { ...c, isSelected: false } : c));
                     }} className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-100 dark:hover:bg-rose-950 rounded-lg transition-colors" title={t('whatif.deselectCut', 'Bỏ chọn cắt giảm mục này')}>
-                            <Trash2 className="w-3.5 h-3.5"/>
+                            <X className="w-3.5 h-3.5"/>
                           </button>
                         </div>
 
@@ -857,67 +1046,298 @@ export const WhatIfSimulatorView = () => {
       </div>
 
       {/* ========================================================================= */}
-      {/* MODAL: THÊM DANH MỤC CẮT GIẢM CHI TIÊU MỚI */}
+      {/* MODAL: THÊM / CHỈNH SỬA KHOẢN CHI TIÊU WHAT-IF */}
       {/* ========================================================================= */}
-      {addCutModalOpen && (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="relative max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-6">
+      {expenseModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="relative max-w-lg w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-6 my-8">
+            {/* Header */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
-              <h3 className="text-lg font-bold text-slate-800 dark:text-white">
-                {t('whatif.addCategoryModal', 'Thêm danh mục cắt giảm chi tiêu')}
-              </h3>
-              <button onClick={() => setAddCutModalOpen(false)} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 flex items-center justify-center">
+                  <Wallet className="w-5 h-5"/>
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-800 dark:text-white">
+                    {editingExpenseId
+                      ? t('whatif.editExpenseModal', 'Chỉnh sửa khoản chi What-If')
+                      : t('whatif.addExpenseModal', 'Thêm khoản chi tiêu What-If')}
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    {editingExpenseId
+                      ? t('whatif.editExpenseDesc', 'Cập nhật thông tin chi tiêu và mức cắt giảm kịch bản')
+                      : t('whatif.addExpenseDesc', 'Thêm khoản chi cá nhân mới vào bảng khảo sát và mô phỏng')}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setExpenseModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg transition-colors"
+              >
                 <X className="w-5 h-5"/>
               </button>
             </div>
 
-            <form onSubmit={handleAddExpenseCut} className="space-y-4 pt-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">
-                  {t('whatif.selectCategoryLabel', 'Chọn danh mục muốn giảm chi')}
-                </label>
-                <select value={newCutCatId} onChange={(e) => setNewCutCatId(e.target.value)} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm dark:text-white">
-                  {categories
-                .filter((c) => c.type === 'EXPENSE')
-                .map((c) => (<option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>))}
-                </select>
+            <form onSubmit={handleSaveExpense} className="space-y-4 pt-4">
+              {/* Type Switcher: Choose from categories OR Custom */}
+              <div className="flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setExpenseSourceType('category');
+                    const cat = categories.find((c) => c.id === selectedCatId) || categories[0];
+                    if (cat) {
+                      setCustomExpenseName(cat.name);
+                      setCustomExpenseIcon(cat.icon || 'Utensils');
+                      setCustomExpenseColor(cat.color || '#3b82f6');
+                    }
+                  }}
+                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                    expenseSourceType === 'category'
+                      ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
+                  }`}
+                >
+                  {t('whatif.fromCategoryTab', 'Chọn từ danh mục mẫu')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setExpenseSourceType('custom')}
+                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                    expenseSourceType === 'custom'
+                      ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
+                  }`}
+                >
+                  {t('whatif.customExpenseTab', 'Tự tạo tùy chỉnh')}
+                </button>
               </div>
 
+              {/* Source 1: Pick from category */}
+              {expenseSourceType === 'category' ? (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">
+                    {t('whatif.selectCategoryLabel', 'Chọn danh mục chi tiêu')}
+                  </label>
+                  <select
+                    value={selectedCatId}
+                    onChange={(e) => handleCategoryChange(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  >
+                    {categories
+                      .filter((c) => c.type === 'EXPENSE')
+                      .map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                  </select>
+
+                  {/* Category Preview */}
+                  <div className="mt-2 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 flex items-center space-x-2.5">
+                    <div
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-white shrink-0"
+                      style={{ backgroundColor: customExpenseColor }}
+                    >
+                      <IconHelper name={customExpenseIcon} size={15}/>
+                    </div>
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                      {customExpenseName}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                /* Source 2: Custom name, icon, color */
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">
+                      {t('whatif.customExpenseNameLabel', 'Tên khoản chi tiêu')}
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={customExpenseName}
+                      onChange={(e) => setCustomExpenseName(e.target.value)}
+                      placeholder={t('whatif.customExpenseNamePlaceholder', 'Ví dụ: Nuôi thú cưng, Tiền gửi về quê, Bảo hiểm...')}
+                      className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+
+                  {/* Icon Selector */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">
+                      {t('whatif.chooseIcon', 'Chọn biểu tượng đại diện')}
+                    </label>
+                    <div className="grid grid-cols-8 gap-1.5 p-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 max-h-32 overflow-y-auto">
+                      {[
+                        'Utensils', 'ShoppingBag', 'Home', 'Car', 'Gamepad2', 'HeartPulse',
+                        'GraduationCap', 'Gift', 'Plane', 'Laptop', 'Flame', 'Wallet',
+                        'Receipt', 'Coins', 'Store', 'MoreHorizontal'
+                      ].map((iconName) => (
+                        <button
+                          key={iconName}
+                          type="button"
+                          onClick={() => setCustomExpenseIcon(iconName)}
+                          className={`p-2 rounded-lg flex items-center justify-center transition-all ${
+                            customExpenseIcon === iconName
+                              ? 'bg-blue-600 text-white shadow-xs scale-105'
+                              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                          }`}
+                        >
+                          <IconHelper name={iconName} size={16}/>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Color Selector */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">
+                      {t('whatif.chooseColor', 'Chọn màu sắc nhận diện')}
+                    </label>
+                    <div className="flex flex-wrap gap-2 pt-0.5">
+                      {[
+                        '#f97316', '#ec4899', '#8b5cf6', '#3b82f6', '#0ea5e9',
+                        '#10b981', '#eab308', '#ef4444', '#64748b', '#6366f1'
+                      ].map((color) => (
+                        <button
+                          key={color}
+                          type="button"
+                          onClick={() => setCustomExpenseColor(color)}
+                          style={{ backgroundColor: color }}
+                          className={`w-6 h-6 rounded-full transition-transform ${
+                            customExpenseColor === color ? 'ring-2 ring-offset-2 ring-blue-500 scale-110' : 'hover:scale-105'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Monthly Amount Input */}
               <div>
                 <label className="block text-xs font-semibold text-slate-500 mb-1">
                   {t('whatif.currentMonthlyExpense', 'Chi tiêu gốc hiện tại mỗi tháng (VNĐ)')}
                 </label>
-                <input type="text" inputMode="numeric" required value={formatNumberWithDots(newCutExpense)} onChange={(e) => {
-                const cleaned = e.target.value.replace(/\D/g, '');
-                if (cleaned.length <= 18) {
-                    setNewCutExpense(cleaned);
-                }
-            }} onKeyDown={(e) => {
-                if (['e', 'E', '+', '-', '.', ','].includes(e.key)) {
-                    e.preventDefault();
-                }
-            }} placeholder={t('budget.limitPlaceholder', 'Ví dụ: 3.000.000')} className="w-full text-xl font-bold px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl dark:text-white"/>
+                <div className="relative">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    required
+                    value={formatNumberWithDots(expenseAmount)}
+                    onChange={(e) => {
+                      const cleaned = e.target.value.replace(/\D/g, '');
+                      if (cleaned.length <= 18) {
+                        setExpenseAmount(cleaned);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (['e', 'E', '+', '-', '.', ','].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    placeholder="2.000.000"
+                    className="w-full text-xl font-black px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                    VNĐ / Tháng
+                  </span>
+                </div>
+
+                {/* Quick Presets */}
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {[500000, 1000000, 2000000, 3000000, 5000000, 10000000].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setExpenseAmount(String(preset))}
+                      className="px-2 py-0.5 text-[11px] font-bold rounded-lg bg-slate-100 hover:bg-blue-50 dark:bg-slate-800 dark:hover:bg-blue-950 text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400 transition-colors"
+                    >
+                      {preset >= 1000000 ? `${preset / 1000000}Tr` : `${preset / 1000}k`}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">
-                  {t('whatif.initialCutPercent', 'Tỷ lệ muốn cắt giảm ban đầu (%)')}
+              {/* What-If Cut Option */}
+              <div className="p-3.5 rounded-2xl bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200/80 dark:border-rose-900/40 space-y-2.5">
+                <label className="flex items-center space-x-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={expenseApplyCut}
+                    onChange={(e) => setExpenseApplyCut(e.target.checked)}
+                    className="w-4 h-4 accent-rose-600 rounded cursor-pointer"
+                  />
+                  <span className="text-xs font-bold text-rose-900 dark:text-rose-200">
+                    {t('whatif.applyCutImmediately', 'Áp dụng cắt giảm ngay trong kịch bản')}
+                  </span>
                 </label>
-                <input type="number" min="0" max="50" step="5" required value={newCutPercent} onChange={(e) => setNewCutPercent(e.target.value)} placeholder="20" className="w-full text-xl font-bold px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl dark:text-white"/>
+
+                {expenseApplyCut && (
+                  <div className="space-y-2 pt-1 border-t border-rose-200/60 dark:border-rose-900/40">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-600 dark:text-slate-400 font-medium">
+                        {t('whatif.initialCutPercent', 'Tỷ lệ muốn cắt giảm ban đầu (%)')}
+                      </span>
+                      <span className="font-extrabold text-rose-600 dark:text-rose-400">
+                        -{expenseCutPercent}%
+                      </span>
+                    </div>
+
+                    <input
+                      type="range"
+                      min="0"
+                      max="50"
+                      step="5"
+                      value={expenseCutPercent}
+                      onChange={(e) => setExpenseCutPercent(e.target.value)}
+                      className="w-full accent-rose-500 cursor-pointer"
+                    />
+
+                    <div className="flex items-center space-x-1.5">
+                      {[10, 20, 30, 50].map((pct) => (
+                        <button
+                          key={pct}
+                          type="button"
+                          onClick={() => setExpenseCutPercent(String(pct))}
+                          className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-colors ${
+                            Number(expenseCutPercent) === pct
+                              ? 'bg-rose-600 text-white'
+                              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+                          }`}
+                        >
+                          -{pct}%
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
+              {/* Form Buttons */}
               <div className="flex justify-end space-x-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button type="button" onClick={() => setAddCutModalOpen(false)} className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setExpenseModalOpen(false)}
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                >
                   {t('common.cancel', 'Hủy')}
                 </button>
-                <button type="submit" className="px-5 py-2 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-sm">
-                  {t('whatif.createCutCard', 'Tạo thẻ cắt giảm')}
+                <button
+                  type="submit"
+                  className="px-5 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm transition-colors"
+                >
+                  {editingExpenseId
+                    ? t('whatif.saveExpenseBtn', 'Lưu khoản chi')
+                    : t('whatif.addExpenseBtn', 'Thêm vào kịch bản')}
                 </button>
               </div>
             </form>
           </div>
-        </div>)}
+        </div>
+      )}
 
       {/* ========================================================================= */}
       {/* MODAL: THÊM KHOẢN VAY NGOÀI / NỢ CẦN TRẢ */}

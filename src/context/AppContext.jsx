@@ -855,10 +855,11 @@ export const AppProvider = ({ children }) => {
     const addWallet = (wallet) => {
         const newWallet = {
             ...wallet,
-            id: `wal-${Date.now()}`,
+            id: wallet.id || `wal-${Date.now()}`,
             createdAt: new Date().toISOString(),
         };
         setWallets((prev) => [...prev, newWallet]);
+        return newWallet;
     };
     const editWallet = (id, updated) => {
         setWallets((prev) => prev.map((w) => (w.id === id ? { ...w, ...updated } : w)));

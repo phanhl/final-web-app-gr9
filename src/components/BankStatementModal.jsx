@@ -18,14 +18,63 @@ import {
     Info,
     Calendar,
     Tag,
+    Plus,
+    Building2,
+    CreditCard,
+    Sparkles,
 } from 'lucide-react';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, formatNumberWithDots } from '@/lib/utils';
 import {
     parseBankStatementFile,
     checkDuplicates,
     downloadSampleStatementTemplate,
+    SUPPORTED_BANKS,
 } from '@/lib/bank-statement-parser';
 import confetti from 'canvas-confetti';
+import { IconHelper } from './IconHelper';
+
+/**
+ * Hàm tìm kiếm ví ngân hàng phù hợp với sao kê đã nhận diện
+ */
+function findMatchingWalletForBank(bank, walletsList, detectedAccountNumber) {
+    if (!bank || !Array.isArray(walletsList)) return null;
+    const bCode = (bank.code || '').toLowerCase();
+    const bName = (bank.name || '').toLowerCase();
+
+    // 1. Khớp theo số tài khoản nếu nhận diện được từ sao kê
+    if (detectedAccountNumber) {
+        const cleanAcc = detectedAccountNumber.replace(/\D/g, '');
+        if (cleanAcc.length >= 4) {
+            const accMatch = walletsList.find((w) => {
+                if (!w.accountNumber) return false;
+                const cleanWAcc = String(w.accountNumber).replace(/\D/g, '');
+                return cleanWAcc && (cleanWAcc === cleanAcc || cleanWAcc.endsWith(cleanAcc) || cleanAcc.endsWith(cleanWAcc));
+            });
+            if (accMatch) return accMatch;
+        }
+    }
+
+    // 2. Khớp theo bankName
+    const bankNameMatch = walletsList.find((w) => {
+        if (!w.bankName) return false;
+        const wbName = w.bankName.toLowerCase();
+        return wbName === bName || wbName === bCode || wbName.includes(bName) || bName.includes(wbName);
+    });
+    if (bankNameMatch) return bankNameMatch;
+
+    // 3. Khớp theo tên ví (name)
+    const nameMatch = walletsList.find((w) => {
+        const wName = (w.name || '').toLowerCase();
+        return (
+            wName.includes(bName) ||
+            (bCode.length >= 3 && wName.includes(bCode)) ||
+            (bank.keywords && bank.keywords.some((k) => wName.includes(k)))
+        );
+    });
+    if (nameMatch) return nameMatch;
+
+    return null;
+}
 
 export const BankStatementModal = () => {
     const {
@@ -35,6 +84,7 @@ export const BankStatementModal = () => {
         wallets,
         categories,
         transactions,
+        addWallet,
         importBankStatementTransactions,
         t,
         tCategory,
@@ -49,6 +99,18 @@ export const BankStatementModal = () => {
     const [parsedItems, setParsedItems] = useState([]);
     const [detectedClosingBalance, setDetectedClosingBalance] = useState(null);
     const [balanceAdjustmentMode, setBalanceAdjustmentMode] = useState('NET_CHANGE'); // 'NET_CHANGE' | 'SET_EXACT'
+
+    // Nhận diện ngân hàng & trạng thái liên kết ví
+    const [detectedBank, setDetectedBank] = useState(null);
+    const [detectedAccountNumber, setDetectedAccountNumber] = useState(null);
+    const [detectedAccountHolder, setDetectedAccountHolder] = useState(null);
+    const [walletMatchStatus, setWalletMatchStatus] = useState('MANUAL'); // 'MATCHED' | 'NOT_FOUND' | 'MANUAL'
+
+    // Modal tạo ví nhanh cho ngân hàng được nhận diện
+    const [showCreateWalletModal, setShowCreateWalletModal] = useState(false);
+    const [customWalletName, setCustomWalletName] = useState('');
+    const [customWalletBalance, setCustomWalletBalance] = useState('0');
+    const [customWalletAccNum, setCustomWalletAccNum] = useState('');
 
     // Bộ lọc xem trước
     const [activeFilterTab, setActiveFilterTab] = useState('ALL'); // 'ALL' | 'INCOME' | 'EXPENSE' | 'DUPLICATE' | 'SELECTED'
@@ -70,10 +132,15 @@ export const BankStatementModal = () => {
             setParsedItems([]);
             setParseError(null);
             setDetectedClosingBalance(null);
+            setDetectedBank(null);
+            setDetectedAccountNumber(null);
+            setDetectedAccountHolder(null);
+            setWalletMatchStatus('MANUAL');
             setBalanceAdjustmentMode('NET_CHANGE');
             setImportSuccessResult(null);
             setActiveFilterTab('ALL');
             setSearchFilter('');
+            setShowCreateWalletModal(false);
         }
     }, [statementModalOpen, statementDefaultWalletId, wallets]);
 
@@ -96,20 +163,35 @@ export const BankStatementModal = () => {
 
         try {
             const result = await parseBankStatementFile(uploadedFile, categories);
-            // Kiểm tra trùng lặp với danh sách giao dịch hiện có
-            const checkedTransactions = checkDuplicates(result.transactions, transactions, selectedWalletId);
-            setParsedItems(checkedTransactions);
             setDetectedClosingBalance(result.detectedClosingBalance);
+            setDetectedBank(result.detectedBank);
+            setDetectedAccountNumber(result.detectedAccountNumber);
+            setDetectedAccountHolder(result.detectedAccountHolder);
 
-            // Tự động nhận diện ví nếu tên file có chứa tên ngân hàng
-            const fileNameLower = uploadedFile.name.toLowerCase();
-            const matchedWallet = wallets.find(w => {
-                const wName = (w.name || '').toLowerCase();
-                const bName = (w.bankName || '').toLowerCase();
-                return (bName && fileNameLower.includes(bName)) || (wName && fileNameLower.includes(wName));
-            });
-            if (matchedWallet) {
-                setSelectedWalletId(matchedWallet.id);
+            // Kiểm tra phân biệt ngân hàng của sao kê và khớp ví
+            if (result.detectedBank) {
+                const matchedWallet = findMatchingWalletForBank(result.detectedBank, wallets, result.detectedAccountNumber);
+                if (matchedWallet) {
+                    setSelectedWalletId(matchedWallet.id);
+                    setWalletMatchStatus('MATCHED');
+                    setParsedItems(checkDuplicates(result.transactions, transactions, matchedWallet.id));
+                } else {
+                    // Chưa có ví ngân hàng này -> YÊU CẦU TẠO VÍ!
+                    setSelectedWalletId('');
+                    setWalletMatchStatus('NOT_FOUND');
+                    setCustomWalletName(`${result.detectedBank.name} Chi tiêu`);
+                    setCustomWalletBalance(result.detectedClosingBalance ? String(result.detectedClosingBalance) : '0');
+                    setCustomWalletAccNum(result.detectedAccountNumber || '');
+                    setParsedItems(checkDuplicates(result.transactions, transactions, ''));
+                }
+            } else {
+                setWalletMatchStatus('MANUAL');
+                const targetWallet = statementDefaultWalletId
+                    ? wallets.find(w => w.id === statementDefaultWalletId)
+                    : wallets.find(w => w.type === 'BANK') || wallets[0];
+                const fallbackId = targetWallet ? targetWallet.id : (wallets[0]?.id || '');
+                setSelectedWalletId(fallbackId);
+                setParsedItems(checkDuplicates(result.transactions, transactions, fallbackId));
             }
         } catch (err) {
             console.error('Error parsing bank statement:', err);
@@ -118,6 +200,40 @@ export const BankStatementModal = () => {
         } finally {
             setIsParsing(false);
         }
+    };
+
+    // Tạo ví ngân hàng tự động (1-Click) hoặc tùy chỉnh
+    const handleQuickCreateBankWallet = (customData = null) => {
+        if (!detectedBank) return;
+        const initialBal = customData ? (Number(customData.balance) || 0) : (Number(detectedClosingBalance) || 0);
+        const accNum = customData?.accountNumber || detectedAccountNumber || '';
+        const wName = customData?.name?.trim() || `${detectedBank.name} Chi tiêu`;
+
+        const newWalletData = {
+            name: wName,
+            type: 'BANK',
+            bankName: detectedBank.name,
+            accountNumber: accNum,
+            balance: initialBal,
+            initialBalance: initialBal,
+            currency: 'VND',
+            color: detectedBank.color || '#0047BA',
+            icon: detectedBank.icon || 'CreditCard',
+        };
+
+        const createdWallet = addWallet(newWalletData);
+        setSelectedWalletId(createdWallet.id);
+        setWalletMatchStatus('MATCHED');
+        setShowCreateWalletModal(false);
+
+        confetti({
+            particleCount: 50,
+            spread: 60,
+            origin: { y: 0.6 },
+        });
+
+        // Cập nhật lại duplicate check với ví mới tạo
+        setParsedItems(prev => checkDuplicates(prev, transactions, createdWallet.id));
     };
 
     const handleFileDrop = (e) => {
@@ -328,52 +444,182 @@ export const BankStatementModal = () => {
                         </div>
                     ) : (
                         <>
-                            {/* BƯỚC 1: CHỌN VÍ VÀ TẢI TỆP */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {/* Chọn ví đích */}
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
-                                        <span className="flex items-center gap-1.5">
-                                            <Wallet className="w-3.5 h-3.5 text-blue-500" />
-                                            1. Chọn ví ngân hàng áp dụng
-                                        </span>
-                                        {currentWallet && (
-                                            <span className="text-[11px] font-normal text-slate-500">
-                                                Số dư: <strong className="text-slate-700 dark:text-slate-300">{formatCurrency(currentWallet.balance)}</strong>
-                                            </span>
-                                        )}
-                                    </label>
-                                    <select
-                                        value={selectedWalletId}
-                                        onChange={(e) => setSelectedWalletId(e.target.value)}
-                                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                                    >
-                                        {wallets.map((w) => (
-                                            <option key={w.id} value={w.id}>
-                                                {w.name} ({w.bankName || w.type}) — {formatCurrency(w.balance)}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
+                            {/* BƯỚC 1: KHUNG NHẬN DIỆN NGÂN HÀNG & LIÊN KẾT VÍ TRỪ TIỀN */}
+                            {parsedItems.length > 0 && (
+                                <div className="space-y-3">
+                                    {/* TRƯỜNG HỢP 1: ĐÃ NHẬN DIỆN VÀ KHỚP ĐƯỢC VÍ NGÂN HÀNG CÓ SẴN */}
+                                    {walletMatchStatus === 'MATCHED' && detectedBank && (
+                                        <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-teal-950/30 border border-emerald-300 dark:border-emerald-700/60 shadow-xs">
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                                <div className="flex items-center space-x-3.5 min-w-0">
+                                                    <div
+                                                        className="w-11 h-11 rounded-xl flex items-center justify-center text-white shadow-sm shrink-0"
+                                                        style={{ backgroundColor: detectedBank.color || '#007A33' }}
+                                                    >
+                                                        <IconHelper name={detectedBank.icon || 'Building2'} size={22} />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <span className="text-xs font-black text-emerald-900 dark:text-emerald-200 uppercase tracking-wide">
+                                                                Sao kê ngân hàng: {detectedBank.name}
+                                                            </span>
+                                                            <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-200 dark:bg-emerald-800 text-emerald-800 dark:text-emerald-100 flex items-center gap-1 shadow-2xs">
+                                                                <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-300" />
+                                                                Đã khớp ví ngân hàng
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-1">
+                                                            Khoản chi/thu sẽ được <strong>trừ/cộng trực tiếp vào ví:</strong> <strong className="underline decoration-emerald-500 font-bold">{currentWallet?.name}</strong> (Số dư hiện tại: {formatCurrency(currentWallet?.balance || 0)})
+                                                            {detectedAccountNumber ? ` • Số TK: ${detectedAccountNumber}` : ''}
+                                                        </p>
+                                                    </div>
+                                                </div>
 
-                                {/* Nút tải file mẫu */}
-                                <div className="flex flex-col justify-end">
-                                    <div className="flex items-center justify-between p-2.5 bg-blue-50 dark:bg-blue-950/30 rounded-xl border border-blue-100 dark:border-blue-900/40 text-xs">
-                                        <div className="flex items-center gap-2 text-blue-900 dark:text-blue-300">
-                                            <Info className="w-4 h-4 text-blue-500 shrink-0" />
-                                            <span>Chưa có file sao kê?</span>
+                                                {/* Dropdown đổi ví nếu người dùng có nhiều tài khoản cùng ngân hàng */}
+                                                <div className="sm:w-60 shrink-0">
+                                                    <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">
+                                                        Đổi ví ngân hàng trừ tiền:
+                                                    </label>
+                                                    <select
+                                                        value={selectedWalletId}
+                                                        onChange={(e) => setSelectedWalletId(e.target.value)}
+                                                        className="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-emerald-300 dark:border-emerald-700 rounded-xl text-xs font-bold text-slate-800 dark:text-white shadow-xs focus:ring-2 focus:ring-emerald-500"
+                                                    >
+                                                        {wallets.map((w) => (
+                                                            <option key={w.id} value={w.id}>
+                                                                {w.name} ({formatCurrency(w.balance)})
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <button
-                                            type="button"
-                                            onClick={downloadSampleStatementTemplate}
-                                            className="flex items-center gap-1 px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[11px] font-semibold shadow-xs transition-colors cursor-pointer shrink-0"
-                                        >
-                                            <Download className="w-3 h-3" />
-                                            <span>Tải file mẫu (.xlsx)</span>
-                                        </button>
-                                    </div>
+                                    )}
+
+                                    {/* TRƯỜNG HỢP 2: NHẬN DIỆN ĐƯỢC NGÂN HÀNG NHƯNG CHƯA CÓ VÍ TRONG HỆ THỐNG (YÊU CẦU TẠO VÍ) */}
+                                    {walletMatchStatus === 'NOT_FOUND' && detectedBank && (
+                                        <div className="p-5 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/30 border-2 border-amber-300 dark:border-amber-700 shadow-md space-y-3.5 animate-in fade-in duration-300">
+                                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3.5">
+                                                <div className="flex items-start space-x-3.5">
+                                                    <div
+                                                        className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-md shrink-0"
+                                                        style={{ backgroundColor: detectedBank.color || '#0047BA' }}
+                                                    >
+                                                        <IconHelper name={detectedBank.icon || 'Building2'} size={24} />
+                                                    </div>
+                                                    <div>
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <h4 className="text-sm font-black text-amber-950 dark:text-amber-100 uppercase tracking-wide">
+                                                                Phát hiện sao kê: {detectedBank.name}
+                                                            </h4>
+                                                            <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100 flex items-center gap-1 border border-amber-300 dark:border-amber-700">
+                                                                <AlertTriangle className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                                                                Chưa có ví ngân hàng này
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-xs text-amber-900 dark:text-amber-200 mt-1 leading-relaxed max-w-xl">
+                                                            Hệ thống xác định đây là bản sao kê của <strong>{detectedBank.fullName || detectedBank.name}</strong>. Để các khoản chi/thu được <strong>trừ đúng vào ngân hàng {detectedBank.name}</strong> và không làm sai lệch số dư các ví khác, bạn cần tạo ví mới cho ngân hàng này trước khi nạp.
+                                                        </p>
+                                                        {detectedAccountNumber && (
+                                                            <div className="mt-2 inline-flex items-center gap-3 text-[11px] font-semibold text-amber-900 dark:text-amber-200 bg-amber-100/70 dark:bg-amber-900/40 px-2.5 py-1 rounded-lg">
+                                                                <span>Số TK sao kê: <strong>{detectedAccountNumber}</strong></span>
+                                                                {detectedAccountHolder && <span>Chủ TK: <strong>{detectedAccountHolder}</strong></span>}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Nút hành động tạo ví */}
+                                                <div className="flex flex-col sm:items-end gap-2 shrink-0">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleQuickCreateBankWallet()}
+                                                        className="px-4 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer hover:shadow-lg active:scale-95"
+                                                    >
+                                                        <Plus className="w-4 h-4" />
+                                                        <span>Tạo ví {detectedBank.name} ngay (1-Click)</span>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowCreateWalletModal(true)}
+                                                        className="text-[11px] font-bold text-amber-700 dark:text-amber-300 hover:underline text-center cursor-pointer"
+                                                    >
+                                                        Tùy chỉnh tên ví & số dư ban đầu...
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* Lựa chọn gộp ví khác nếu người dùng muốn */}
+                                            <div className="pt-2 border-t border-amber-200/60 dark:border-amber-800/40 flex items-center justify-between flex-wrap gap-2 text-[11px] text-amber-800 dark:text-amber-300">
+                                                <span>* Yêu cầu tạo ví {detectedBank.name} hoặc chỉ định một ví sẵn có để tiếp tục nạp.</span>
+                                                <div className="flex items-center gap-1.5">
+                                                    <span>Hoặc dùng ví sẵn có:</span>
+                                                    <select
+                                                        value={selectedWalletId}
+                                                        onChange={(e) => {
+                                                            setSelectedWalletId(e.target.value);
+                                                            if (e.target.value) setWalletMatchStatus('MATCHED');
+                                                        }}
+                                                        className="px-2 py-0.5 bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-700 rounded-lg text-xs font-semibold text-slate-800 dark:text-white"
+                                                    >
+                                                        <option value="">-- Chọn ví khác --</option>
+                                                        {wallets.map((w) => (
+                                                            <option key={w.id} value={w.id}>
+                                                                {w.name} ({formatCurrency(w.balance)})
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* TRƯỜNG HỢP 3: KHÔNG NHẬN DIỆN ĐƯỢC NGÂN HÀNG CỤ THỂ TỪ FILE */}
+                                    {walletMatchStatus === 'MANUAL' && (
+                                        <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                                            <div className="flex items-center gap-2.5">
+                                                <Info className="w-4 h-4 text-blue-500 shrink-0" />
+                                                <span className="text-slate-600 dark:text-slate-300">
+                                                    Chưa nhận diện được ngân hàng cụ thể từ file. Vui lòng chọn ví nhận giao dịch:
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <select
+                                                    value={selectedWalletId}
+                                                    onChange={(e) => setSelectedWalletId(e.target.value)}
+                                                    className="px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-800 dark:text-white"
+                                                >
+                                                    {wallets.map((w) => (
+                                                        <option key={w.id} value={w.id}>
+                                                            {w.name} ({formatCurrency(w.balance)})
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
+                            )}
+
+                            {/* KHI CHƯA CHỌN FILE: HƯỚNG DẪN & NÚT TẢI FILE MẪU */}
+                            {parsedItems.length === 0 && (
+                                <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/30 rounded-xl border border-blue-100 dark:border-blue-900/40 text-xs">
+                                    <div className="flex items-center gap-2 text-blue-900 dark:text-blue-300">
+                                        <Info className="w-4 h-4 text-blue-500 shrink-0" />
+                                        <span>
+                                            Hệ thống <strong>tự động nhận diện ngân hàng</strong> (Techcombank, Vietcombank, MB Bank, VPBank...) và <strong>tự động khớp ví tương ứng</strong> để trừ tiền.
+                                        </span>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={downloadSampleStatementTemplate}
+                                        className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer shrink-0"
+                                    >
+                                        <Download className="w-3.5 h-3.5" />
+                                        <span>Tải file mẫu Techcombank (.xlsx)</span>
+                                    </button>
+                                </div>
+                            )}
 
                             {/* KHUNG KÉO THẢ / CHỌN FILE */}
                             {parsedItems.length === 0 ? (
@@ -777,15 +1023,124 @@ export const BankStatementModal = () => {
                                 <button
                                     type="button"
                                     onClick={handleExecuteImport}
-                                    disabled={selectedItems.length === 0}
-                                    className="flex items-center gap-1.5 px-5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-sm transition-colors cursor-pointer"
+                                    disabled={selectedItems.length === 0 || !selectedWalletId}
+                                    className={`flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-bold shadow-sm transition-all ${
+                                        selectedItems.length === 0 || !selectedWalletId
+                                            ? 'bg-slate-300 dark:bg-slate-800 text-slate-500 dark:text-slate-400 cursor-not-allowed'
+                                            : 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer active:scale-95'
+                                    }`}
                                 >
                                     <CheckCircle2 className="w-4 h-4" />
                                     <span>
-                                        Xác nhận nạp {selectedItems.length} giao dịch vào ví
+                                        {selectedWalletId
+                                            ? `Xác nhận nạp ${selectedItems.length} giao dịch vào ví ${currentWallet?.name || ''}`
+                                            : `Yêu cầu tạo hoặc chọn ví ${detectedBank?.name || 'ngân hàng'} để nạp`}
                                     </span>
                                 </button>
                             )}
+                        </div>
+                    </div>
+                )}
+
+                {/* MODAL NHỎ: TÙY CHỈNH THÔNG TIN TẠO VÍ NGÂN HÀNG MỚI */}
+                {showCreateWalletModal && detectedBank && (
+                    <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+                        <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-4">
+                            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                                <div className="flex items-center space-x-2.5">
+                                    <div
+                                        className="w-9 h-9 rounded-xl flex items-center justify-center text-white shadow-xs"
+                                        style={{ backgroundColor: detectedBank.color || '#0047BA' }}
+                                    >
+                                        <IconHelper name={detectedBank.icon || 'Building2'} size={18} />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-sm font-bold text-slate-800 dark:text-white">
+                                            Tạo Ví Ngân Hàng {detectedBank.name}
+                                        </h4>
+                                        <span className="text-[10px] text-slate-400">
+                                            Liên kết trừ tiền sao kê tự động
+                                        </span>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setShowCreateWalletModal(false)}
+                                    className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg cursor-pointer"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+
+                            <form
+                                onSubmit={(e) => {
+                                    e.preventDefault();
+                                    handleQuickCreateBankWallet({
+                                        name: customWalletName,
+                                        balance: customWalletBalance,
+                                        accountNumber: customWalletAccNum,
+                                    });
+                                }}
+                                className="space-y-3.5"
+                            >
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                                        Tên ví ngân hàng
+                                    </label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={customWalletName}
+                                        onChange={(e) => setCustomWalletName(e.target.value)}
+                                        placeholder={`Ví dụ: ${detectedBank.name} Chi tiêu`}
+                                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-amber-500"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                                        Số tài khoản ngân hàng
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={customWalletAccNum}
+                                        onChange={(e) => setCustomWalletAccNum(e.target.value)}
+                                        placeholder="Số TK ngân hàng (nếu có)"
+                                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-amber-500"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                                        Số dư ban đầu (VNĐ)
+                                    </label>
+                                    <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        value={formatNumberWithDots(customWalletBalance)}
+                                        onChange={(e) => {
+                                            const cleaned = e.target.value.replace(/\D/g, '');
+                                            setCustomWalletBalance(cleaned);
+                                        }}
+                                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-black text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-amber-500"
+                                    />
+                                </div>
+
+                                <div className="flex justify-end space-x-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowCreateWalletModal(false)}
+                                        className="px-3.5 py-1.5 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl font-medium cursor-pointer"
+                                    >
+                                        Hủy
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="px-4 py-1.5 text-xs bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white rounded-xl font-bold shadow-sm cursor-pointer"
+                                    >
+                                        Tạo và liên kết ví ngay
+                                    </button>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 )}

@@ -3,18 +3,1948 @@
     {
       "name": "Tech",
       "type": "BANK",
-      "balance": 10001000,
-      "initialBalance": 10001000,
+      "balance": 816673,
+      "initialBalance": 3000000,
       "currency": "VND",
-      "bankName": "Vietcombank",
+      "bankName": "Techcombank",
       "accountNumber": "",
       "color": "#0ea5e9",
       "icon": "Building2",
-      "id": "wal-1790792237038",
-      "createdAt": "2026-09-30T18:17:17.038Z"
+      "id": "wal-1790820313760",
+      "createdAt": "2026-10-01T02:05:13.760Z"
+    },
+    {
+      "name": "MB",
+      "type": "BANK",
+      "balance": 4206016,
+      "initialBalance": 4000000,
+      "currency": "VND",
+      "bankName": "MB Bank",
+      "accountNumber": "",
+      "color": "#0ea5e9",
+      "icon": "Building2",
+      "id": "wal-1790820324212",
+      "createdAt": "2026-10-01T02:05:24.212Z"
+    },
+    {
+      "name": "Ví tay",
+      "type": "CASH",
+      "balance": 650000,
+      "initialBalance": 650000,
+      "currency": "VND",
+      "accountNumber": "",
+      "color": "#3b82f6",
+      "icon": "Banknote",
+      "id": "wal-1790820538236",
+      "createdAt": "2026-10-01T02:08:58.236Z"
+    },
+    {
+      "name": "Cống hiến cho anh 7",
+      "type": "CREDIT",
+      "balance": 7000000,
+      "initialBalance": 7000000,
+      "currency": "VND",
+      "bankName": "ACB Bank",
+      "accountNumber": "",
+      "creditLimit": 0,
+      "color": "#007a33",
+      "icon": "CreditCard",
+      "id": "wal-1790820589219",
+      "createdAt": "2026-10-01T02:09:49.219Z"
     }
   ],
-  "transactions": [],
+  "transactions": [
+    {
+      "id": "tx-st-1790820374604-0-45uo",
+      "type": "INCOME",
+      "amount": 75000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-01-03T16:56:23",
+      "note": "MB - CUSTOMER NGUYEN TRUONG HAI chuyen tien. TU: NGUYEN TRUONG HAI",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-1-vi0y",
+      "type": "EXPENSE",
+      "amount": 75000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-01-03T20:38:18",
+      "note": "TCB - CUSTOMER HOANG LE PHAN chuyen tien - Ma giao  dich/ Trace 361069",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-2-v6js",
+      "type": "INCOME",
+      "amount": 10001,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-01-07T20:26:04",
+      "note": "MB - CTCP DICH VU DI DONG TRUC TUYEN 113681715115-HOANG LE PHAN chuyen t ien qua MoMo-CHUYEN TIEN-OQCH0005kP 1c-MOMO113681715115MOMO. TU: M SERVICE JSC",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-3-7dae",
+      "type": "EXPENSE",
+      "amount": 672,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-01-14T03:46:47",
+      "note": "ICC-GIAO DICH THU NO PHI THUONG NIE - N THE ...9182 DEN THANG 08/2026",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-4-34st",
+      "type": "EXPENSE",
+      "amount": 6724,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-01-14T03:46:47",
+      "note": "ICC-GIAO DICH THU NO PHI THUONG NIE - N THE ...9182 DEN THANG 08/2026",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-5-hd8g",
+      "type": "INCOME",
+      "amount": 40000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-01-21T12:24:10",
+      "note": "MB - ZION O5CH7IAS2OKH-Phan dung Zalopay chuy en tien. TU: ZION",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-6-8hr2",
+      "type": "EXPENSE",
+      "amount": 40000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-01-21T12:26:33",
+      "note": "MB - CUSTOMER HOANG LE PHAN chuyen tien. DEN: HOANG THE DUNG",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-7-xnld",
+      "type": "INCOME",
+      "amount": 20000000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-02-02T09:25:37",
+      "note": "MB - ZION O5CH7IEE9JBM-Phan dung Zalopay chuy en tien. TU: ZION",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-8-e4vy",
+      "type": "INCOME",
+      "amount": 8000000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-02-02T09:26:08",
+      "note": "MB - ZION O5CH7IEE9M52-Phan dung Zalopay chuy en tien. TU: ZION",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-9-ct0b",
+      "type": "EXPENSE",
+      "amount": 28000000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-02-02T09:29:24",
+      "note": "VIETINBANK - CUSTOMER QR 23BA14226 HP 28000000",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-10-k5xo",
+      "type": "INCOME",
+      "amount": 18259,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-02-07T00:03:31",
+      "note": "MB - CUSTOMER NGUYEN TRUONG HAI chuyen tien. TU: NGUYEN TRUONG HAI",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-11-511o",
+      "type": "EXPENSE",
+      "amount": 20864,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-02-13T15:36:26",
+      "note": "TCB - CUSTOMER HOANG LE PHAN chuyen tien - Ma giao  dich/ Trace 069681",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-12-z4nl",
+      "type": "INCOME",
+      "amount": 100000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-02-14T20:05:15",
+      "note": "MB - CUSTOMER HOANG VIET HUNG chuyen tien. TU: HOANG VIET HUNG",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-13-1b73",
+      "type": "EXPENSE",
+      "amount": 100000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-02-14T20:22:55",
+      "note": "TCB - CUSTOMER HOANG LE PHAN chuyen tien - Ma giao  dich/ Trace 429466",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-14-qs02",
+      "type": "INCOME",
+      "amount": 50000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-02-26T12:52:52",
+      "note": "MB - CUSTOMER NGUYEN TRUONG HAI chuyen tien. TU: NGUYEN TRUONG HAI",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-15-gzhe",
+      "type": "INCOME",
+      "amount": 51778,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-03-03T13:52:47",
+      "note": "MB - CUSTOMER NGUYEN TRUONG HAI chuyen tien. TU: NGUYEN TRUONG HAI",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-16-j55h",
+      "type": "EXPENSE",
+      "amount": 101778,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-03-03T18:44:07",
+      "note": "NH TMCP BAN VIET HOI SO CHINH - CUSTOMER MBCT HOANG LE PHAN chuyen tien D2LQ PHTB/577667",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-17-efg7",
+      "type": "INCOME",
+      "amount": 300000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-03-16T11:16:15",
+      "note": "MB - CUSTOMER HOANG VIET HUNG chuyen tien. TU: HOANG VIET HUNG",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-18-c2a5",
+      "type": "INCOME",
+      "amount": 2,
+      "categoryId": "cat-invest-inc",
+      "categoryName": "Lợi nhuận đầu tư",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-03-22T01:19:32",
+      "note": "Tra lai tien gui, so TK: 0856466802-20260321",
+      "tags": [
+        "Lãi"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-19-ty8y",
+      "type": "INCOME",
+      "amount": 100000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-03-24T23:27:19",
+      "note": "MB - CUSTOMER HOANG VIET HUNG chuyen tien. TU: HOANG VIET HUNG",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-20-7m9f",
+      "type": "EXPENSE",
+      "amount": 400000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-03-25T07:58:47",
+      "note": "NH TMCP BAN VIET HOI SO CHINH - CUSTOMER MBCT HOANG LE PHAN chuyen tien D2QC 3USI/167778",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-21-e8vy",
+      "type": "INCOME",
+      "amount": 55000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-04-10T15:40:30",
+      "note": "MB - CUSTOMER NGUYEN TRUONG HAI chuyen tien. TU: NGUYEN TRUONG HAI",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-22-351e",
+      "type": "EXPENSE",
+      "amount": 55002,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-04-11T11:49:07",
+      "note": "NH TMCP BAN VIET HOI SO CHINH - CUSTOMER MBCT HOANG LE PHAN chuyen tien D2BS LQJK/099033",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-23-8t9i",
+      "type": "INCOME",
+      "amount": 5000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-04-17T12:38:50",
+      "note": "MB - CUSTOMER NGUYEN TRUONG HAI chuyen tien. TU: NGUYEN TRUONG HAI",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-24-mfbn",
+      "type": "INCOME",
+      "amount": 1,
+      "categoryId": "cat-invest-inc",
+      "categoryName": "Lợi nhuận đầu tư",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-04-19T01:06:14",
+      "note": "Tra lai tien gui, so TK: 0856466802-20260418",
+      "tags": [
+        "Lãi"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-25-3p5w",
+      "type": "INCOME",
+      "amount": 20000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-04-20T15:36:38",
+      "note": "MB - CUSTOMER NGUYEN TRUONG HAI chuyen tien. TU: NGUYEN TRUONG HAI",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-26-0zhl",
+      "type": "INCOME",
+      "amount": 800000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-04-20T17:54:38",
+      "note": "MB - ZION O5CH7J5D7UD9-Phan dung Zalopay chuy en tien. TU: ZION",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-27-xmpi",
+      "type": "EXPENSE",
+      "amount": 825000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-04-20T17:56:30",
+      "note": "NH TMCP KY THUONG VIET NAM HSC - CUSTOMER MBCT HOANG LE PHAN chuyen tien D21N 3S2W/186621",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-28-7nc4",
+      "type": "INCOME",
+      "amount": 150000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-04-28T15:25:00",
+      "note": "MB - CUSTOMER HOANG VIET HUNG chuyen tien. TU: HOANG VIET HUNG",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-29-09fr",
+      "type": "INCOME",
+      "amount": 11000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-05-07T12:57:21",
+      "note": "MB - CUSTOMER NGUYEN TRUONG HAI chuyen tien. TU: NGUYEN TRUONG HAI",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-30-ipap",
+      "type": "EXPENSE",
+      "amount": 161001,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-05-12T13:06:17",
+      "note": "NH TMCP BAN VIET HOI SO CHINH - CUSTOMER MBCT HOANG LE PHAN chuyen tien D28X BLCQ/731348",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-31-jijx",
+      "type": "INCOME",
+      "amount": 3,
+      "categoryId": "cat-invest-inc",
+      "categoryName": "Lợi nhuận đầu tư",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-05-17T01:08:35",
+      "note": "Tra lai tien gui, so TK: 0856466802-20260516",
+      "tags": [
+        "Lãi"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-32-csga",
+      "type": "INCOME",
+      "amount": 35000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-06-04T12:49:46",
+      "note": "MB - CUSTOMER HOANG THE DUNG chuyen tien. TU: HOANG THE DUNG",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-33-qja7",
+      "type": "EXPENSE",
+      "amount": 20000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-06-18T09:37:22",
+      "note": "MB - CUSTOMER HOANG LE PHAN chuyen tien. DEN: TRINH NGOC HOANG",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-34-vzvc",
+      "type": "INCOME",
+      "amount": 1,
+      "categoryId": "cat-invest-inc",
+      "categoryName": "Lợi nhuận đầu tư",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-06-21T01:43:49",
+      "note": "Tra lai tien gui, so TK: 0856466802-20260620",
+      "tags": [
+        "Lãi"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-35-o7oe",
+      "type": "INCOME",
+      "amount": 700000,
+      "categoryId": "cat-bonus",
+      "categoryName": "Thưởng & Làm thêm",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-07-03T20:14:26",
+      "note": "NH TMCP KY THUONG VIET NAM HSC - VND-TGTT-HOANG LE PHAN HOANG LE PHAN chuyen FT261842782540 10 kCAYM33C/222974",
+      "tags": [
+        "Thưởng"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-36-1huj",
+      "type": "EXPENSE",
+      "amount": 17384,
+      "categoryId": "cat-education",
+      "categoryName": "Giáo dục & Khóa học",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-07-03T20:16:24",
+      "note": "MB - CUSTOMER RetailVisa-741018-20-USD-6184133530 76-COURSERA.ORG-The 1084741000",
+      "tags": [
+        "Giáo dục"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-37-2q2z",
+      "type": "EXPENSE",
+      "amount": 526800,
+      "categoryId": "cat-education",
+      "categoryName": "Giáo dục & Khóa học",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-07-03T20:16:24",
+      "note": "MB - CUSTOMER RetailVisa-741018-20-USD-6184133530 76-COURSERA.ORG-The 1084741000",
+      "tags": [
+        "Giáo dục"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-38-gcwg",
+      "type": "EXPENSE",
+      "amount": 170820,
+      "categoryId": "cat-shopping",
+      "categoryName": "Mua sắm",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-07-13T00:30:50",
+      "note": "MB - CUSTOMER ZALOPAY-CASHIN-220302002003068-2607 1300304693797-",
+      "tags": [
+        "Mua sắm"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-39-z55x",
+      "type": "INCOME",
+      "amount": 2,
+      "categoryId": "cat-invest-inc",
+      "categoryName": "Lợi nhuận đầu tư",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-07-19T00:10:46",
+      "note": "Tra lai tien gui, so TK: 0856466802-20260718",
+      "tags": [
+        "Lãi"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-40-jdrg",
+      "type": "INCOME",
+      "amount": 267000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-07-24T11:33:07",
+      "note": "MB - CUSTOMER HOANG THE DUNG chuyen tien. TU: HOANG THE DUNG",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-41-2tf5",
+      "type": "INCOME",
+      "amount": 245000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-07-25T16:14:51",
+      "note": "MB - CUSTOMER HOANG THE DUNG chuyen tien. TU: HOANG THE DUNG",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-42-6ptx",
+      "type": "EXPENSE",
+      "amount": 6000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-08-01T04:34:30",
+      "note": "Phi thuong nien the Active Plus Chi",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-43-w7ld",
+      "type": "EXPENSE",
+      "amount": 60000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-08-01T04:34:30",
+      "note": "Phi thuong nien the Active Plus Chi",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-44-pb09",
+      "type": "EXPENSE",
+      "amount": 200000,
+      "categoryId": "cat-shopping",
+      "categoryName": "Mua sắm",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-08-11T10:30:58",
+      "note": "MB - CUSTOMER ZALOPAY-CASHIN-220302002003068-2608 1110304987304-",
+      "tags": [
+        "Mua sắm"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-45-jeeb",
+      "type": "EXPENSE",
+      "amount": 200000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-08-11T10:31:22",
+      "note": "BVBANK - CUSTOMER MBCT HOANG LE PHAN chuyen tien D2S7 P8UE/848342",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-46-udae",
+      "type": "INCOME",
+      "amount": 11,
+      "categoryId": "cat-invest-inc",
+      "categoryName": "Lợi nhuận đầu tư",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-08-16T00:24:35",
+      "note": "Tra lai tien gui, so TK: 0856466802-20260815",
+      "tags": [
+        "Lãi"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-47-jagz",
+      "type": "INCOME",
+      "amount": 3,
+      "categoryId": "cat-invest-inc",
+      "categoryName": "Lợi nhuận đầu tư",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-09-20T01:44:20",
+      "note": "Tra lai tien gui, so TK: 0856466802-20260919",
+      "tags": [
+        "Lãi"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-48-xmwt",
+      "type": "EXPENSE",
+      "amount": 30000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-09-28T18:35:40",
+      "note": "BVBANK - CUSTOMER MBCT HOANG LE PHAN chuyen tien D27D IL4T/988502",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-49-nq2b",
+      "type": "INCOME",
+      "amount": 10000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-09-28T20:59:07",
+      "note": "MB - ZION O5CH7KLD0RM9-Phan dung Zalopay chuy en tien. TU: ZION",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-50-a11b",
+      "type": "EXPENSE",
+      "amount": 20000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-09-29T13:40:14",
+      "note": "NH TMCP BAN VIET HOI SO CHINH - CUSTOMER MBCT HOANG LE PHAN chuyen tien D27P LLTN/755707",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820374604-51-hsje",
+      "type": "INCOME",
+      "amount": 200000,
+      "categoryId": "cat-bonus",
+      "categoryName": "Thưởng & Làm thêm",
+      "walletId": "wal-1790820324212",
+      "walletName": "MB",
+      "date": "2026-09-29T22:02:34",
+      "note": "NH TMCP KY THUONG VIET NAM HSC - VND-TGTT-HOANG LE PHAN HOANG LE PHAN chuyen FT262720298765 87 k2IREF1B/857146",
+      "tags": [
+        "Thưởng"
+      ],
+      "createdAt": "2026-10-01T02:06:14.604Z"
+    },
+    {
+      "id": "tx-st-1790820351720-0-sm8x",
+      "type": "EXPENSE",
+      "amount": 700000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-07-03T12:00:00",
+      "note": "HOANG LE PHAN chuyen",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.720Z"
+    },
+    {
+      "id": "tx-st-1790820351720-1-dwxc",
+      "type": "EXPENSE",
+      "amount": 1500000,
+      "categoryId": "cat-shopping",
+      "categoryName": "Mua sắm",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-07-03T12:00:00",
+      "note": "ZALOPAY_HOANG LE PHAN - HOANG LE PHAN chuyen tien",
+      "tags": [
+        "Mua sắm"
+      ],
+      "createdAt": "2026-10-01T02:05:51.720Z"
+    },
+    {
+      "id": "tx-st-1790820351720-2-k94g",
+      "type": "EXPENSE",
+      "amount": 1500,
+      "categoryId": "cat-bills",
+      "categoryName": "Hóa đơn & Tiện ích",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-07-06T12:00:00",
+      "note": "Thu phi Homebanking SMS va ZALO thang 6/2026 cua KH 72544635",
+      "tags": [
+        "Hóa đơn"
+      ],
+      "createdAt": "2026-10-01T02:05:51.720Z"
+    },
+    {
+      "id": "tx-st-1790820351720-3-oyo2",
+      "type": "EXPENSE",
+      "amount": 15000,
+      "categoryId": "cat-bills",
+      "categoryName": "Hóa đơn & Tiện ích",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-07-06T12:00:00",
+      "note": "Thu phi Homebanking SMS va ZALO thang 6/2026 cua KH 72544635",
+      "tags": [
+        "Hóa đơn"
+      ],
+      "createdAt": "2026-10-01T02:05:51.720Z"
+    },
+    {
+      "id": "tx-st-1790820351720-4-bdu8",
+      "type": "EXPENSE",
+      "amount": 10000,
+      "categoryId": "cat-shopping",
+      "categoryName": "Mua sắm",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-07-13T12:00:00",
+      "note": "SHOPEEPAY., JSC - NAP VI SHOPEEPAY 0856466802 10000 VND 12/07/2026 20:03:01 1tcb260712teesfn",
+      "tags": [
+        "Mua sắm"
+      ],
+      "createdAt": "2026-10-01T02:05:51.720Z"
+    },
+    {
+      "id": "tx-st-1790820351720-5-8m4s",
+      "type": "INCOME",
+      "amount": 38000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-07-13T12:00:00",
+      "note": "IBFT DANG THANH DUNG chuyen tien",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.720Z"
+    },
+    {
+      "id": "tx-st-1790820351720-6-7l3h",
+      "type": "INCOME",
+      "amount": 170820,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-07-13T12:00:00",
+      "note": "ZION JOINT STOCK COMPANY - ZP7D3NSS4H69, Rut tien ve the, giao  dich 260713000092028",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.720Z"
+    },
+    {
+      "id": "tx-st-1790820351720-7-26cg",
+      "type": "EXPENSE",
+      "amount": 20000,
+      "categoryId": "cat-shopping",
+      "categoryName": "Mua sắm",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-07-13T12:00:00",
+      "note": "SHOPEEPAY., JSC - NAP VI SHOPEEPAY 0856466802 20000 VND 13/07/2026 11:41:25 1tcb260713amkmlp",
+      "tags": [
+        "Mua sắm"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-8-sx2q",
+      "type": "EXPENSE",
+      "amount": 18000,
+      "categoryId": "cat-shopping",
+      "categoryName": "Mua sắm",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-07-13T12:00:00",
+      "note": "SHOPEEPAY., JSC - NAP VI SHOPEEPAY 0856466802 18000 VND 13/07/2026 11:42:50 1tcb260713alefap",
+      "tags": [
+        "Mua sắm"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-9-3ffv",
+      "type": "INCOME",
+      "amount": 400000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-07-13T12:00:00",
+      "note": "ZP261940429256 Phan dung Zalopay ch uyen tien",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-10-yio6",
+      "type": "EXPENSE",
+      "amount": 6000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-07-14T12:00:00",
+      "note": "FUTECH TECHNOLOGY JSC - PD010540 98B385384",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-11-i0vy",
+      "type": "EXPENSE",
+      "amount": 33000,
+      "categoryId": "cat-shopping",
+      "categoryName": "Mua sắm",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-07-15T12:00:00",
+      "note": "SHOPEEPAY., JSC - NAP VI SHOPEEPAY 0856466802 33000 VND 15/07/2026 13:01:03 1tcb260715bknmot",
+      "tags": [
+        "Mua sắm"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-12-iq8r",
+      "type": "EXPENSE",
+      "amount": 100000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-07-16T12:00:00",
+      "note": "NGUYEN THI HOANG ANH - HOANG LE PHAN chuyen",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-13-h63h",
+      "type": "EXPENSE",
+      "amount": 65000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-07-20T12:00:00",
+      "note": "M SERVICE JSC - NAP VI MOMO 024205003515 65000 VND 18/07/2026 20:42:48 138269782039",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-14-na3o",
+      "type": "EXPENSE",
+      "amount": 286149,
+      "categoryId": "cat-shopping",
+      "categoryName": "Mua sắm",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-07-25T12:00:00",
+      "note": "SHOPEEPAY., JSC - NAP VI SHOPEEPAY 0856466802 286149 VND 25/07/2026 17:55:33 1tcb260725fkdoot",
+      "tags": [
+        "Mua sắm"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-15-7xqf",
+      "type": "INCOME",
+      "amount": 30,
+      "categoryId": "cat-invest-inc",
+      "categoryName": "Lợi nhuận đầu tư",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-07-25T12:00:00",
+      "note": "Tra lai so du tren tai khoan - thang 07/2026",
+      "tags": [
+        "Lãi"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-16-it0u",
+      "type": "EXPENSE",
+      "amount": 20000,
+      "categoryId": "cat-shopping",
+      "categoryName": "Mua sắm",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-07-27T12:00:00",
+      "note": "SHOPEEPAY., JSC - NAP VI SHOPEEPAY 0856466802 20000 VND 26/07/2026 12:30:01 1tcb260726foobef",
+      "tags": [
+        "Mua sắm"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-17-lja7",
+      "type": "EXPENSE",
+      "amount": 18000,
+      "categoryId": "cat-shopping",
+      "categoryName": "Mua sắm",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-07-27T12:00:00",
+      "note": "SHOPEEPAY., JSC - NAP VI SHOPEEPAY 0856466802 18000 VND 26/07/2026 12:31:17 1tcb260726foocan",
+      "tags": [
+        "Mua sắm"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-18-umak",
+      "type": "EXPENSE",
+      "amount": 100000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-07-30T12:00:00",
+      "note": "NGUYEN THI HOANG ANH - HOANG LE PHAN chuyen",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-19-e4kq",
+      "type": "EXPENSE",
+      "amount": 105000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-07-30T12:00:00",
+      "note": "DO VAN MINH_DO VAN MINH - HOANG LE PHAN chuyen tien",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-20-oprp",
+      "type": "INCOME",
+      "amount": 100000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-08-03T12:00:00",
+      "note": "O5CH7K4CSTLB Phan dung Zalopay chuy en tien",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-21-lrcq",
+      "type": "EXPENSE",
+      "amount": 100000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-08-03T12:00:00",
+      "note": "NGUYEN THI HOANG ANH - HOANG LE PHAN chuyen",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-22-87x6",
+      "type": "INCOME",
+      "amount": 200000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-08-04T12:00:00",
+      "note": "QR - Nguyen Hoang Anh chuyen khoan nhanh qua Zalo",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-23-a8vf",
+      "type": "EXPENSE",
+      "amount": 1500,
+      "categoryId": "cat-bills",
+      "categoryName": "Hóa đơn & Tiện ích",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-08-10T12:00:00",
+      "note": "Thu phi Homebanking SMS va ZALO thang 7/2026 cua KH 72544635",
+      "tags": [
+        "Hóa đơn"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-24-5t9j",
+      "type": "EXPENSE",
+      "amount": 15000,
+      "categoryId": "cat-bills",
+      "categoryName": "Hóa đơn & Tiện ích",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-08-10T12:00:00",
+      "note": "Thu phi Homebanking SMS va ZALO thang 7/2026 cua KH 72544635",
+      "tags": [
+        "Hóa đơn"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-25-ys3q",
+      "type": "EXPENSE",
+      "amount": 13000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-08-10T12:00:00",
+      "note": "M SERVICE JSC - NAP VI MOMO 024205003515 13000 VND 10/08/2026 10:22:40 141548241924",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-26-v6u7",
+      "type": "EXPENSE",
+      "amount": 18900,
+      "categoryId": "cat-shopping",
+      "categoryName": "Mua sắm",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-08-10T12:00:00",
+      "note": "SHOPEEPAY., JSC - NAP VI SHOPEEPAY 0856466802 18900 VND 10/08/2026 10:26:53 1tcb260810porqmf",
+      "tags": [
+        "Mua sắm"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-27-gcfh",
+      "type": "INCOME",
+      "amount": 200000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-08-11T12:00:00",
+      "note": "IBFT DANG THANH DUNG chuyen tien",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-28-kmu9",
+      "type": "INCOME",
+      "amount": 500000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-08-17T12:00:00",
+      "note": "QR - Nguyen Hoang Anh chuyen khoan nhanh qua Zalo",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-29-dly1",
+      "type": "EXPENSE",
+      "amount": 124100,
+      "categoryId": "cat-shopping",
+      "categoryName": "Mua sắm",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-08-19T12:00:00",
+      "note": "SHOPEEPAY., JSC - NAP VI SHOPEEPAY 0856466802 124100 VND 18/08/2026 21:42:07 1tcb260818sckmat",
+      "tags": [
+        "Mua sắm"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-30-e65o",
+      "type": "EXPENSE",
+      "amount": 200000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-08-20T12:00:00",
+      "note": "NGUYEN MINH DUONG - HOANG LE PHAN chuyen tien",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-31-wlug",
+      "type": "EXPENSE",
+      "amount": 100000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-08-21T12:00:00",
+      "note": "NGUYEN MINH DUONG - HOANG LE PHAN chuyen tien",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-32-3owo",
+      "type": "EXPENSE",
+      "amount": 159000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-08-22T12:00:00",
+      "note": "HOANG THI KIEU LY - HOANG LE PHAN chuyen tien",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-33-k10v",
+      "type": "EXPENSE",
+      "amount": 238325,
+      "categoryId": "cat-shopping",
+      "categoryName": "Mua sắm",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-08-24T12:00:00",
+      "note": "SHOPEEPAY., JSC - NAP VI SHOPEEPAY 0856466802 238325 VND 24/08/2026 10:44:08 1tcb260824abcobf",
+      "tags": [
+        "Mua sắm"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-34-bf4a",
+      "type": "INCOME",
+      "amount": 550000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-08-24T12:00:00",
+      "note": "QR - Nguyen Hoang Anh chuyen khoan nhanh qua Zalo",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-35-jjt5",
+      "type": "EXPENSE",
+      "amount": 130000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-08-27T12:00:00",
+      "note": "DANG THI TIN - 0856466802",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-36-sdnp",
+      "type": "INCOME",
+      "amount": 17,
+      "categoryId": "cat-invest-inc",
+      "categoryName": "Lợi nhuận đầu tư",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-08-29T12:00:00",
+      "note": "Tra lai so du tren tai khoan - thang 08/2026",
+      "tags": [
+        "Lãi"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-37-cms9",
+      "type": "EXPENSE",
+      "amount": 298200,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-03T12:00:00",
+      "note": "HKD LE THI HONG NGOC - HOANG LE PHAN chuyen tien",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-38-vk8u",
+      "type": "INCOME",
+      "amount": 90000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-03T12:00:00",
+      "note": "HOANG VIET HUNG chuyen tien",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-39-ffvg",
+      "type": "EXPENSE",
+      "amount": 220000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-03T12:00:00",
+      "note": "FANSIPAN SAPA SUN WORLD - HOANG LE PHAN chuyen tien",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-40-rpms",
+      "type": "INCOME",
+      "amount": 2000000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-03T12:00:00",
+      "note": "QR - Nguyen Hoang Anh chuyen khoan nhanh qua Zalo",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-41-emcn",
+      "type": "EXPENSE",
+      "amount": 40000,
+      "categoryId": "cat-food",
+      "categoryName": "Ăn uống",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-03T12:00:00",
+      "note": "HO KINH DOANH BUN CHA OANH BEO - HOANG LE PHAN chuyen tien",
+      "tags": [
+        "Ăn uống"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-42-tarl",
+      "type": "EXPENSE",
+      "amount": 2000000,
+      "categoryId": "cat-shopping",
+      "categoryName": "Mua sắm",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-03T12:00:00",
+      "note": "ZALOPAY_HOANG LE PHAN - HOANG LE PHAN chuyen tien",
+      "tags": [
+        "Mua sắm"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-43-2mrz",
+      "type": "INCOME",
+      "amount": 3000000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-03T12:00:00",
+      "note": "QR - Thinh chuyen khoan nhanh qua Z alo",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-44-7tek",
+      "type": "EXPENSE",
+      "amount": 3000000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-03T12:00:00",
+      "note": "NGUYEN THI HOANG ANH - HOANG LE PHAN chuyen",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-45-9ybf",
+      "type": "INCOME",
+      "amount": 300000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-07T12:00:00",
+      "note": "NGUYEN MINH DUONG chuyen tien",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-46-msij",
+      "type": "INCOME",
+      "amount": 750000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-08T12:00:00",
+      "note": "QR - Thinh chuyen khoan nhanh qua Z alo",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-47-ybt0",
+      "type": "EXPENSE",
+      "amount": 1500,
+      "categoryId": "cat-bills",
+      "categoryName": "Hóa đơn & Tiện ích",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-09T12:00:00",
+      "note": "Thu phi Homebanking SMS va ZALO thang 8/2026 cua KH 72544635",
+      "tags": [
+        "Hóa đơn"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-48-si2e",
+      "type": "EXPENSE",
+      "amount": 15000,
+      "categoryId": "cat-bills",
+      "categoryName": "Hóa đơn & Tiện ích",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-09T12:00:00",
+      "note": "Thu phi Homebanking SMS va ZALO thang 8/2026 cua KH 72544635",
+      "tags": [
+        "Hóa đơn"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-49-iqgq",
+      "type": "INCOME",
+      "amount": 1000000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-10T12:00:00",
+      "note": "QR - Thinh chuyen khoan nhanh qua Z alo",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-50-dm40",
+      "type": "EXPENSE",
+      "amount": 1000000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-11T12:00:00",
+      "note": "NGUYEN THI HOANG ANH - HOANG LE PHAN chuyen",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-51-jtpx",
+      "type": "EXPENSE",
+      "amount": 15000,
+      "categoryId": "cat-shopping",
+      "categoryName": "Mua sắm",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-11T12:00:00",
+      "note": "SHOPEEPAY., JSC - NAP VI SHOPEEPAY 0856466802 15000 VND 11/09/2026 01:22:47 1tcb260911lfsocl",
+      "tags": [
+        "Mua sắm"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-52-4c9o",
+      "type": "EXPENSE",
+      "amount": 500000,
+      "categoryId": "cat-shopping",
+      "categoryName": "Mua sắm",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-14T12:00:00",
+      "note": "ZALOPAY_HOANG LE PHAN - HOANG LE PHAN chuyen tien",
+      "tags": [
+        "Mua sắm"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-53-m74u",
+      "type": "INCOME",
+      "amount": 600000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-15T12:00:00",
+      "note": "QR - Thinh chuyen khoan nhanh qua Z alo",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-54-5k5k",
+      "type": "EXPENSE",
+      "amount": 20000,
+      "categoryId": "cat-shopping",
+      "categoryName": "Mua sắm",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-16T12:00:00",
+      "note": "SHOPEEPAY., JSC - NAP VI SHOPEEPAY 0856466802 20000 VND 16/09/2026 10:25:47 1tcb260916oltpap",
+      "tags": [
+        "Mua sắm"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-55-rzsm",
+      "type": "EXPENSE",
+      "amount": 18000,
+      "categoryId": "cat-shopping",
+      "categoryName": "Mua sắm",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-16T12:00:00",
+      "note": "SHOPEEPAY., JSC - NAP VI SHOPEEPAY 0856466802 18000 VND 16/09/2026 10:27:20 1tcb260916oleokf",
+      "tags": [
+        "Mua sắm"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-56-qvk7",
+      "type": "EXPENSE",
+      "amount": 60000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-18T12:00:00",
+      "note": "PHUNG MANH TUAN - HOANG LE PHAN chuyen tien",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-57-gl1p",
+      "type": "EXPENSE",
+      "amount": 24000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-18T12:00:00",
+      "note": "ONG KHANH VINH - GF 2KMWLA18OL08Q8KE",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-58-d41d",
+      "type": "INCOME",
+      "amount": 500000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-19T12:00:00",
+      "note": "QR - Nguyen Hoang Anh chuyen khoan nhanh qua Zalo",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-59-8k2b",
+      "type": "EXPENSE",
+      "amount": 20000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-21T12:00:00",
+      "note": "PHAM VAN DIEP - HOANG LE PHAN chuyen tien",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-60-985j",
+      "type": "EXPENSE",
+      "amount": 20000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-22T12:00:00",
+      "note": "ZIONCO.,SJC - ZP7D9QHJSSEG, Nap tien giao dich 26 0922001964909",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-61-vsj6",
+      "type": "EXPENSE",
+      "amount": 220000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-22T12:00:00",
+      "note": "DANG GIA PHUC - HOANG LE PHAN chuyen tien",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-62-11el",
+      "type": "EXPENSE",
+      "amount": 23000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-22T12:00:00",
+      "note": "ONG KHANH VINH - GF DFAZR252C5XKDFAD",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-63-9omo",
+      "type": "EXPENSE",
+      "amount": 50700,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-23T12:00:00",
+      "note": "ONG KHANH VINH - GF 96M9OZILY5WLV2X0",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-64-46in",
+      "type": "EXPENSE",
+      "amount": 34000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-23T12:00:00",
+      "note": "DANG THI HONG HA - HOANG LE PHAN chuyen tien",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-65-ydw5",
+      "type": "EXPENSE",
+      "amount": 12000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-24T12:00:00",
+      "note": "DANG THI HONG HA - HOANG LE PHAN chuyen tien",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-66-ekqt",
+      "type": "EXPENSE",
+      "amount": 100000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-24T12:00:00",
+      "note": "KHAM THIEN GIAM - ZPQVCA03AST7APNI10I9",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-67-mwh2",
+      "type": "EXPENSE",
+      "amount": 15000,
+      "categoryId": "cat-food",
+      "categoryName": "Ăn uống",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-25T12:00:00",
+      "note": "BAOKIM CTCP MAY BAN CAFE VA DO UON - HOANG LE PHAN chuyen tien",
+      "tags": [
+        "Ăn uống"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-68-weu4",
+      "type": "EXPENSE",
+      "amount": 315352,
+      "categoryId": "cat-shopping",
+      "categoryName": "Mua sắm",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-26T12:00:00",
+      "note": "SHOPEEPAY., JSC - NAP VI SHOPEEPAY 0856466802 315352 VND 25/09/2026 22:40:34 1tcb260925reprcb",
+      "tags": [
+        "Mua sắm"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-69-38xi",
+      "type": "EXPENSE",
+      "amount": 20000,
+      "categoryId": "cat-other-exp",
+      "categoryName": "Chi phí khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-26T12:00:00",
+      "note": "MS00P00000001216872,NGUYEN THI CUC,HOANG LE PHAN chuyen tien",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-70-rhig",
+      "type": "INCOME",
+      "amount": 32,
+      "categoryId": "cat-invest-inc",
+      "categoryName": "Lợi nhuận đầu tư",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-26T12:00:00",
+      "note": "Tra lai so du tren tai khoan - thang 09/2026",
+      "tags": [
+        "Lãi"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-71-vx00",
+      "type": "INCOME",
+      "amount": 7000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-28T12:00:00",
+      "note": "IBFT DANG THANH DUNG chuyen tien",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-72-aqru",
+      "type": "INCOME",
+      "amount": 150000,
+      "categoryId": "cat-other-inc",
+      "categoryName": "Thu nhập khác",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-28T12:00:00",
+      "note": "QR - Nguyen Hoang Anh chuyen khoan nhanh qua Zalo",
+      "tags": [
+        "Sao kê"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    },
+    {
+      "id": "tx-st-1790820351721-73-2jeb",
+      "type": "EXPENSE",
+      "amount": 600000,
+      "categoryId": "cat-shopping",
+      "categoryName": "Mua sắm",
+      "walletId": "wal-1790820313760",
+      "walletName": "Tech",
+      "date": "2026-09-28T12:00:00",
+      "note": "ZALOPAY_DINH BA VIET - HOANG LE PHAN chuyen tien",
+      "tags": [
+        "Mua sắm"
+      ],
+      "createdAt": "2026-10-01T02:05:51.721Z"
+    }
+  ],
   "categories": [
     {
       "id": "cat-food",
@@ -185,11 +2115,10 @@
       "amount": 6000000,
       "categoryId": "cat-housing",
       "categoryName": "Nhà cửa & Thuê nhà",
-      "walletId": "wal-cash",
       "dueDay": 5,
       "frequency": "MONTHLY",
       "status": "PAID",
-      "lastPaidDate": "2026-09-18",
+      "lastPaidDate": "2026-10-01",
       "note": "Chuyển khoản chủ nhà qua Techcombank",
       "reminderDaysBefore": 3
     },
@@ -280,7 +2209,7 @@
     "notes": "Áp dụng quy tắc 50/30/20: 50% thiết yếu, 30% sở thích cá nhân, 20% tích lũy & quỹ khẩn cấp",
     "emergencyPercent": 10
   },
-  "currentMonth": "2026-10",
+  "currentMonth": "2026-01",
   "userProfile": {
     "name": "PanC",
     "email": "admin@fintrack.vn",
@@ -293,92 +2222,52 @@
   "simulatorConfig": {
     "spendingCategories": [
       {
-        "id": "spend-food",
+        "id": "spend-1790819823321",
         "categoryId": "cat-food",
-        "categoryName": "Ăn uống & Cà phê",
+        "categoryName": "Ăn uống",
         "icon": "Utensils",
         "color": "#f97316",
-        "monthlyExpense": 5500000,
-        "isSelected": false,
-        "cutPercent": 30
-      },
-      {
-        "id": "spend-shopping",
-        "categoryId": "cat-shopping",
-        "categoryName": "Mua sắm & Quần áo",
-        "icon": "ShoppingBag",
-        "color": "#ec4899",
         "monthlyExpense": 3000000,
-        "isSelected": false,
-        "cutPercent": 30
+        "isSelected": true,
+        "cutPercent": 20
       },
       {
-        "id": "spend-entertainment",
+        "id": "spend-1790820399224",
+        "categoryId": "cat-transport",
+        "categoryName": "Di chuyển & Xe",
+        "icon": "Car",
+        "color": "#0ea5e9",
+        "monthlyExpense": 5000000,
+        "isSelected": false,
+        "cutPercent": 20
+      },
+      {
+        "id": "spend-1790820406839",
+        "categoryId": "cat-invest-exp",
+        "categoryName": "Đầu tư & Tích lũy",
+        "icon": "TrendingUp",
+        "color": "#6366f1",
+        "monthlyExpense": 2000000,
+        "isSelected": false,
+        "cutPercent": 20
+      },
+      {
+        "id": "spend-1790820410658",
+        "categoryId": "cat-housing",
+        "categoryName": "Nhà cửa & Thuê nhà",
+        "icon": "Home",
+        "color": "#8b5cf6",
+        "monthlyExpense": 2000000,
+        "isSelected": false,
+        "cutPercent": 20
+      },
+      {
+        "id": "spend-1790820414333",
         "categoryId": "cat-entertainment",
         "categoryName": "Giải trí & Du lịch",
         "icon": "Gamepad2",
         "color": "#10b981",
         "monthlyExpense": 2000000,
-        "isSelected": true,
-        "cutPercent": 20
-      },
-      {
-        "id": "spend-housing",
-        "categoryId": "cat-housing",
-        "categoryName": "Nhà cửa & Tiền thuê",
-        "icon": "Home",
-        "color": "#8b5cf6",
-        "monthlyExpense": 6000000,
-        "isSelected": false,
-        "cutPercent": 10
-      },
-      {
-        "id": "spend-bills",
-        "categoryId": "cat-bills",
-        "categoryName": "Hóa đơn & Tiện ích",
-        "icon": "Receipt",
-        "color": "#eab308",
-        "monthlyExpense": 2500000,
-        "isSelected": false,
-        "cutPercent": 15
-      },
-      {
-        "id": "spend-transport",
-        "categoryId": "cat-transport",
-        "categoryName": "Di chuyển & Xăng xe",
-        "icon": "Car",
-        "color": "#0ea5e9",
-        "monthlyExpense": 1800000,
-        "isSelected": false,
-        "cutPercent": 20
-      },
-      {
-        "id": "spend-health",
-        "categoryId": "cat-health",
-        "categoryName": "Sức khỏe & Y tế",
-        "icon": "HeartPulse",
-        "color": "#ef4444",
-        "monthlyExpense": 1200000,
-        "isSelected": false,
-        "cutPercent": 10
-      },
-      {
-        "id": "spend-education",
-        "categoryId": "cat-education",
-        "categoryName": "Giáo dục & Khóa học",
-        "icon": "GraduationCap",
-        "color": "#06b6d4",
-        "monthlyExpense": 1500000,
-        "isSelected": false,
-        "cutPercent": 15
-      },
-      {
-        "id": "spend-other",
-        "categoryId": "cat-other-exp",
-        "categoryName": "Chi phí phát sinh khác",
-        "icon": "MoreHorizontal",
-        "color": "#64748b",
-        "monthlyExpense": 800000,
         "isSelected": false,
         "cutPercent": 20
       }
@@ -400,5 +2289,5 @@
       }
     ]
   },
-  "updatedAt": "2026-09-30T18:17:17.460Z"
+  "updatedAt": "2026-10-01T02:09:49.637Z"
 }
