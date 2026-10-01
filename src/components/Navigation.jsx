@@ -1,7 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
-import { LayoutDashboard, ReceiptText, PieChart, CalendarCheck, WalletCards, BarChart3, Settings, Plus, Bell, AlertTriangle, Flame, User, CheckCircle2, ChevronRight, Shield, Sparkles, Sun, Moon, Edit2, Check, Download, X, Mail, Phone, Calendar, Crown, Search, CreditCard, RefreshCw, Eye, EyeOff, } from 'lucide-react';
+import { Upload, LayoutDashboard, ReceiptText, PieChart, CalendarCheck, WalletCards, BarChart3, Settings, Plus, Bell, AlertTriangle, Flame, User, CheckCircle2, ChevronRight, Shield, Sparkles, Sun, Moon, Edit2, Check, Download, X, Mail, Phone, Calendar, Crown, Search, CreditCard, RefreshCw, Eye, EyeOff, } from 'lucide-react';
 import { formatCurrency, calculateBudgetStatuses } from '@/lib/utils';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 const navItems = [
@@ -22,7 +22,7 @@ const bottomNavItems = [
     { id: 'settings', key: 'nav.settings', defaultLabel: 'Settings', icon: Settings },
 ];
 export const Navigation = () => {
-    const { activeTab, setActiveTab, openQuickAdd, budgets, transactions, bills, financialSummary, currentMonth, serverSyncStatus, syncDataFromServer, theme, toggleTheme, isDarkMode, userProfile, updateUserProfile, wallets, goals, exportDatabaseJSON, navigateToCategoryTransactions, navigateToBudget, navigateToBill, language, t, tCategory, tWalletType, dismissedAlertIds, dismissAlert, restoreAlert, dismissAllAlerts, restoreAllAlerts, isAlertDismissed, } = useApp();
+    const { activeTab, setActiveTab, openQuickAdd, budgets, transactions, bills, financialSummary, currentMonth, serverSyncStatus, syncDataFromServer, theme, toggleTheme, isDarkMode, userProfile, updateUserProfile, wallets, goals, exportDatabaseJSON, importDatabaseJSON, navigateToCategoryTransactions, navigateToBudget, navigateToBill, language, t, tCategory, tWalletType, dismissedAlertIds, dismissAlert, restoreAlert, dismissAllAlerts, restoreAllAlerts, isAlertDismissed, } = useApp();
     const [showNotificationModal, setShowNotificationModal] = useState(false);
     const [showDismissedSection, setShowDismissedSection] = useState(false);
     const [showProfileModal, setShowProfileModal] = useState(false);
@@ -659,6 +659,21 @@ export const Navigation = () => {
                         <Download className="w-3.5 h-3.5"/>
                         <span>{t('nav.backupDataBtn', 'Sao lưu dữ liệu')}</span>
                       </button>
+                      <label className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium transition-colors cursor-pointer">
+                        <Upload className="w-3.5 h-3.5"/>
+                        <span>Khôi phục bản sao lưu</span>
+                        <input type="file" accept="application/json,.json" className="hidden" onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = '';
+                    if (!file)
+                        return;
+                    if (!confirm('Khôi phục sẽ THAY THẾ toàn bộ dữ liệu hiện tại bằng nội dung file sao lưu. Tiếp tục?'))
+                        return;
+                    file.text().then((text) => {
+                        alert(importDatabaseJSON(text) ? 'Đã khôi phục dữ liệu từ bản sao lưu.' : 'File sao lưu không hợp lệ.');
+                    });
+                }}/>
+                      </label>
                       <button onClick={() => {
                     setShowProfileModal(false);
                     setActiveTab('settings');

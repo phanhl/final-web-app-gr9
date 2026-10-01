@@ -1,7 +1,7 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { INITIAL_WALLETS, INITIAL_TRANSACTIONS, INITIAL_BUDGETS, INITIAL_BILLS, INITIAL_GOALS, INITIAL_PLANNER, DEFAULT_CATEGORIES, INITIAL_SIMULATOR_CONFIG, } from '@/lib/mock-data';
-import { calculateFinancialSummary, checkWalletSufficientFunds, formatCurrency, getLocalDateString, toLocalDateKey, normalizeSaveDate } from '@/lib/utils';
+import { calculateFinancialSummary, checkWalletSufficientFunds, formatCurrency, getLocalDateString, toLocalDateKey, normalizeSaveDate, applyTxToWallets, recomputeWalletBalances, sumWalletTxEffect, mergeSnapshots, generateId, MAX_TX_AMOUNT } from '@/lib/utils';
 import { translate, translateCategory, translateWalletType } from '@/lib/i18n';
 const AppContext = createContext(undefined);
 const STORAGE_KEY = 'quan_ly_chi_tieu_data_v2';
@@ -207,6 +207,8 @@ export const AppProvider = ({ children }) => {
     const lastServerUpdatedAtRef = useRef(null);
     const isSavingRef = useRef(false);
     const lastSavedDataSignatureRef = useRef('');
+    // Bản server gần nhất mà state local dựa vào (dùng làm base khi merge xung đột)
+    const lastServerSnapshotRef = useRef(null);
     const computeDataSignature = (data) => {
         return JSON.stringify({
             wallets: data.wallets || [],
@@ -222,15 +224,13 @@ export const AppProvider = ({ children }) => {
         });
     };
     // Centralized server data applicator
-    const applyServerData = useCallback((d) => {
+    const applyServerData = useCallback((d, fromServer = true) => {
         if (!d)
             return;
         if (d.wallets)
             setWallets(d.wallets);
-        if (d.transactions) {
-            const cleanTxs = d.transactions.filter(t => (Number(t.amount) || 0) < 100_000_000_000);
-            setTransactions(cleanTxs);
-        }
+        if (d.transactions)
+            setTransactions(d.transactions);
         if (d.categories)
             setCategories(d.categories);
         if (d.budgets)
@@ -251,11 +251,16 @@ export const AppProvider = ({ children }) => {
             setUserProfile(d.userProfile);
         if (d.simulatorConfig)
             setSimulatorConfig(d.simulatorConfig);
-        if (d.updatedAt) {
-            lastServerUpdatedAtRef.current = d.updatedAt;
+        if (fromServer) {
+            if (d.updatedAt)
+                lastServerUpdatedAtRef.current = d.updatedAt;
+            lastServerSnapshotRef.current = d;
         }
-        // Update signature to match current server payload so auto-save won't echo back
-        lastSavedDataSignatureRef.current = computeDataSignature(d);
+        // Update signature to match current server payload so auto-save won't echo back.
+        // Với dữ liệu local (chưa có trên server) thì KHÔNG cập nhật để auto-save đẩy lên server.
+        if (fromServer) {
+            lastSavedDataSignatureRef.current = computeDataSignature(d);
+        }
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
         }
@@ -275,6 +280,10 @@ export const AppProvider = ({ children }) => {
             });
             if (res.ok) {
                 const result = await res.json();
+                if (isSavingRef.current) {
+                    // Đang lưu thay đổi local -> lần lưu đó sẽ tự merge với server
+                    return false;
+                }
                 if (result.success && result.data) {
                     applyServerData(result.data);
                     setServerSyncStatus('synced');
@@ -318,31 +327,26 @@ export const AppProvider = ({ children }) => {
                 const saved = localStorage.getItem(STORAGE_KEY);
                 if (saved) {
                     localData = JSON.parse(saved);
-                    if (localData && Array.isArray(localData.transactions)) {
-                        localData.transactions = localData.transactions.filter(t => (Number(t.amount) || 0) < 100_000_000_000);
-                    }
                 }
             }
             catch (e) {
                 console.error('Failed to parse localStorage data:', e);
             }
             // Choose between server and local by comparing last updatedAt timestamp
-            let chosenData = serverData || localData;
-            if (localData && serverData) {
+            if (serverData && isSubscribed) {
+                applyServerData(serverData, true);
+            }
+            if (localData && isSubscribed) {
                 const localTime = new Date(localData.updatedAt || 0).getTime();
-                const serverTime = new Date(serverData.updatedAt || 0).getTime();
-                if (localTime > serverTime) {
-                    chosenData = localData;
+                const serverTime = new Date(serverData?.updatedAt || 0).getTime();
+                if (!serverData || localTime > serverTime) {
+                    // Bản local có thay đổi chưa đẩy lên server (VD: sửa khi offline) -> merge với server rồi auto-save đẩy lên
+                    const merged = serverData ? mergeSnapshots(serverData, localData, serverData) : localData;
+                    applyServerData(merged, false);
                 }
             }
-            if (chosenData && isSubscribed) {
-                applyServerData(chosenData);
-                setServerSyncStatus(serverData ? 'synced' : 'offline');
-            }
-            else if (!chosenData && isSubscribed) {
-                setServerSyncStatus('offline');
-            }
             if (isSubscribed) {
+                setServerSyncStatus(serverData ? 'synced' : 'offline');
                 setMounted(true);
             }
         }
@@ -371,6 +375,9 @@ export const AppProvider = ({ children }) => {
                 });
                 if (res.ok) {
                     const result = await res.json();
+                    // Có thay đổi local đang chờ lưu -> không áp dữ liệu server để tránh ghi đè (sẽ merge khi lưu)
+                    if (isSavingRef.current)
+                        return;
                     if (result.success && result.data) {
                         const serverUpdatedAt = result.data.updatedAt;
                         // If server timestamp differs from our last applied state
@@ -414,119 +421,117 @@ export const AppProvider = ({ children }) => {
             window.removeEventListener('focus', handleFocus);
         };
     }, [mounted, applyServerData]);
+    const getCurrentData = () => ({
+        wallets,
+        transactions,
+        categories,
+        budgets,
+        bills,
+        goals,
+        planner,
+        currentMonth,
+        userProfile,
+        simulatorConfig,
+    });
+    /**
+     * Đẩy dữ liệu lên server kèm baseUpdatedAt. Nếu thiết bị khác vừa lưu (409),
+     * merge 3 chiều (base = bản server cũ, local, remote) rồi thử lại thay vì ghi đè mất dữ liệu.
+     */
+    const pushToServer = async (initialData) => {
+        let data = initialData;
+        for (let attempt = 0; attempt < 3; attempt++) {
+            const payload = {
+                ...data,
+                updatedAt: new Date().toISOString(),
+                baseUpdatedAt: lastServerUpdatedAtRef.current,
+            };
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+            }
+            catch (e) {
+                console.error('Failed to save to localStorage:', e);
+            }
+            const res = await fetch('/api/storage', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            if (res.status === 409) {
+                const result = await res.json();
+                const remote = result.data;
+                const merged = mergeSnapshots(lastServerSnapshotRef.current, data, remote);
+                lastServerUpdatedAtRef.current = remote.updatedAt;
+                lastServerSnapshotRef.current = remote;
+                applyServerData(merged, false);
+                data = merged;
+                continue;
+            }
+            if (!res.ok) {
+                return false;
+            }
+            const result = await res.json();
+            lastSavedDataSignatureRef.current = computeDataSignature(data);
+            if (result.updatedAt) {
+                lastServerUpdatedAtRef.current = result.updatedAt;
+                lastServerSnapshotRef.current = { ...data, updatedAt: result.updatedAt };
+            }
+            return true;
+        }
+        return false;
+    };
     // Auto-save local changes to server disk
     useEffect(() => {
         if (!mounted)
             return;
-        const currentData = {
-            wallets,
-            transactions,
-            categories,
-            budgets,
-            bills,
-            goals,
-            planner,
-            currentMonth,
-            userProfile,
-            simulatorConfig,
-        };
+        const currentData = getCurrentData();
         const currentSignature = computeDataSignature(currentData);
         // If state equals what we last saved or loaded from server, do nothing!
         if (currentSignature === lastSavedDataSignatureRef.current) {
             return;
         }
-        const payload = {
-            ...currentData,
-            updatedAt: new Date().toISOString(),
-        };
         // 1. Fast local cache save
         try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...currentData, updatedAt: new Date().toISOString() }));
         }
         catch (e) {
             console.error('Failed to save to localStorage:', e);
         }
-        // 2. Persist to server disk via API
+        // 2. Persist to server disk via API (debounced)
         isSavingRef.current = true;
         setServerSyncStatus('syncing');
+        let cancelled = false;
+        let fired = false;
         const timer = setTimeout(async () => {
+            fired = true;
             try {
-                const res = await fetch('/api/storage', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload),
-                });
-                if (res.ok) {
-                    const result = await res.json();
-                    lastSavedDataSignatureRef.current = currentSignature;
-                    if (result.updatedAt) {
-                        lastServerUpdatedAtRef.current = result.updatedAt;
-                    }
-                    setServerSyncStatus('synced');
-                }
-                else {
-                    setServerSyncStatus('offline');
-                }
+                const ok = await pushToServer(currentData);
+                if (!cancelled)
+                    setServerSyncStatus(ok ? 'synced' : 'offline');
             }
             catch (err) {
                 console.warn('Failed to sync to server storage API:', err);
-                setServerSyncStatus('offline');
+                if (!cancelled)
+                    setServerSyncStatus('offline');
             }
             finally {
                 isSavingRef.current = false;
             }
         }, 400);
         return () => {
+            cancelled = true;
             clearTimeout(timer);
-            isSavingRef.current = false;
+            if (!fired)
+                isSavingRef.current = false;
         };
     }, [mounted, wallets, transactions, categories, budgets, bills, goals, planner, currentMonth, userProfile, simulatorConfig]);
     // Immediate save on demand
     const saveDataNow = async () => {
-        const currentData = {
-            wallets,
-            transactions,
-            categories,
-            budgets,
-            bills,
-            goals,
-            planner,
-            currentMonth,
-            userProfile,
-            simulatorConfig,
-        };
-        const currentSignature = computeDataSignature(currentData);
-        const payload = {
-            ...currentData,
-            updatedAt: new Date().toISOString(),
-        };
-        try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-        }
-        catch (e) {
-            console.error('Failed to save to localStorage:', e);
-        }
         isSavingRef.current = true;
         setServerSyncStatus('syncing');
         try {
-            const res = await fetch('/api/storage', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            });
-            if (res.ok) {
-                const result = await res.json();
-                lastSavedDataSignatureRef.current = currentSignature;
-                if (result.updatedAt) {
-                    lastServerUpdatedAtRef.current = result.updatedAt;
-                }
-                setServerSyncStatus('synced');
-                return true;
-            }
-            else {
-                setServerSyncStatus('offline');
-                return false;
-            }
+            const ok = await pushToServer(getCurrentData());
+            setServerSyncStatus(ok ? 'synced' : 'offline');
+            return ok;
         }
         catch (err) {
             console.warn('Failed to sync to server storage API:', err);
@@ -551,7 +556,7 @@ export const AppProvider = ({ children }) => {
         setStatementDefaultWalletId(undefined);
     };
     // Financial summary
-    const financialSummary = calculateFinancialSummary(wallets, transactions, currentMonth);
+    const financialSummary = useMemo(() => calculateFinancialSummary(wallets, transactions, currentMonth), [wallets, transactions, currentMonth]);
     // Available distinct months from all transactions + currentMonth
     const availableMonths = useMemo(() => {
         const set = new Set();
@@ -568,16 +573,39 @@ export const AppProvider = ({ children }) => {
         });
         return Array.from(set).sort((a, b) => b.localeCompare(a));
     }, [transactions, currentMonth]);
-    // Helper: Determine if transaction date is effective as of today (wall-clock local date)
-    const isTxEffective = (dateStr) => {
-        if (!dateStr) return true;
-        const txDateKey = toLocalDateKey(dateStr);
-        const todayKey = getLocalDateString();
-        return txDateKey <= todayKey;
+    // Validate chung cho mọi giao dịch: số tiền hợp lệ & không ở tương lai
+    const validateTxBasics = (amount, date) => {
+        const num = Number(amount);
+        if (!Number.isFinite(num) || num <= 0) {
+            return 'Số tiền giao dịch phải lớn hơn 0';
+        }
+        if (num > MAX_TX_AMOUNT) {
+            return `Số tiền vượt quá giới hạn cho phép (${formatCurrency(MAX_TX_AMOUNT)})`;
+        }
+        if (toLocalDateKey(date) > getLocalDateString()) {
+            return 'Không thể ghi nhận giao dịch cho ngày trong tương lai (chưa đến ngày)!';
+        }
+        return null;
     };
-    // Add Transaction
+    // Add Transaction - trả về giao dịch đã tạo (truthy) hoặc false nếu bị từ chối
     const addTransaction = (tx) => {
-        // 1. Validate funds for EXPENSE and TRANSFER to prevent negative balance
+        const txDate = tx.date ? normalizeSaveDate(tx.date) : normalizeSaveDate();
+        const basicError = validateTxBasics(tx.amount, txDate);
+        if (basicError) {
+            alert(basicError);
+            return false;
+        }
+        if (tx.type === 'TRANSFER') {
+            if (!tx.toWalletId || tx.toWalletId === tx.walletId) {
+                alert('Ví nhận phải khác ví chuyển!');
+                return false;
+            }
+            if (!wallets.some((w) => w.id === tx.toWalletId)) {
+                alert('Không tìm thấy ví nhận');
+                return false;
+            }
+        }
+        // Validate funds for EXPENSE and TRANSFER to prevent negative balance
         if (tx.type === 'EXPENSE' || tx.type === 'TRANSFER') {
             const sourceWallet = wallets.find((w) => w.id === tx.walletId);
             const fee = tx.type === 'TRANSFER' ? (tx.fee || 0) : 0;
@@ -587,55 +615,16 @@ export const AppProvider = ({ children }) => {
                 return false;
             }
         }
-        const id = `tx-${Date.now()}`;
-        const createdAt = new Date().toISOString();
-        const txDate = tx.date ? normalizeSaveDate(tx.date) : normalizeSaveDate();
-        const todayKey = getLocalDateString();
-        if (toLocalDateKey(txDate) > todayKey) {
-            alert('Không thể ghi nhận giao dịch cho ngày trong tương lai (chưa đến ngày)!');
-            return false;
-        }
         const newTx = {
             ...tx,
+            amount: Number(tx.amount),
             date: txDate,
-            id,
-            createdAt,
+            id: generateId('tx'),
+            createdAt: new Date().toISOString(),
         };
-        // Update wallet balances with mathematical integrity (no artificial clamping)
-        // ONLY update wallet balance if the transaction date has arrived (date <= today)
-        if (isTxEffective(newTx.date)) {
-            setWallets((prevWallets) => prevWallets.map((w) => {
-                if (newTx.type === 'EXPENSE' && w.id === newTx.walletId) {
-                    if (w.type === 'CREDIT') {
-                        return { ...w, balance: w.balance + newTx.amount };
-                    }
-                    return { ...w, balance: w.balance - newTx.amount };
-                }
-                if (newTx.type === 'INCOME' && w.id === newTx.walletId) {
-                    if (w.type === 'CREDIT') {
-                        return { ...w, balance: w.balance - newTx.amount };
-                    }
-                    return { ...w, balance: w.balance + newTx.amount };
-                }
-                if (newTx.type === 'TRANSFER') {
-                    if (w.id === newTx.walletId) {
-                        if (w.type === 'CREDIT') {
-                            return { ...w, balance: w.balance + (newTx.amount + (newTx.fee || 0)) };
-                        }
-                        return { ...w, balance: w.balance - (newTx.amount + (newTx.fee || 0)) };
-                    }
-                    if (w.id === newTx.toWalletId) {
-                        if (w.type === 'CREDIT') {
-                            return { ...w, balance: w.balance - newTx.amount };
-                        }
-                        return { ...w, balance: w.balance + newTx.amount };
-                    }
-                }
-                return w;
-            }));
-        }
+        setWallets((prevWallets) => applyTxToWallets(prevWallets, newTx, 1));
         setTransactions((prev) => [newTx, ...prev]);
-        return true;
+        return newTx;
     };
     // Import Bank Statement Transactions in Batch
     const importBankStatementTransactions = ({
@@ -651,65 +640,61 @@ export const AppProvider = ({ children }) => {
         if (!targetWallet) {
             return { success: false, message: 'Không tìm thấy ví tương ứng' };
         }
-
-        let totalIncome = 0;
-        let totalExpense = 0;
-
-        const newTxList = transactionsToImport.map((tx, idx) => {
+        let skipped = 0;
+        const newTxList = [];
+        transactionsToImport.forEach((tx) => {
             const amount = Number(tx.amount) || 0;
-            if (tx.type === 'INCOME') totalIncome += amount;
-            if (tx.type === 'EXPENSE') totalExpense += amount;
-
-            return {
-                id: `tx-st-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
+            const date = normalizeSaveDate(tx.date || undefined);
+            if (validateTxBasics(amount, date)) {
+                skipped++;
+                return;
+            }
+            newTxList.push({
+                id: generateId('tx-st'),
                 type: tx.type,
                 amount,
                 categoryId: tx.categoryId,
                 categoryName: tx.categoryName,
                 walletId: targetWallet.id,
                 walletName: targetWallet.name,
-                date: tx.date || new Date().toISOString(),
+                date,
                 note: tx.note || 'Sao kê ngân hàng',
                 tags: Array.isArray(tx.tags) && tx.tags.length > 0 ? tx.tags : ['Sao kê'],
                 createdAt: new Date().toISOString(),
-            };
+            });
         });
-
+        if (newTxList.length === 0) {
+            return { success: false, message: 'Không có giao dịch hợp lệ (số tiền không hợp lệ hoặc ngày trong tương lai)' };
+        }
+        const totalIncome = newTxList.filter((t) => t.type === 'INCOME').reduce((s, t) => s + t.amount, 0);
+        const totalExpense = newTxList.filter((t) => t.type === 'EXPENSE').reduce((s, t) => s + t.amount, 0);
         const netChange = totalIncome - totalExpense;
-        const oldBalance = targetWallet.balance;
-        let newBalance = oldBalance;
-
-        if (balanceAdjustmentMode === 'SET_EXACT' && exactClosingBalance !== null && !isNaN(Number(exactClosingBalance))) {
-            newBalance = Math.max(0, Number(exactClosingBalance));
-        } else {
-            if (targetWallet.type === 'CREDIT') {
-                newBalance = Math.max(0, oldBalance + totalExpense - totalIncome);
-            } else {
-                newBalance = Math.max(0, oldBalance + netChange);
-            }
+        const importDelta = sumWalletTxEffect(targetWallet, newTxList);
+        let newBalance = (Number(targetWallet.balance) || 0) + importDelta;
+        let newInitialBalance = Number(targetWallet.initialBalance) || 0;
+        if (balanceAdjustmentMode === 'SET_EXACT' && exactClosingBalance !== null && exactClosingBalance !== '' && !isNaN(Number(exactClosingBalance))) {
+            // Chốt đúng số dư cuối kỳ của sao kê; phần chênh lệch đưa vào số dư ban đầu
+            // để "số dư ban đầu + lịch sử giao dịch" vẫn luôn khớp với số dư hiện tại
+            const exact = Number(exactClosingBalance);
+            newInitialBalance += exact - newBalance;
+            newBalance = exact;
         }
-
-        setWallets((prev) => prev.map((w) => {
-            if (w.id === targetWallet.id) {
-                return { ...w, balance: newBalance };
-            }
-            return w;
-        }));
-
+        setWallets((prev) => prev.map((w) => (w.id === targetWallet.id ? { ...w, balance: newBalance, initialBalance: newInitialBalance } : w)));
         setTransactions((prev) => [...newTxList, ...prev]);
-
-        if (newTxList.length > 0) {
-            const latestTxMonth = newTxList[0].date.slice(0, 7);
-            if (latestTxMonth && /^\d{4}-\d{2}$/.test(latestTxMonth)) {
-                setCurrentMonth(latestTxMonth);
-            }
+        // Chuyển sang tháng của giao dịch mới nhất (không phụ thuộc thứ tự dòng trong file)
+        const latestDate = newTxList.reduce((max, t) => (t.date > max ? t.date : max), '');
+        const latestTxMonth = latestDate.slice(0, 7);
+        if (/^\d{4}-\d{2}$/.test(latestTxMonth)) {
+            setCurrentMonth(latestTxMonth);
         }
-
         return {
             success: true,
             count: newTxList.length,
+            skipped,
             totalIncome,
             totalExpense,
+            netChange,
+            newBalance,
             walletName: targetWallet.name,
         };
     };
@@ -719,100 +704,41 @@ export const AppProvider = ({ children }) => {
         if (!oldTx)
             return false;
         const newTx = { ...oldTx, ...updated };
-        if (newTx.date) {
-            newTx.date = normalizeSaveDate(newTx.date);
-        }
-        const todayKey = getLocalDateString();
-        if (toLocalDateKey(newTx.date) > todayKey) {
-            alert('Không thể đặt ngày giao dịch trong tương lai (chưa đến ngày)!');
+        newTx.date = normalizeSaveDate(newTx.date || undefined);
+        newTx.amount = Number(newTx.amount);
+        const basicError = validateTxBasics(newTx.amount, newTx.date);
+        if (basicError) {
+            alert(basicError);
             return false;
         }
         if (newTx.type === 'TRANSFER') {
-            if (newTx.walletId === newTx.toWalletId) {
+            if (!newTx.toWalletId || newTx.walletId === newTx.toWalletId) {
                 alert('Ví nhận phải khác ví chuyển!');
                 return false;
             }
             const destW = wallets.find((w) => w.id === newTx.toWalletId);
             newTx.toWalletName = destW?.name || newTx.toWalletName;
-        } else {
+        }
+        else {
             delete newTx.toWalletId;
             delete newTx.toWalletName;
             newTx.fee = 0;
         }
-
-        const oldEffective = isTxEffective(oldTx.date);
-        const newEffective = isTxEffective(newTx.date);
-
-        // Rollback old transaction on wallets ONLY if it was effective as of today
-        let adjustedWallets = [...wallets];
-        if (oldEffective) {
-            adjustedWallets = adjustedWallets.map((w) => {
-                if (oldTx.type === 'EXPENSE' && w.id === oldTx.walletId) {
-                    if (w.type === 'CREDIT')
-                        return { ...w, balance: w.balance - oldTx.amount };
-                    return { ...w, balance: w.balance + oldTx.amount };
-                }
-                if (oldTx.type === 'INCOME' && w.id === oldTx.walletId) {
-                    if (w.type === 'CREDIT')
-                        return { ...w, balance: w.balance + oldTx.amount };
-                    return { ...w, balance: w.balance - oldTx.amount };
-                }
-                if (oldTx.type === 'TRANSFER') {
-                    if (w.id === oldTx.walletId) {
-                        if (w.type === 'CREDIT')
-                            return { ...w, balance: w.balance - (oldTx.amount + (oldTx.fee || 0)) };
-                        return { ...w, balance: w.balance + (oldTx.amount + (oldTx.fee || 0)) };
-                    }
-                    if (w.id === oldTx.toWalletId) {
-                        if (w.type === 'CREDIT')
-                            return { ...w, balance: w.balance + oldTx.amount };
-                        return { ...w, balance: w.balance - oldTx.amount };
-                    }
-                }
-                return w;
-            });
-        }
-
-        // Validate new transaction funds against rolled-back wallets if effective
-        if (newEffective && (newTx.type === 'EXPENSE' || newTx.type === 'TRANSFER')) {
-            const sourceW = adjustedWallets.find((w) => w.id === newTx.walletId);
+        const sourceW = wallets.find((w) => w.id === newTx.walletId);
+        if (sourceW)
+            newTx.walletName = sourceW.name;
+        // Hoàn tác giao dịch cũ rồi áp dụng giao dịch mới
+        const rolledBack = applyTxToWallets(wallets, oldTx, -1);
+        if (newTx.type === 'EXPENSE' || newTx.type === 'TRANSFER') {
+            const rolledSource = rolledBack.find((w) => w.id === newTx.walletId);
             const fee = newTx.type === 'TRANSFER' ? (newTx.fee || 0) : 0;
-            const validation = checkWalletSufficientFunds(sourceW, newTx.amount, fee);
+            const validation = checkWalletSufficientFunds(rolledSource, newTx.amount, fee);
             if (!validation.isValid) {
                 alert(validation.errorMessage || 'Số dư ví không đủ sau khi điều chỉnh!');
                 return false;
             }
         }
-
-        // Apply new transaction to wallets ONLY if it is effective as of today
-        if (newEffective) {
-            adjustedWallets = adjustedWallets.map((w) => {
-                if (newTx.type === 'EXPENSE' && w.id === newTx.walletId) {
-                    if (w.type === 'CREDIT')
-                        return { ...w, balance: w.balance + newTx.amount };
-                    return { ...w, balance: w.balance - newTx.amount };
-                }
-                if (newTx.type === 'INCOME' && w.id === newTx.walletId) {
-                    if (w.type === 'CREDIT')
-                        return { ...w, balance: w.balance - newTx.amount };
-                    return { ...w, balance: w.balance + newTx.amount };
-                }
-                if (newTx.type === 'TRANSFER') {
-                    if (w.id === newTx.walletId) {
-                        if (w.type === 'CREDIT')
-                            return { ...w, balance: w.balance + (newTx.amount + (newTx.fee || 0)) };
-                        return { ...w, balance: w.balance - (newTx.amount + (newTx.fee || 0)) };
-                    }
-                    if (w.id === newTx.toWalletId) {
-                        if (w.type === 'CREDIT')
-                            return { ...w, balance: w.balance - newTx.amount };
-                        return { ...w, balance: w.balance + newTx.amount };
-                    }
-                }
-                return w;
-            });
-        }
-        setWallets(adjustedWallets);
+        setWallets(applyTxToWallets(rolledBack, newTx, 1));
         setTransactions((prev) => prev.map((t) => (t.id === id ? newTx : t)));
         return true;
     };
@@ -821,69 +747,91 @@ export const AppProvider = ({ children }) => {
         const oldTx = transactions.find((t) => t.id === id);
         if (!oldTx)
             return;
-        // Rollback wallet balance safely if transaction was effective as of today
-        if (isTxEffective(oldTx.date)) {
-            setWallets((prevWallets) => prevWallets.map((w) => {
-                if (oldTx.type === 'EXPENSE' && w.id === oldTx.walletId) {
-                    if (w.type === 'CREDIT')
-                        return { ...w, balance: w.balance - oldTx.amount };
-                    return { ...w, balance: w.balance + oldTx.amount };
-                }
-                if (oldTx.type === 'INCOME' && w.id === oldTx.walletId) {
-                    if (w.type === 'CREDIT')
-                        return { ...w, balance: w.balance + oldTx.amount };
-                    return { ...w, balance: w.balance - oldTx.amount };
-                }
-                if (oldTx.type === 'TRANSFER') {
-                    if (w.id === oldTx.walletId) {
-                        if (w.type === 'CREDIT')
-                            return { ...w, balance: w.balance - (oldTx.amount + (oldTx.fee || 0)) };
-                        return { ...w, balance: w.balance + (oldTx.amount + (oldTx.fee || 0)) };
-                    }
-                    if (w.id === oldTx.toWalletId) {
-                        if (w.type === 'CREDIT')
-                            return { ...w, balance: w.balance + oldTx.amount };
-                        return { ...w, balance: w.balance - oldTx.amount };
-                    }
-                }
-                return w;
-            }));
-        }
+        setWallets((prevWallets) => applyTxToWallets(prevWallets, oldTx, -1));
         setTransactions((prev) => prev.filter((t) => t.id !== id));
     };
     // Wallets
     const addWallet = (wallet) => {
+        const balance = Number(wallet.balance) || 0;
         const newWallet = {
             ...wallet,
-            id: wallet.id || `wal-${Date.now()}`,
+            balance,
+            initialBalance: wallet.initialBalance !== undefined ? Number(wallet.initialBalance) || 0 : balance,
+            id: wallet.id || generateId('wal'),
             createdAt: new Date().toISOString(),
         };
         setWallets((prev) => [...prev, newWallet]);
         return newWallet;
     };
     const editWallet = (id, updated) => {
-        setWallets((prev) => prev.map((w) => (w.id === id ? { ...w, ...updated } : w)));
+        const oldWallet = wallets.find((w) => w.id === id);
+        if (!oldWallet)
+            return;
+        const merged = { ...oldWallet, ...updated };
+        // Số dư = số dư ban đầu + lịch sử. Khi người dùng chỉnh số dư (hoặc đổi loại ví),
+        // điều chỉnh số dư ban đầu để công thức trên vẫn đúng -> không bị lệch khi tính lại.
+        const effect = sumWalletTxEffect(merged, transactions);
+        if (updated.balance !== undefined) {
+            merged.balance = Number(updated.balance) || 0;
+            merged.initialBalance = merged.balance - effect;
+        }
+        else {
+            merged.initialBalance = Number(merged.initialBalance) || 0;
+            merged.balance = merged.initialBalance + effect;
+        }
+        setWallets((prev) => prev.map((w) => (w.id === id ? merged : w)));
+        // Đồng bộ tên ví hiển thị trong các giao dịch
+        if (updated.name && updated.name !== oldWallet.name) {
+            setTransactions((prev) => prev.map((t) => {
+                if (t.walletId === id)
+                    t = { ...t, walletName: updated.name };
+                if (t.toWalletId === id)
+                    t = { ...t, toWalletName: updated.name };
+                return t;
+            }));
+        }
     };
     const deleteWallet = (id) => {
+        const deleted = wallets.find((w) => w.id === id);
         setWallets((prev) => prev.filter((w) => w.id !== id));
-        // Also remove transactions associated with this deleted wallet to prevent orphaned entries
-        setTransactions((prev) => prev.filter((tx) => tx.walletId !== id && tx.toWalletId !== id));
+        // Xóa giao dịch của ví bị xóa. Riêng giao dịch chuyển khoản với ví KHÁC thì chuyển thành
+        // thu/chi của ví còn lại để số dư ví đó không bị thay đổi (tiền thực tế đã đi/đến).
+        setTransactions((prev) => prev.flatMap((tx) => {
+            if (tx.type === 'TRANSFER' && (tx.walletId === id || tx.toWalletId === id)) {
+                if (tx.walletId === id && tx.toWalletId && tx.toWalletId !== id) {
+                    const { toWalletId, toWalletName, fee, ...rest } = tx;
+                    return [{
+                        ...rest,
+                        type: 'INCOME',
+                        walletId: toWalletId,
+                        walletName: toWalletName,
+                        categoryId: 'cat-other-inc',
+                        categoryName: 'Thu nhập khác',
+                        note: `${tx.note || 'Chuyển khoản'} (từ ví đã xóa: ${deleted?.name || ''})`,
+                    }];
+                }
+                if (tx.toWalletId === id && tx.walletId !== id) {
+                    const { toWalletId, toWalletName, fee, ...rest } = tx;
+                    return [{
+                        ...rest,
+                        type: 'EXPENSE',
+                        amount: (Number(tx.amount) || 0) + (Number(fee) || 0),
+                        categoryId: 'cat-other-exp',
+                        categoryName: 'Chi phí khác',
+                        note: `${tx.note || 'Chuyển khoản'} (sang ví đã xóa: ${deleted?.name || ''})`,
+                    }];
+                }
+                return [];
+            }
+            return tx.walletId === id ? [] : [tx];
+        }));
         // Unbind any bills or goals associated with this wallet
         setBills((prev) => prev.map((b) => b.walletId === id ? { ...b, walletId: undefined } : b));
         setGoals((prev) => prev.map((g) => g.walletId === id ? { ...g, walletId: undefined } : g));
     };
     const transferFunds = (fromWalletId, toWalletId, amount, fee, note) => {
-        if (fromWalletId === toWalletId) {
-            alert('Ví nhận phải khác ví chuyển!');
-            return false;
-        }
         const fromW = wallets.find((w) => w.id === fromWalletId);
         const toW = wallets.find((w) => w.id === toWalletId);
-        const validation = checkWalletSufficientFunds(fromW, amount, fee);
-        if (!validation.isValid) {
-            alert(validation.errorMessage || 'Số dư ví chuyển không đủ!');
-            return false;
-        }
         return addTransaction({
             type: 'TRANSFER',
             amount,
@@ -897,62 +845,28 @@ export const AppProvider = ({ children }) => {
             tags: ['Chuyển khoản nội bộ'],
         });
     };
+    // Thanh toán dư nợ thẻ tín dụng từ 1 ví tài sản (chuyển khoản nội bộ, không tính là chi tiêu)
+    const payCreditCard = (creditWalletId, fromWalletId, amount, note) => {
+        const creditW = wallets.find((w) => w.id === creditWalletId);
+        if (!creditW || creditW.type !== 'CREDIT') {
+            alert('Ví nhận phải là thẻ tín dụng');
+            return false;
+        }
+        if (Number(amount) > (Number(creditW.balance) || 0)) {
+            alert(`Số tiền trả vượt quá dư nợ hiện tại (${formatCurrency(creditW.balance)})`);
+            return false;
+        }
+        return transferFunds(fromWalletId, creditWalletId, Number(amount), 0, note || `Thanh toán dư nợ thẻ ${creditW.name}`);
+    };
     // Recalculate wallet balances safely from history
     const recalculateWalletBalances = () => {
-        const todayKey = getLocalDateString();
-        setWallets((prevWallets) => {
-            return prevWallets.map((w) => {
-                let currentBal = w.initialBalance || 0;
-                const sortedTxs = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-                for (const tx of sortedTxs) {
-                    // Do not count future transactions towards current balance
-                    if (toLocalDateKey(tx.date) > todayKey) {
-                        continue;
-                    }
-                    if (tx.type === 'EXPENSE' && tx.walletId === w.id) {
-                        if (w.type === 'CREDIT') {
-                            currentBal += tx.amount;
-                        }
-                        else {
-                            currentBal -= tx.amount;
-                        }
-                    }
-                    else if (tx.type === 'INCOME' && tx.walletId === w.id) {
-                        if (w.type === 'CREDIT') {
-                            currentBal -= tx.amount;
-                        }
-                        else {
-                            currentBal += tx.amount;
-                        }
-                    }
-                    else if (tx.type === 'TRANSFER') {
-                        if (tx.walletId === w.id) {
-                            if (w.type === 'CREDIT') {
-                                currentBal += tx.amount + (tx.fee || 0);
-                            }
-                            else {
-                                currentBal -= (tx.amount + (tx.fee || 0));
-                            }
-                        }
-                        else if (tx.toWalletId === w.id) {
-                            if (w.type === 'CREDIT') {
-                                currentBal -= tx.amount;
-                            }
-                            else {
-                                currentBal += tx.amount;
-                            }
-                        }
-                    }
-                }
-                return { ...w, balance: currentBal };
-            });
-        });
+        setWallets((prevWallets) => recomputeWalletBalances(prevWallets, transactions));
     };
     // Budgets
     const addBudget = (budget) => {
         const newBudget = {
             ...budget,
-            id: `bud-${Date.now()}`,
+            id: generateId('bud'),
         };
         setBudgets((prev) => [...prev, newBudget]);
     };
@@ -969,7 +883,7 @@ export const AppProvider = ({ children }) => {
     const addBill = (bill) => {
         const newBill = {
             ...bill,
-            id: `bill-${Date.now()}`,
+            id: generateId('bill'),
         };
         setBills((prev) => [...prev, newBill]);
     };
@@ -982,45 +896,77 @@ export const AppProvider = ({ children }) => {
     const payBill = (billId, walletId, customPaidDate) => {
         const bill = bills.find((b) => b.id === billId);
         if (!bill)
-            return;
-        const targetWallet = wallets.find((w) => w.id === walletId) || wallets[0];
-        const validation = checkWalletSufficientFunds(targetWallet, bill.amount);
-        if (!validation.isValid) {
-            alert(validation.errorMessage || `Số dư ví ${targetWallet?.name} không đủ để thanh toán hóa đơn này!`);
-            return;
+            return false;
+        const targetWallet = wallets.find((w) => w.id === walletId);
+        if (!targetWallet) {
+            alert('Vui lòng chọn ví thanh toán hợp lệ');
+            return false;
         }
         const billCategory = categories.find((c) => c.id === bill.categoryId);
         const paidDate = customPaidDate || getLocalDateString();
-        // 1. Mark bill as PAID
-        setBills((prev) => prev.map((b) => b.id === billId
-            ? {
-                ...b,
-                status: 'PAID',
-                lastPaidDate: paidDate,
-                walletId,
-            }
-            : b));
-        // 2. Automatically record transaction (addTransaction will deduct wallet balance safely)
         const now = new Date();
         const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-        const txDate = `${paidDate}T${timeStr}`;
-        addTransaction({
+        // 1. Ghi giao dịch trước (đã validate số dư, ngày) - chỉ đánh dấu PAID khi ghi thành công
+        const createdTx = addTransaction({
             type: 'EXPENSE',
             amount: bill.amount,
             categoryId: bill.categoryId,
             categoryName: billCategory?.name || bill.categoryName || 'Hóa đơn',
             walletId: targetWallet.id,
             walletName: targetWallet.name,
-            date: txDate,
+            date: `${paidDate}T${timeStr}`,
             note: `Thanh toán hóa đơn: ${bill.name}`,
             tags: ['Hóa đơn định kỳ'],
         });
+        if (!createdTx)
+            return false;
+        // 2. Mark bill as PAID, nhớ id giao dịch để có thể hoàn tác
+        setBills((prev) => prev.map((b) => b.id === billId
+            ? {
+                ...b,
+                status: 'PAID',
+                lastPaidDate: paidDate,
+                lastPaymentTxId: createdTx.id,
+                walletId: targetWallet.id,
+            }
+            : b));
+        return true;
     };
+    // Đánh dấu hóa đơn chưa thanh toán; tùy chọn xóa giao dịch thanh toán đã ghi (hoàn tiền vào ví)
+    const unpayBill = (billId, revertTransaction = false) => {
+        const bill = bills.find((b) => b.id === billId);
+        if (!bill)
+            return;
+        if (revertTransaction && bill.lastPaymentTxId) {
+            deleteTransaction(bill.lastPaymentTxId);
+        }
+        setBills((prev) => prev.map((b) => b.id === billId ? { ...b, status: 'UNPAID', lastPaidDate: undefined, lastPaymentTxId: undefined } : b));
+    };
+    // Hóa đơn định kỳ: tự chuyển về UNPAID khi sang kỳ thanh toán mới (tháng / quý / năm)
+    useEffect(() => {
+        if (!mounted)
+            return;
+        const periodKey = (dateStr, frequency) => {
+            const [y, m] = String(dateStr).slice(0, 7).split('-').map(Number);
+            if (!y || !m)
+                return '';
+            if (frequency === 'YEARLY')
+                return `${y}`;
+            if (frequency === 'QUARTERLY')
+                return `${y}-Q${Math.ceil(m / 3)}`;
+            return `${y}-${m}`;
+        };
+        const todayStr = getLocalDateString();
+        const needsReset = (b) => b.status === 'PAID' && b.lastPaidDate && periodKey(b.lastPaidDate, b.frequency) !== periodKey(todayStr, b.frequency);
+        if (bills.some(needsReset)) {
+            setBills((prev) => prev.map((b) => (needsReset(b) ? { ...b, status: 'UNPAID', lastPaymentTxId: undefined } : b)));
+        }
+    }, [mounted, bills]);
     // Goals
     const addGoal = (goal) => {
         const newGoal = {
             ...goal,
-            id: `goal-${Date.now()}`,
+            id: generateId('goal'),
             history: [],
             createdAt: new Date().toISOString(),
         };
@@ -1036,31 +982,9 @@ export const AppProvider = ({ children }) => {
         const goal = goals.find((g) => g.id === goalId);
         const wallet = wallets.find((w) => w.id === walletId);
         if (!goal || !wallet)
-            return;
-        // Check if wallet has sufficient funds
-        const validation = checkWalletSufficientFunds(wallet, amount);
-        if (!validation.isValid) {
-            alert(validation.errorMessage || `Số dư ví ${wallet.name} không đủ để tích lũy vào mục tiêu!`);
-            return;
-        }
-        // Add to goal
-        const newHistoryItem = {
-            id: `gh-${Date.now()}`,
-            date: getLocalDateString(),
-            amount,
-            type: 'DEPOSIT',
-            walletId,
-            note: note || `Nạp từ ${wallet.name}`,
-        };
-        setGoals((prev) => prev.map((g) => g.id === goalId
-            ? {
-                ...g,
-                currentAmount: g.currentAmount + amount,
-                history: [newHistoryItem, ...g.history],
-            }
-            : g));
-        // Log transaction - addTransaction already safely deducts from wallet without double-counting
-        addTransaction({
+            return false;
+        // Ghi giao dịch trước (đã validate số dư) - chỉ cộng vào hũ khi ghi thành công
+        const createdTx = addTransaction({
             type: 'EXPENSE',
             amount,
             categoryId: 'cat-invest-exp',
@@ -1071,34 +995,36 @@ export const AppProvider = ({ children }) => {
             note: `Tích lũy vào hũ: ${goal.name}`,
             tags: ['Tích lũy mục tiêu'],
         });
+        if (!createdTx)
+            return false;
+        const newHistoryItem = {
+            id: generateId('gh'),
+            date: getLocalDateString(),
+            amount,
+            type: 'DEPOSIT',
+            walletId,
+            txId: createdTx.id,
+            note: note || `Nạp từ ${wallet.name}`,
+        };
+        setGoals((prev) => prev.map((g) => g.id === goalId
+            ? {
+                ...g,
+                currentAmount: (Number(g.currentAmount) || 0) + amount,
+                history: [newHistoryItem, ...(g.history || [])],
+            }
+            : g));
+        return true;
     };
     const withdrawFromGoal = (goalId, amount, walletId, note) => {
         const goal = goals.find((g) => g.id === goalId);
         const wallet = wallets.find((w) => w.id === walletId);
         if (!goal || !wallet)
-            return;
+            return false;
         if (amount > goal.currentAmount) {
             alert(`Số tiền rút (${formatCurrency(amount)}) vượt quá số dư hiện có trong mục tiêu (${formatCurrency(goal.currentAmount)})!`);
-            return;
+            return false;
         }
-        // Deduct from goal
-        const newHistoryItem = {
-            id: `gh-${Date.now()}`,
-            date: getLocalDateString(),
-            amount,
-            type: 'WITHDRAW',
-            walletId,
-            note: note || `Rút về ${wallet.name}`,
-        };
-        setGoals((prev) => prev.map((g) => g.id === goalId
-            ? {
-                ...g,
-                currentAmount: Math.max(0, g.currentAmount - amount),
-                history: [newHistoryItem, ...g.history],
-            }
-            : g));
-        // Log income transaction - addTransaction already safely adds to wallet without double-counting
-        addTransaction({
+        const createdTx = addTransaction({
             type: 'INCOME',
             amount,
             categoryId: 'cat-other-inc',
@@ -1109,6 +1035,25 @@ export const AppProvider = ({ children }) => {
             note: `Rút từ hũ tích lũy: ${goal.name}`,
             tags: ['Rút hũ tiết kiệm'],
         });
+        if (!createdTx)
+            return false;
+        const newHistoryItem = {
+            id: generateId('gh'),
+            date: getLocalDateString(),
+            amount,
+            type: 'WITHDRAW',
+            walletId,
+            txId: createdTx.id,
+            note: note || `Rút về ${wallet.name}`,
+        };
+        setGoals((prev) => prev.map((g) => g.id === goalId
+            ? {
+                ...g,
+                currentAmount: Math.max(0, (Number(g.currentAmount) || 0) - amount),
+                history: [newHistoryItem, ...(g.history || [])],
+            }
+            : g));
+        return true;
     };
     // Backup & Reset
     const resetToDefaultData = async () => {
@@ -1132,18 +1077,7 @@ export const AppProvider = ({ children }) => {
         setPlanner(defaultData.planner);
         setCurrentMonth('2026-09');
         setSimulatorConfig(INITIAL_SIMULATOR_CONFIG);
-        localStorage.removeItem(STORAGE_KEY);
-        try {
-            await fetch('/api/storage', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(defaultData),
-            });
-            setServerSyncStatus('synced');
-        }
-        catch (e) {
-            console.error('Failed to reset on server:', e);
-        }
+        // Auto-save sẽ đẩy dữ liệu mặc định lên server (có kiểm tra xung đột)
     };
     const clearAllData = () => {
         setWallets([
@@ -1195,10 +1129,15 @@ export const AppProvider = ({ children }) => {
     const importDatabaseJSON = (jsonStr) => {
         try {
             const data = JSON.parse(jsonStr);
-            if (data.wallets && Array.isArray(data.wallets))
-                setWallets(data.wallets);
-            if (data.transactions && Array.isArray(data.transactions))
-                setTransactions(data.transactions);
+            if (!data || typeof data !== 'object' || !Array.isArray(data.wallets) || !Array.isArray(data.transactions)) {
+                return false;
+            }
+            setWallets(data.wallets.map((w) => ({
+                ...w,
+                balance: Number(w.balance) || 0,
+                initialBalance: w.initialBalance !== undefined ? Number(w.initialBalance) || 0 : Number(w.balance) || 0,
+            })));
+            setTransactions(data.transactions);
             if (data.categories && Array.isArray(data.categories))
                 setCategories(data.categories);
             if (data.budgets && Array.isArray(data.budgets))
@@ -1266,6 +1205,7 @@ export const AppProvider = ({ children }) => {
             editWallet,
             deleteWallet,
             transferFunds,
+            payCreditCard,
             recalculateWalletBalances,
             addBudget,
             editBudget,
@@ -1275,6 +1215,7 @@ export const AppProvider = ({ children }) => {
             editBill,
             deleteBill,
             payBill,
+            unpayBill,
             addGoal,
             editGoal,
             deleteGoal,

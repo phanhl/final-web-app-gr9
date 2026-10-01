@@ -77,3 +77,11 @@ npm run dev
 npm start
 ```
 3. Mở trình duyệt tại: **`http://localhost:3000`**
+
+4. **Bảo mật khi mở ra Internet (ngrok / cloudflared):** đặt mật khẩu để bật HTTP Basic Auth cho cả trang và API dữ liệu:
+```bash
+APP_PASSWORD='mat-khau-manh' APP_USER='admin' ./start.sh   # build + chạy + mở tunnel
+NO_TUNNEL=1 ./start.sh                                     # chỉ chạy local
+./stop.sh
+```
+`start.sh` sẽ **không** mở tunnel nếu chưa đặt `APP_PASSWORD`. Tuỳ chọn: `NGROK_DOMAIN`, `NGROK_BIN`, `CLOUDFLARED_BIN`, `PORT`.

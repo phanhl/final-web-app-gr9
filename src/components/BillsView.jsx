@@ -4,7 +4,7 @@ import { useApp } from '@/context/AppContext';
 import { CalendarCheck, Plus, CheckCircle2, Edit2, Trash2, Check, RotateCcw, X, Bell, } from 'lucide-react';
 import { formatCurrency, formatNumberWithDots, getLocalDateString, formatDisplayDate } from '@/lib/utils';
 export const BillsView = () => {
-    const { bills, wallets, categories, addBill, editBill, deleteBill, payBill, navTargetBillId, setNavTargetBillId, billToAutoPayId, setBillToAutoPayId, t, tCategory, tWalletType, language, } = useApp();
+    const { bills, wallets, categories, addBill, editBill, deleteBill, payBill, unpayBill, navTargetBillId, setNavTargetBillId, billToAutoPayId, setBillToAutoPayId, t, tCategory, tWalletType, language, } = useApp();
     const [billModalOpen, setBillModalOpen] = useState(false);
     const [editingBill, setEditingBill] = useState(null);
     // Form State
@@ -38,13 +38,19 @@ export const BillsView = () => {
             const target = bills.find((b) => b.id === billToAutoPayId);
             if (target) {
                 setBillToPay(target);
-                setPayWalletId(wallets[0]?.id || '');
+                setPayWalletId(getDefaultPayWalletId(target));
                 setPayDate(getLocalDateString());
                 setPayModalOpen(true);
             }
             setBillToAutoPayId(null);
         }
     }, [billToAutoPayId, bills, wallets, setBillToAutoPayId]);
+    // Ví mặc định khi thanh toán: ví gắn với hóa đơn, nếu không có thì ví tài sản đầu tiên
+    const getDefaultPayWalletId = (bill) => {
+        if (bill?.walletId && wallets.some((w) => w.id === bill.walletId))
+            return bill.walletId;
+        return (wallets.find((w) => w.type === 'CASH' || w.type === 'BANK') || wallets[0])?.id || '';
+    };
     // Current date & day in month
     const [currentDateInfo, setCurrentDateInfo] = useState(() => {
         const now = new Date();
@@ -113,7 +119,9 @@ export const BillsView = () => {
     const handleConfirmPay = () => {
         if (!billToPay)
             return;
-        payBill(billToPay.id, payWalletId, payDate || getLocalDateString());
+        const ok = payBill(billToPay.id, payWalletId, payDate || getLocalDateString());
+        if (!ok)
+            return; // giữ modal để người dùng chọn ví / ngày khác
         setPayModalOpen(false);
         setBillToPay(null);
     };
@@ -281,14 +289,20 @@ export const BillsView = () => {
 
                   {!isPaid ? (<button onClick={() => {
                         setBillToPay(bill);
-                        setPayWalletId(wallets[0]?.id || '');
+                        setPayWalletId(getDefaultPayWalletId(bill));
                         setPayDate(getLocalDateString());
                         setPayModalOpen(true);
                     }} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors flex items-center space-x-1.5">
                       <Check className="w-3.5 h-3.5"/>
                       <span>{t('bill.payNow', 'Thanh toán ngay')}</span>
                     </button>) : (<button onClick={() => {
-                        editBill(bill.id, { status: 'UNPAID', lastPaidDate: undefined });
+                        if (bill.lastPaymentTxId) {
+                            const revert = confirm('Xóa luôn giao dịch thanh toán đã ghi và hoàn tiền về ví?\n\nOK: xóa giao dịch & hoàn tiền\nHủy: chỉ đặt lại trạng thái');
+                            unpayBill(bill.id, revert);
+                        }
+                        else {
+                            unpayBill(bill.id, false);
+                        }
                     }} className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-medium transition-colors" title={t('bills.resetUnpaid', 'Đặt lại chưa thanh toán')}>
                       <RotateCcw className="w-3.5 h-3.5 inline mr-1"/>
                       <span>{t('bill.resetUnpaid', 'Đặt lại')}</span>
@@ -353,7 +367,7 @@ export const BillsView = () => {
                 </label>
                 <input type="text" inputMode="numeric" required value={formatNumberWithDots(billAmount)} onChange={(e) => {
                 const cleaned = e.target.value.replace(/\D/g, '');
-                if (cleaned.length <= 18) {
+                if (cleaned.length <= 12) {
                     setBillAmount(cleaned);
                 }
             }} onKeyDown={(e) => {

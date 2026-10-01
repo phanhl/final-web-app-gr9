@@ -322,8 +322,9 @@ export function exportToCSV(transactions, filename = 'bao-cao-giao-dich.csv') {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 0);
 }
-export function exportToExcel(transactions, budgets, wallets, summary, filename = 'Bao-Cao-Tai-Chinh-Chi-Tieu.xlsx') {
+export function exportToExcel(transactions, budgets, wallets, summary, filename = 'Bao-Cao-Tai-Chinh-Chi-Tieu.xlsx', monthStr = getLocalDateString().slice(0, 7)) {
     const wb = XLSX.utils.book_new();
     // Sheet 1: Danh sách giao dịch
     const txData = transactions.map((t, idx) => ({
@@ -352,7 +353,7 @@ export function exportToExcel(transactions, budgets, wallets, summary, filename 
     const wsWallets = XLSX.utils.json_to_sheet(walletData);
     XLSX.utils.book_append_sheet(wb, wsWallets, 'Tài Khoản & Ví');
     // Sheet 3: Báo cáo ngân sách
-    const budgetStatuses = calculateBudgetStatuses(budgets, transactions);
+    const budgetStatuses = calculateBudgetStatuses(budgets, transactions, monthStr);
     const budgetData = budgetStatuses.map((bs) => ({
         'Danh mục': bs.budget.categoryName,
         'Hạn mức tháng (₫)': bs.budget.amount,
@@ -478,4 +479,141 @@ export function formatWalletOptionLabel(wallet, language = 'vi') {
         return `${wallet.name} [${debtLabel}: ${formatCurrency(wallet.balance, language)} - ${noLimitLabel}]`;
     }
     return `${wallet.name} (${formatCurrency(wallet.balance, language)})`;
+}
+
+// Giới hạn số tiền 1 giao dịch: 999 tỷ (an toàn với Number.MAX_SAFE_INTEGER)
+export const MAX_TX_AMOUNT = 999_999_999_999;
+
+/**
+ * Sinh ID duy nhất, không bị trùng khi nhiều thao tác xảy ra trong cùng 1 mili-giây
+ */
+export function generateId(prefix) {
+    const rand = typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID().slice(0, 8)
+        : Math.random().toString(36).slice(2, 10);
+    return `${prefix}-${Date.now()}-${rand}`;
+}
+
+/**
+ * Ảnh hưởng của 1 giao dịch lên số dư của 1 ví (đã tính theo chiều nợ của thẻ tín dụng).
+ * Ví tài sản: tăng = có thêm tiền. Thẻ tín dụng: balance là dư nợ nên chi tiêu làm tăng nợ.
+ */
+export function getTxWalletDelta(tx, wallet) {
+    if (!tx || !wallet)
+        return 0;
+    const amount = Number(tx.amount) || 0;
+    const fee = Number(tx.fee) || 0;
+    let assetDelta = 0;
+    if (tx.type === 'EXPENSE' && tx.walletId === wallet.id) {
+        assetDelta = -amount;
+    }
+    else if (tx.type === 'INCOME' && tx.walletId === wallet.id) {
+        assetDelta = amount;
+    }
+    else if (tx.type === 'TRANSFER') {
+        if (tx.walletId === wallet.id)
+            assetDelta -= amount + fee;
+        if (tx.toWalletId === wallet.id)
+            assetDelta += amount;
+    }
+    return wallet.type === 'CREDIT' ? -assetDelta : assetDelta;
+}
+
+/**
+ * Áp dụng (sign = 1) hoặc hoàn tác (sign = -1) 1 giao dịch lên danh sách ví
+ */
+export function applyTxToWallets(wallets, tx, sign = 1) {
+    return wallets.map((w) => {
+        const delta = getTxWalletDelta(tx, w);
+        return delta ? { ...w, balance: (Number(w.balance) || 0) + sign * delta } : w;
+    });
+}
+
+/**
+ * Tổng ảnh hưởng của toàn bộ lịch sử giao dịch lên 1 ví (không tính số dư ban đầu)
+ */
+export function sumWalletTxEffect(wallet, transactions) {
+    return transactions.reduce((sum, tx) => sum + getTxWalletDelta(tx, wallet), 0);
+}
+
+/**
+ * Tính lại số dư mọi ví = số dư ban đầu + lịch sử giao dịch
+ */
+export function recomputeWalletBalances(wallets, transactions) {
+    return wallets.map((w) => ({ ...w, balance: (Number(w.initialBalance) || 0) + sumWalletTxEffect(w, transactions) }));
+}
+
+/**
+ * Merge 3 chiều theo id cho 1 mảng: base = bản server mà local dựa vào, local = bản trên máy, remote = bản server mới nhất.
+ * Thay đổi cục bộ (thêm/sửa/xóa so với base) được ưu tiên; các thay đổi còn lại lấy từ remote.
+ */
+function mergeArrayById(base = [], local = [], remote = []) {
+    const key = (x) => x?.id;
+    const baseMap = new Map(base.map((x) => [key(x), JSON.stringify(x)]));
+    const localMap = new Map(local.map((x) => [key(x), x]));
+    const remoteMap = new Map(remote.map((x) => [key(x), x]));
+    const result = [];
+    const seen = new Set();
+    const pick = (id) => {
+        if (seen.has(id))
+            return;
+        seen.add(id);
+        const inBase = baseMap.has(id);
+        const l = localMap.get(id);
+        const r = remoteMap.get(id);
+        const localChanged = inBase ? (!l || JSON.stringify(l) !== baseMap.get(id)) : !!l;
+        if (localChanged) {
+            if (l)
+                result.push(l); // local thêm mới hoặc sửa
+            return; // local xóa -> bỏ
+        }
+        if (r)
+            result.push(r); // giữ bản remote (kể cả remote sửa); remote xóa -> bỏ
+    };
+    // Giữ thứ tự của local trước, các phần tử mới từ remote nối thêm
+    local.forEach((x) => pick(key(x)));
+    remote.forEach((x) => pick(key(x)));
+    base.forEach((x) => pick(key(x)));
+    return result;
+}
+
+const MERGE_ARRAY_FIELDS = ['wallets', 'transactions', 'categories', 'budgets', 'bills', 'goals'];
+
+export function mergeSnapshots(base, local, remote) {
+    const merged = { ...remote };
+    const safeBase = base || {};
+    for (const field of MERGE_ARRAY_FIELDS) {
+        merged[field] = mergeArrayById(safeBase[field], local[field], remote[field]);
+    }
+    for (const field of ['planner', 'currentMonth', 'userProfile', 'simulatorConfig']) {
+        const localChanged = JSON.stringify(local[field]) !== JSON.stringify(safeBase[field]);
+        merged[field] = localChanged ? local[field] : remote[field];
+    }
+    // Số dư là dữ liệu dẫn xuất -> tính lại từ lịch sử sau khi merge để không bị cộng/trừ 2 lần
+    merged.wallets = recomputeWalletBalances(merged.wallets, merged.transactions);
+    return merged;
+}
+
+/**
+ * Thu nhỏ ảnh chứng từ trước khi lưu (tránh làm phình DB / vượt quota localStorage)
+ */
+export function compressImageFile(file, maxSize = 1024, quality = 0.7) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error('Không đọc được ảnh'));
+        reader.onload = () => {
+            const img = new Image();
+            img.onerror = () => reject(new Error('Ảnh không hợp lệ'));
+            img.onload = () => {
+                const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.round(img.width * scale);
+                canvas.height = Math.round(img.height * scale);
+                canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+            img.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+    });
 }

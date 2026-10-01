@@ -4,7 +4,7 @@ import { useApp } from '@/context/AppContext';
 import { X, Upload, Plus, AlertTriangle, FileSpreadsheet } from 'lucide-react';
 import { POPULAR_TAGS } from '@/lib/mock-data';
 import { IconHelper } from './IconHelper';
-import { formatCurrency, checkWalletSufficientFunds, getWalletAvailableBalance, numberToVietnameseWords, formatNumberWithDots, toLocalDateTimeInput, normalizeSaveDate, toLocalDateKey, getLocalDateString } from '@/lib/utils';
+import { formatCurrency, checkWalletSufficientFunds, getWalletAvailableBalance, numberToVietnameseWords, formatNumberWithDots, toLocalDateTimeInput, normalizeSaveDate, toLocalDateKey, getLocalDateString, compressImageFile } from '@/lib/utils';
 export const QuickAddModal = () => {
     const { quickAddOpen, setQuickAddOpen, quickAddDefaultType, quickAddDefaultWalletId, openStatementModal, wallets, categories, currentMonth, setCurrentMonth, addTransaction, language, t, tCategory, tWalletType, } = useApp();
     const [type, setType] = useState('EXPENSE');
@@ -44,7 +44,10 @@ export const QuickAddModal = () => {
             setTags([]);
             setReceiptImage(undefined);
         }
-    }, [quickAddOpen, quickAddDefaultType, quickAddDefaultWalletId, categories, wallets]);
+        // Chỉ khởi tạo form khi mở modal; không phụ thuộc wallets/categories để đồng bộ nền
+        // (polling từ thiết bị khác) không xóa form đang nhập dở.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [quickAddOpen, quickAddDefaultType, quickAddDefaultWalletId]);
     if (!quickAddOpen)
         return null;
     const handleQuickAmount = (val) => {
@@ -62,11 +65,10 @@ export const QuickAddModal = () => {
     const handleImageUpload = (e) => {
         const file = e.target.files?.[0];
         if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setReceiptImage(reader.result);
-            };
-            reader.readAsDataURL(file);
+            // Thu nhỏ ảnh trước khi lưu (ảnh gốc vài MB sẽ làm phình DB và vượt quota localStorage)
+            compressImageFile(file)
+                .then(setReceiptImage)
+                .catch((err) => alert(err.message || 'Không đọc được ảnh'));
         }
     };
     const selectedWallet = wallets.find((w) => w.id === walletId);
@@ -192,7 +194,7 @@ export const QuickAddModal = () => {
             <div className="relative">
               <input type="text" inputMode="numeric" required autoFocus value={formatNumberWithDots(amount)} onChange={(e) => {
             const cleaned = e.target.value.replace(/\D/g, '');
-            if (cleaned.length <= 18) {
+            if (cleaned.length <= 12) {
                 setAmount(cleaned);
             }
         }} onKeyDown={(e) => {

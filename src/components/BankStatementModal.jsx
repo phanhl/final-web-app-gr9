@@ -76,6 +76,16 @@ function findMatchingWalletForBank(bank, walletsList, detectedAccountNumber) {
     return null;
 }
 
+/**
+ * Số dư đầu kỳ = số dư cuối kỳ - (tổng thu - tổng chi) của các giao dịch trong sao kê
+ */
+function computeOpeningBalance(closingBalance, items = []) {
+    if (closingBalance === null || closingBalance === undefined)
+        return 0;
+    const net = items.reduce((sum, t) => sum + (t.type === 'INCOME' ? t.amount : -t.amount), 0);
+    return Number(closingBalance) - net;
+}
+
 export const BankStatementModal = () => {
     const {
         statementModalOpen,
@@ -142,7 +152,10 @@ export const BankStatementModal = () => {
             setSearchFilter('');
             setShowCreateWalletModal(false);
         }
-    }, [statementModalOpen, statementDefaultWalletId, wallets]);
+        // Chỉ reset khi MỞ modal. Không phụ thuộc `wallets`: tạo ví / nạp sao kê / đồng bộ từ thiết bị khác
+        // đều làm `wallets` đổi và trước đây xóa sạch dữ liệu đã đọc + màn hình thành công.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [statementModalOpen, statementDefaultWalletId]);
 
     // Khi người dùng đổi ví đích, cập nhật lại việc kiểm tra trùng lặp
     useEffect(() => {
@@ -180,7 +193,7 @@ export const BankStatementModal = () => {
                     setSelectedWalletId('');
                     setWalletMatchStatus('NOT_FOUND');
                     setCustomWalletName(`${result.detectedBank.name} Chi tiêu`);
-                    setCustomWalletBalance(result.detectedClosingBalance ? String(result.detectedClosingBalance) : '0');
+                    setCustomWalletBalance(String(Math.max(0, computeOpeningBalance(result.detectedClosingBalance, result.transactions))));
                     setCustomWalletAccNum(result.detectedAccountNumber || '');
                     setParsedItems(checkDuplicates(result.transactions, transactions, ''));
                 }
@@ -205,7 +218,11 @@ export const BankStatementModal = () => {
     // Tạo ví ngân hàng tự động (1-Click) hoặc tùy chỉnh
     const handleQuickCreateBankWallet = (customData = null) => {
         if (!detectedBank) return;
-        const initialBal = customData ? (Number(customData.balance) || 0) : (Number(detectedClosingBalance) || 0);
+        // Số dư ban đầu của ví mới = số dư ĐẦU KỲ của sao kê (trước các giao dịch sẽ nạp),
+        // nếu không sau khi nạp sẽ bị cộng/trừ 2 lần các giao dịch đã nằm sẵn trong số dư cuối kỳ.
+        const initialBal = customData
+            ? (Number(customData.balance) || 0)
+            : Math.max(0, computeOpeningBalance(detectedClosingBalance, parsedItems));
         const accNum = customData?.accountNumber || detectedAccountNumber || '';
         const wName = customData?.name?.trim() || `${detectedBank.name} Chi tiêu`;
 
@@ -306,9 +323,9 @@ export const BankStatementModal = () => {
         projectedBalance = detectedClosingBalance;
     } else {
         if (currentWallet?.type === 'CREDIT') {
-            projectedBalance = Math.max(0, currentBalance + totalSelectedExpense - totalSelectedIncome);
+            projectedBalance = currentBalance + totalSelectedExpense - totalSelectedIncome;
         } else {
-            projectedBalance = Math.max(0, currentBalance + netSelectedChange);
+            projectedBalance = currentBalance + netSelectedChange;
         }
     }
 
@@ -404,6 +421,9 @@ export const BankStatementModal = () => {
                                 </h3>
                                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                                     Đã ghi nhận an toàn <strong>{importSuccessResult.count} giao dịch</strong> vào ví <strong>{importSuccessResult.walletName}</strong>.
+                                    {importSuccessResult.skipped > 0 && (
+                                        <> Bỏ qua <strong>{importSuccessResult.skipped}</strong> giao dịch không hợp lệ (ngày trong tương lai hoặc số tiền sai).</>
+                                    )}
                                 </p>
                             </div>
 
@@ -1111,7 +1131,7 @@ export const BankStatementModal = () => {
 
                                 <div>
                                     <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
-                                        Số dư ban đầu (VNĐ)
+                                        Số dư đầu kỳ (trước các giao dịch trong sao kê, VNĐ)
                                     </label>
                                     <input
                                         type="text"

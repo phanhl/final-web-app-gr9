@@ -326,16 +326,17 @@ export function parseAmount(val) {
  * Chuẩn hóa ngày giao dịch thành định dạng ISO (YYYY-MM-DDTHH:mm:ss)
  */
 export function parseDate(val) {
-    if (!val) return new Date().toISOString();
+    if (!val) return null;
 
     // Trường hợp ngày của Excel (serial number)
     if (typeof val === 'number') {
         const dateObj = XLSX.SSF.parse_date_code(val);
         if (dateObj) {
+            const hasTime = val % 1 !== 0;
             const y = dateObj.y;
             const m = String(dateObj.m).padStart(2, '0');
             const d = String(dateObj.d).padStart(2, '0');
-            const h = String(dateObj.H || 12).padStart(2, '0');
+            const h = String(hasTime ? dateObj.H : 12).padStart(2, '0');
             const min = String(dateObj.M || 0).padStart(2, '0');
             const s = String(dateObj.S || 0).padStart(2, '0');
             return `${y}-${m}-${d}T${h}:${min}:${s}`;
@@ -371,10 +372,15 @@ export function parseDate(val) {
     // Fallback: Date.parse
     const timestamp = Date.parse(str);
     if (!isNaN(timestamp)) {
-        return new Date(timestamp).toISOString();
+        return toLocalIso(new Date(timestamp));
     }
 
-    return new Date().toISOString();
+    return null;
+}
+
+function toLocalIso(d) {
+    const p = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 }
 
 /**
@@ -510,25 +516,40 @@ export async function parseBankStatementFile(file, categories = []) {
         reader.onload = (e) => {
             try {
                 const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array', cellDates: true });
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
+                const isCsv = /\.(csv|txt)$/i.test(file.name || '') || /csv|text\/plain/i.test(file.type || '');
+                // - Excel: đọc giá trị thô -> ô ngày là số serial, tự chuyển chính xác (không bị format 'm/d/yy' kiểu Mỹ)
+                // - CSV: raw: true để SheetJS KHÔNG tự đoán ngày theo kiểu Mỹ (01/09 -> 9 tháng 1)
+                // - CSV tự decode UTF-8 (SheetJS mặc định đọc như Latin-1 -> lỗi font tiếng Việt)
+                const workbook = isCsv
+                    ? XLSX.read(new TextDecoder('utf-8').decode(data).replace(/^\uFEFF/, ''), { type: 'string', raw: true })
+                    : XLSX.read(data, { type: 'array' });
 
-                // Chuyển sheet sang dạng mảng 2D (header: 1)
-                const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false, defval: '' });
+                // Quét tất cả sheet, lấy sheet đầu tiên tìm được hàng tiêu đề hợp lệ
+                let rows = [];
+                let headerRowIdx = -1;
+                let columnMapping = null;
+                for (const sheetName of workbook.SheetNames) {
+                    const sheetRows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, raw: true, defval: '' });
+                    const found = findHeaderRow(sheetRows);
+                    if (found.headerRowIdx !== -1) {
+                        rows = sheetRows;
+                        headerRowIdx = found.headerRowIdx;
+                        columnMapping = found.columnMapping;
+                        break;
+                    }
+                    if (rows.length === 0) rows = sheetRows;
+                }
 
                 if (!rows || rows.length === 0) {
                     throw new Error('Tệp không có dữ liệu bảng tính');
                 }
-
-                const { headerRowIdx, columnMapping } = findHeaderRow(rows);
 
                 if (headerRowIdx === -1 || !columnMapping) {
                     throw new Error('Không thể tìm thấy hàng tiêu đề của bản sao kê (thiếu cột Ngày, Số tiền hoặc Thu/Chi). Vui lòng dùng file mẫu chuẩn FinTrack.');
                 }
 
                 const parsedTransactions = [];
-                let detectedClosingBalance = null;
+                let footerClosingBalance = null;
 
                 // Duyệt qua các hàng dữ liệu từ sau hàng tiêu đề
                 for (let i = headerRowIdx + 1; i < rows.length; i++) {
@@ -541,6 +562,13 @@ export async function parseBankStatementFile(file, categories = []) {
 
                     const normRowText = normalizeText(row.join(' '));
 
+                    // Dòng số dư cuối kỳ ở chân sao kê -> đây là nguồn số dư cuối đáng tin nhất
+                    if (normRowText.includes('so du cuoi ky') || normRowText.includes('ending balance') || normRowText.includes('closing balance')) {
+                        const amounts = row.map(parseAmount).filter(a => a > 0);
+                        if (amounts.length > 0) footerClosingBalance = amounts[amounts.length - 1];
+                        continue;
+                    }
+
                     // Bỏ qua các dòng chú thích, chân trang in ấn, tổng kết
                     if (
                         normRowText.includes('so du dau ky') ||
@@ -551,11 +579,6 @@ export async function parseBankStatementFile(file, categories = []) {
                         normRowText.includes('this document was generated') ||
                         normRowText.includes('dien giai/ description')
                     ) {
-                        // Nếu là dòng số dư cuối kỳ -> ghi nhận số dư cuối
-                        if (normRowText.includes('so du cuoi ky') || normRowText.includes('ending balance')) {
-                            const possibleBal = row.map(parseAmount).find(a => a > 0);
-                            if (possibleBal) detectedClosingBalance = possibleBal;
-                        }
                         continue;
                     }
 
@@ -613,7 +636,7 @@ export async function parseBankStatementFile(file, categories = []) {
 
                         if (columnMapping.type !== undefined) {
                             const rawType = normalizeText(row[columnMapping.type]);
-                            if (rawType.includes('cr') || rawType.includes('co') || rawType.includes('+') || rawType.includes('thu')) {
+                            if (rawType === 'c' || rawType.includes('cr') || rawType.startsWith('co') || rawType.includes('ghi co') || rawType.includes('+') || rawType.includes('thu')) {
                                 type = 'INCOME';
                             } else {
                                 type = 'EXPENSE';
@@ -640,14 +663,12 @@ export async function parseBankStatementFile(file, categories = []) {
 
                     // Lấy số dư (nếu có)
                     let rowBalance = null;
-                    if (columnMapping.balance !== undefined && row[columnMapping.balance]) {
+                    if (columnMapping.balance !== undefined && row[columnMapping.balance] !== '' && row[columnMapping.balance] !== null) {
                         rowBalance = parseAmount(row[columnMapping.balance]);
-                        if (rowBalance > 0) {
-                            detectedClosingBalance = rowBalance;
-                        }
                     }
 
                     const parsedDate = parseDate(rawDate);
+                    if (!parsedDate) continue;
                     const { categoryId, categoryName, tags } = detectCategoryAndTags(note, type, categories);
 
                     parsedTransactions.push({
@@ -669,6 +690,19 @@ export async function parseBankStatementFile(file, categories = []) {
 
                 if (parsedTransactions.length === 0) {
                     throw new Error('Không đọc được giao dịch hợp lệ nào từ tệp. Vui lòng kiểm tra lại định dạng tệp sao kê.');
+                }
+
+                // Số dư cuối kỳ: ưu tiên dòng "số dư cuối kỳ"; nếu không có thì lấy số dư sau GD của
+                // giao dịch MỚI NHẤT (sao kê có thể xếp tăng dần hoặc giảm dần theo ngày)
+                let detectedClosingBalance = footerClosingBalance;
+                if (detectedClosingBalance === null) {
+                    const withBalance = parsedTransactions.filter(t => t.balanceAfter !== null);
+                    if (withBalance.length > 0) {
+                        const first = withBalance[0];
+                        const last = withBalance[withBalance.length - 1];
+                        const isDescending = first.date > last.date;
+                        detectedClosingBalance = (isDescending ? first : last).balanceAfter;
+                    }
                 }
 
                 // Nhận diện ngân hàng và thông tin tài khoản từ file
@@ -700,15 +734,26 @@ export async function parseBankStatementFile(file, categories = []) {
 /**
  * Kiểm tra và đánh dấu giao dịch trùng lặp so với dữ liệu hiện có
  */
+function toDateKey(dateStr) {
+    if (!dateStr) return '';
+    const s = String(dateStr);
+    // Chuỗi có múi giờ (Z / +07:00) -> quy về ngày theo giờ địa phương
+    if (s.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(s)) {
+        const d = new Date(s);
+        if (!isNaN(d.getTime())) return toLocalIso(d).slice(0, 10);
+    }
+    return s.slice(0, 10);
+}
+
 export function checkDuplicates(parsedTransactions, existingTransactions = [], targetWalletId = null) {
     return parsedTransactions.map(item => {
-        const itemDateStr = item.date.slice(0, 10); // YYYY-MM-DD
+        const itemDateStr = toDateKey(item.date); // YYYY-MM-DD
         const itemAmount = item.amount;
         const itemType = item.type;
         const itemNoteNorm = normalizeText(item.note);
 
         const isDup = existingTransactions.some(existing => {
-            const exDateStr = existing.date.slice(0, 10);
+            const exDateStr = toDateKey(existing.date);
             const exAmount = existing.amount;
             const exType = existing.type;
             const exNoteNorm = normalizeText(existing.note || '');
@@ -721,6 +766,9 @@ export function checkDuplicates(parsedTransactions, existingTransactions = [], t
             // Trùng khi cùng ngày, cùng số tiền, cùng loại Thu/Chi
             if (exDateStr === itemDateStr && Math.abs(exAmount - itemAmount) < 1 && exType === itemType) {
                 // Nếu nội dung tương đồng hoặc ngắn
+                if (!exNoteNorm || !itemNoteNorm) {
+                    return exNoteNorm === itemNoteNorm;
+                }
                 if (exNoteNorm === itemNoteNorm || exNoteNorm.includes(itemNoteNorm) || itemNoteNorm.includes(exNoteNorm)) {
                     return true;
                 }

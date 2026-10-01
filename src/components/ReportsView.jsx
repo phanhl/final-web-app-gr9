@@ -210,7 +210,7 @@ export const ReportsView = () => {
             <span>{t('rep.exportCSV', 'Xuất CSV')}</span>
           </button>
 
-          <button onClick={() => exportToExcel(filteredTxs, budgets, wallets, financialSummary)} className="flex items-center space-x-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer">
+          <button onClick={() => exportToExcel(filteredTxs, budgets, wallets, financialSummary, undefined, currentMonth)} className="flex items-center space-x-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer">
             <FileSpreadsheet className="w-4 h-4"/>
             <span>{t('rep.exportExcel', 'Xuất Excel (.xlsx)')}</span>
           </button>

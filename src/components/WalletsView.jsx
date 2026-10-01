@@ -1,13 +1,13 @@
 'use client';
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
-import { Plus, ArrowRightLeft, Banknote, Building2, CreditCard, PiggyBank, Edit2, Trash2, DollarSign, X, ArrowLeft, ArrowDownLeft, ArrowUpRight, TrendingUp, TrendingDown, Search, Receipt, Inbox, FileSpreadsheet } from 'lucide-react';
+import { Plus, ArrowRightLeft, Banknote, Building2, CreditCard, PiggyBank, Edit2, Trash2, DollarSign, X, ArrowLeft, ArrowDownLeft, ArrowUpRight, TrendingUp, TrendingDown, Search, Receipt, Inbox, FileSpreadsheet, RefreshCw } from 'lucide-react';
 import { formatCurrency, formatDate, formatNumberWithDots } from '@/lib/utils';
 import { IconHelper } from './IconHelper';
 import { VIETNAMESE_BANKS } from '@/lib/mock-data';
 import { ReceiptModal } from './ReceiptModal';
 export const WalletsView = () => {
-    const { wallets, transactions, financialSummary, addWallet, editWallet, deleteWallet, deleteTransaction, recalculateWalletBalances, openQuickAdd, openStatementModal, t, tCategory, tWalletType, language, } = useApp();
+    const { wallets, transactions, financialSummary, addWallet, editWallet, deleteWallet, deleteTransaction, recalculateWalletBalances, payCreditCard, openQuickAdd, openStatementModal, t, tCategory, tWalletType, language, } = useApp();
     // Selected Wallet for viewing detailed cash flow
     const [selectedWalletId, setSelectedWalletId] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -24,6 +24,24 @@ export const WalletsView = () => {
     const [walletCreditLimit, setWalletCreditLimit] = useState('');
     const [walletInterestRate, setWalletInterestRate] = useState('');
     const [walletColor, setWalletColor] = useState('#0ea5e9');
+    // Thanh toán dư nợ thẻ tín dụng
+    const [payCardOpen, setPayCardOpen] = useState(false);
+    const [payCardFromId, setPayCardFromId] = useState('');
+    const [payCardAmount, setPayCardAmount] = useState('');
+    const assetWalletsForPay = wallets.filter((w) => w.type === 'CASH' || w.type === 'BANK');
+    const handleOpenPayCard = (w) => {
+        setPayCardFromId(assetWalletsForPay[0]?.id || '');
+        setPayCardAmount(String(Math.max(0, Number(w.balance) || 0)));
+        setPayCardOpen(true);
+    };
+    const handleConfirmPayCard = (e) => {
+        e.preventDefault();
+        if (!selectedWallet)
+            return;
+        const ok = payCreditCard(selectedWallet.id, payCardFromId, Number(payCardAmount) || 0);
+        if (ok)
+            setPayCardOpen(false);
+    };
     // Groups
     const cashWallets = wallets.filter((w) => w.type === 'CASH');
     const bankWallets = wallets.filter((w) => w.type === 'BANK');
@@ -109,7 +127,7 @@ export const WalletsView = () => {
     };
     const handleDeleteWalletWithConfirm = (w) => {
         if (!w) return;
-        if (confirm(`${t('wallets.deleteWalletConfirm', 'Bạn có chắc muốn xóa ví')} "${w.name}"? Toàn bộ giao dịch liên quan đến ví này cũng sẽ được xóa khỏi hệ thống để không làm sai lệch thu chi.`)) {
+        if (confirm(`${t('wallets.deleteWalletConfirm', 'Bạn có chắc muốn xóa ví')} "${w.name}"? Toàn bộ giao dịch của ví này sẽ bị xóa; các giao dịch chuyển khoản với ví khác được giữ lại dưới dạng thu/chi của ví đó để số dư không bị sai lệch.`)) {
             deleteWallet(w.id);
             if (selectedWalletId === w.id) {
                 setSelectedWalletId(null);
@@ -211,6 +229,20 @@ export const WalletsView = () => {
                 <button onClick={() => openQuickAdd('EXPENSE', selectedWallet.id)} className="flex items-center space-x-1.5 px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors cursor-pointer">
                   <DollarSign className="w-4 h-4"/>
                   <span>{t('wallets.outFromWallet', 'Chi tiền từ ví')}</span>
+                </button>
+
+                {selectedWallet.type === 'CREDIT' && selectedWallet.balance > 0 && (<button onClick={() => handleOpenPayCard(selectedWallet)} className="flex items-center space-x-1.5 px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors cursor-pointer">
+                  <ArrowRightLeft className="w-4 h-4"/>
+                  <span>Thanh toán dư nợ thẻ</span>
+                </button>)}
+
+                <button onClick={() => {
+                    if (confirm('Tính lại số dư mọi ví từ số dư ban đầu + toàn bộ lịch sử giao dịch?')) {
+                        recalculateWalletBalances();
+                    }
+                }} className="flex items-center space-x-1.5 px-3.5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold transition-colors cursor-pointer" title="Đối soát số dư với lịch sử giao dịch">
+                  <RefreshCw className="w-4 h-4"/>
+                  <span>Tính lại số dư</span>
                 </button>
 
                 <button onClick={(e) => handleStartEditWallet(selectedWallet, e)} className="flex items-center space-x-1.5 px-3.5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold transition-colors cursor-pointer">
@@ -597,7 +629,7 @@ export const WalletsView = () => {
                 </label>
                 <input type="text" inputMode="numeric" value={formatNumberWithDots(walletBalance)} onChange={(e) => {
                 const cleaned = e.target.value.replace(/\D/g, '');
-                if (cleaned.length <= 18) {
+                if (cleaned.length <= 12) {
                     setWalletBalance(cleaned);
                 }
             }} onKeyDown={(e) => {
@@ -633,7 +665,7 @@ export const WalletsView = () => {
                   </label>
                   <input type="text" inputMode="numeric" value={walletCreditLimit ? formatNumberWithDots(walletCreditLimit) : ''} onChange={(e) => {
                     const cleaned = e.target.value.replace(/\D/g, '');
-                    if (cleaned.length <= 18) {
+                    if (cleaned.length <= 12) {
                         setWalletCreditLimit(cleaned);
                     }
                 }} onKeyDown={(e) => {
@@ -672,6 +704,39 @@ export const WalletsView = () => {
       {/* ========================================================================= */}
       {/* MODAL: VIEW RECEIPT */}
       {/* ========================================================================= */}
+      {payCardOpen && selectedWallet && (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <form onSubmit={handleConfirmPayCard} className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-slate-800 dark:text-white">Thanh toán dư nợ: {selectedWallet.name}</h3>
+              <button type="button" onClick={() => setPayCardOpen(false)} className="p-1 text-slate-400 hover:text-slate-600 cursor-pointer" aria-label="Đóng">
+                <X className="w-4 h-4"/>
+              </button>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Dư nợ hiện tại: <strong className="text-rose-600">{formatCurrency(selectedWallet.balance)}</strong>. Khoản trả được ghi là chuyển khoản nội bộ (không tính vào chi tiêu).
+            </p>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Trả từ ví</label>
+              <select required value={payCardFromId} onChange={(e) => setPayCardFromId(e.target.value)} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-800 dark:text-white">
+                {assetWalletsForPay.length === 0 && <option value="">Chưa có ví tiền mặt / ngân hàng</option>}
+                {assetWalletsForPay.map((w) => (<option key={w.id} value={w.id}>{w.name} ({formatCurrency(w.balance)})</option>))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Số tiền trả (VNĐ)</label>
+              <input type="text" inputMode="numeric" required value={formatNumberWithDots(payCardAmount)} onChange={(e) => {
+                const cleaned = e.target.value.replace(/\D/g, '');
+                if (cleaned.length <= 12)
+                    setPayCardAmount(cleaned);
+            }} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-800 dark:text-white"/>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setPayCardOpen(false)} className="px-3.5 py-2 text-xs text-slate-600 dark:text-slate-300 rounded-xl cursor-pointer">Hủy</button>
+              <button type="submit" disabled={!payCardFromId} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold cursor-pointer">Xác nhận trả nợ</button>
+            </div>
+          </form>
+        </div>)}
+
       <ReceiptModal isOpen={Boolean(receiptModalImage)} imageUrl={receiptModalImage || undefined} onClose={() => setReceiptModalImage(null)} title={t('wallets.receiptModalTitle', 'Chứng từ / Hóa đơn giao dịch')}/>
     </div>);
 };

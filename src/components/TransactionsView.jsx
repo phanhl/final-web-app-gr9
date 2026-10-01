@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Search, Filter, ArrowDownLeft, ArrowUpRight, ArrowRightLeft, Calendar, FileSpreadsheet, Plus, Edit2, Trash2, FileCheck, X, Upload, BarChart3, AlertTriangle, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, } from 'lucide-react';
-import { formatCurrency, formatDate, exportToCSV, exportToExcel, formatNumberWithDots, formatMonthLabel, toLocalDateTimeInput, normalizeSaveDate, toLocalDateKey, getLocalDateString } from '@/lib/utils';
+import { formatCurrency, formatDate, exportToCSV, exportToExcel, formatNumberWithDots, formatMonthLabel, toLocalDateTimeInput, normalizeSaveDate, toLocalDateKey, getLocalDateString, compressImageFile } from '@/lib/utils';
 import { POPULAR_TAGS } from '@/lib/mock-data';
 import { ReceiptModal } from './ReceiptModal';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, } from 'recharts';
@@ -322,7 +322,7 @@ export const TransactionsView = () => {
             <span>{t('tx.exportCSV', 'Xuất CSV')}</span>
           </button>
 
-          <button onClick={() => exportToExcel(filteredTransactions, budgets, wallets, financialSummary)} className="flex items-center space-x-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors cursor-pointer" title="Excel">
+          <button onClick={() => exportToExcel(filteredTransactions, budgets, wallets, financialSummary, undefined, currentMonth)} className="flex items-center space-x-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors cursor-pointer" title="Excel">
             <FileSpreadsheet className="w-4 h-4"/>
             <span>{t('tx.exportExcel', 'Xuất Excel (.xlsx)')}</span>
           </button>
@@ -982,17 +982,17 @@ const EditTransactionModal = ({ isOpen, onClose, transaction, }) => {
             setTags(transaction.tags || []);
             setReceiptImage(transaction.receiptImage);
         }
-    }, [transaction, wallets]);
+        // Chỉ nạp lại form khi đổi giao dịch được sửa (theo id), không reset khi ví được đồng bộ nền
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [transaction?.id, isOpen]);
     if (!isOpen || !transaction)
         return null;
     const handleImageUpload = (e) => {
         const file = e.target.files?.[0];
         if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setReceiptImage(reader.result);
-            };
-            reader.readAsDataURL(file);
+            compressImageFile(file)
+                .then(setReceiptImage)
+                .catch((err) => alert(err.message || 'Không đọc được ảnh'));
         }
     };
     const handleTagToggle = (tag) => {
@@ -1095,7 +1095,7 @@ const EditTransactionModal = ({ isOpen, onClose, transaction, }) => {
             <div className="relative">
               <input type="text" inputMode="numeric" value={amount ? formatNumberWithDots(amount) : ''} onChange={(e) => {
             const cleaned = e.target.value.replace(/\D/g, '');
-            if (cleaned.length <= 18) {
+            if (cleaned.length <= 12) {
                 setAmount(cleaned ? Number(cleaned) : 0);
             }
         }} onKeyDown={(e) => {

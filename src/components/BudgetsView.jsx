@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Plus, AlertTriangle, ShieldAlert, CheckCircle2, Edit2, Trash2, ArrowUpRight, ArrowDownLeft, Calendar, Sparkles, DollarSign, X, Target, ReceiptText, Save, Check, Bell, BellOff, } from 'lucide-react';
-import { formatCurrency, calculateBudgetStatuses, formatNumberWithDots } from '@/lib/utils';
+import { formatCurrency, calculateBudgetStatuses, formatNumberWithDots, formatMonthLabel } from '@/lib/utils';
 import { IconHelper } from './IconHelper';
 import confetti from 'canvas-confetti';
 export const BudgetsView = () => {
@@ -107,7 +107,7 @@ export const BudgetsView = () => {
                 name: goalName,
                 targetAmount: targetNum,
                 currentAmount: 0,
-                deadline: goalDeadline || '2026-12-31',
+                deadline: goalDeadline || `${new Date().getFullYear()}-12-31`,
                 color: goalColor,
                 icon: 'PiggyBank',
             });
@@ -126,7 +126,8 @@ export const BudgetsView = () => {
             return;
         }
         if (isDepositMode) {
-            depositToGoal(selectedGoal.id, amountNum, depositWalletId, depositNote);
+            if (!depositToGoal(selectedGoal.id, amountNum, depositWalletId, depositNote))
+                return; // giao dịch bị từ chối (không đủ số dư...) -> giữ modal
             // If goal reaches 100%, trigger celebration!
             if (selectedGoal.currentAmount + amountNum >= selectedGoal.targetAmount) {
                 try {
@@ -142,7 +143,8 @@ export const BudgetsView = () => {
             }
         }
         else {
-            withdrawFromGoal(selectedGoal.id, amountNum, depositWalletId, depositNote);
+            if (!withdrawFromGoal(selectedGoal.id, amountNum, depositWalletId, depositNote))
+                return;
         }
         setDepositModalOpen(false);
         setSelectedGoal(null);
@@ -175,7 +177,7 @@ export const BudgetsView = () => {
                 setEditingGoal(null);
                 setGoalName('');
                 setGoalTarget('');
-                setGoalDeadline('2026-12-31');
+                setGoalDeadline(`${new Date().getFullYear()}-12-31`);
                 setGoalModalOpen(true);
             }} className="flex items-center space-x-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors">
               <Plus className="w-4 h-4"/>
@@ -216,7 +218,7 @@ export const BudgetsView = () => {
               <p className="text-2xl font-black text-slate-800 dark:text-white mt-1">
                 {formatCurrency(totalBudgetLimit)}
               </p>
-              <span className="text-[11px] text-slate-400">{t('budget.forMonth', 'Áp dụng cho tháng')} 09/2026</span>
+              <span className="text-[11px] text-slate-400">{t('budget.forMonth', 'Áp dụng cho tháng')} {formatMonthLabel(currentMonth, language).replace(/^Tháng /, '')}</span>
             </div>
 
             <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -268,7 +270,7 @@ export const BudgetsView = () => {
                               {t('notif.activeAlert', 'Đang xem cảnh báo')}
                             </span>)}
                         </div>
-                        <span className="text-[11px] text-slate-400">{t('budget.monthLabel', 'Tháng')} 09/2026</span>
+                        <span className="text-[11px] text-slate-400">{formatMonthLabel(currentMonth, language)}</span>
                       </div>
                     </div>
 
@@ -434,7 +436,7 @@ export const BudgetsView = () => {
                 <div className="relative">
                   <input type="text" inputMode="numeric" value={monthlyIncome ? formatNumberWithDots(monthlyIncome) : ''} onChange={(e) => {
                 const cleaned = e.target.value.replace(/\D/g, '');
-                if (cleaned.length <= 18) {
+                if (cleaned.length <= 12) {
                     updatePlanner({ ...planner, monthlyIncome: cleaned ? Number(cleaned) : 0 });
                 }
             }} onKeyDown={(e) => {
@@ -797,7 +799,7 @@ export const BudgetsView = () => {
                 </label>
                 <input type="text" inputMode="numeric" required value={formatNumberWithDots(budgetAmount)} onChange={(e) => {
                 const cleaned = e.target.value.replace(/\D/g, '');
-                if (cleaned.length <= 18) {
+                if (cleaned.length <= 12) {
                     setBudgetAmount(cleaned);
                 }
             }} onKeyDown={(e) => {
@@ -851,7 +853,7 @@ export const BudgetsView = () => {
                 </label>
                 <input type="text" inputMode="numeric" required value={formatNumberWithDots(goalTarget)} onChange={(e) => {
                 const cleaned = e.target.value.replace(/\D/g, '');
-                if (cleaned.length <= 18) {
+                if (cleaned.length <= 12) {
                     setGoalTarget(cleaned);
                 }
             }} onKeyDown={(e) => {
@@ -908,7 +910,7 @@ export const BudgetsView = () => {
                 </label>
                 <input type="text" inputMode="numeric" required autoFocus value={formatNumberWithDots(depositAmount)} onChange={(e) => {
                 const cleaned = e.target.value.replace(/\D/g, '');
-                if (cleaned.length <= 18) {
+                if (cleaned.length <= 12) {
                     setDepositAmount(cleaned);
                 }
             }} onKeyDown={(e) => {

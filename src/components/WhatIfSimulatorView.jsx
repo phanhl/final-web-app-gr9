@@ -1350,7 +1350,7 @@ export const WhatIfSimulatorView = () => {
                     value={formatNumberWithDots(expenseAmount)}
                     onChange={(e) => {
                       const cleaned = e.target.value.replace(/\D/g, '');
-                      if (cleaned.length <= 18) {
+                      if (cleaned.length <= 12) {
                         setExpenseAmount(cleaned);
                       }
                     }}
@@ -1488,7 +1488,7 @@ export const WhatIfSimulatorView = () => {
                 </label>
                 <input type="text" inputMode="numeric" required value={formatNumberWithDots(newLoanDebt)} onChange={(e) => {
                 const cleaned = e.target.value.replace(/\D/g, '');
-                if (cleaned.length <= 18) {
+                if (cleaned.length <= 12) {
                     setNewLoanDebt(cleaned);
                 }
             }} onKeyDown={(e) => {
@@ -1504,7 +1504,7 @@ export const WhatIfSimulatorView = () => {
                 </label>
                 <input type="text" inputMode="numeric" required value={formatNumberWithDots(newLoanPayment)} onChange={(e) => {
                 const cleaned = e.target.value.replace(/\D/g, '');
-                if (cleaned.length <= 18) {
+                if (cleaned.length <= 12) {
                     setNewLoanPayment(cleaned);
                 }
             }} onKeyDown={(e) => {

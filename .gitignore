@@ -34,3 +34,12 @@ Thumbs.db
 # Misc
 *.pem
 .vercel
+
+# Du lieu tai chinh ca nhan (khong commit)
+data/database.json
+data/database.json.*
+
+# PID cua start.sh
+.server.pid
+.ngrok.pid
+.cloudflared.pid
