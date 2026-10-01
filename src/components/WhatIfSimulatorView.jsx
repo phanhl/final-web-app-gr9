@@ -8,12 +8,14 @@ import * as XLSX from 'xlsx';
 import { IconHelper, getIconLabel } from './IconHelper';
 import { DEFAULT_SPENDING_ITEMS } from '@/lib/mock-data';
 export const WhatIfSimulatorView = () => {
-    const { transactions, financialSummary, categories, planner, simulatorConfig, updateSimulatorConfig, t, tCategory, tWalletType, language, } = useApp();
+    const { transactions, financialSummary, categories, planner, simulatorConfig, updateSimulatorConfig, t, tCategory, tWalletType, language, showConfirm, } = useApp();
     // Khung thời gian mô phỏng
     const projectionMonths = simulatorConfig.projectionMonths;
     const setProjectionMonths = (val) => updateSimulatorConfig({ projectionMonths: val });
     // 1. CÁC KHOẢN TIÊU DÙNG CHI TIÊU CÁ NHÂN & LỰA CHỌN CẮT GIẢM
-    const spendingCategories = simulatorConfig.spendingCategories || DEFAULT_SPENDING_ITEMS;
+    const spendingCategories = Array.isArray(simulatorConfig?.spendingCategories)
+        ? simulatorConfig.spendingCategories
+        : [];
     const setSpendingCategories = (updater) => {
         if (typeof updater === 'function') {
             updateSimulatorConfig({ spendingCategories: updater(spendingCategories) });
@@ -34,19 +36,19 @@ export const WhatIfSimulatorView = () => {
     const [expenseCutPercent, setExpenseCutPercent] = useState('20');
     const [expenseApplyCut, setExpenseApplyCut] = useState(false);
     // 2. KÊNH ĐẦU TƯ / GỬI TIẾT KIỆM
-    const savingsAmount = simulatorConfig.savingsAmount;
+    const savingsAmount = simulatorConfig?.savingsAmount ?? 0;
     const setSavingsAmount = (val) => updateSimulatorConfig({ savingsAmount: val });
-    const savingsInterestRate = simulatorConfig.savingsInterestRate;
+    const savingsInterestRate = simulatorConfig?.savingsInterestRate ?? 5.5;
     const setSavingsInterestRate = (val) => updateSimulatorConfig({ savingsInterestRate: val });
-    const investmentAmount = simulatorConfig.investmentAmount;
+    const investmentAmount = simulatorConfig?.investmentAmount ?? 0;
     const setInvestmentAmount = (val) => updateSimulatorConfig({ investmentAmount: val });
-    const investmentRateScenario = simulatorConfig.investmentRateScenario;
+    const investmentRateScenario = simulatorConfig?.investmentRateScenario ?? 8.5;
     const setInvestmentRateScenario = (val) => updateSimulatorConfig({ investmentRateScenario: val });
-    const [customInvestRate, setCustomInvestRate] = useState(simulatorConfig.customInvestRate || '8.5');
+    const [customInvestRate, setCustomInvestRate] = useState(simulatorConfig?.customInvestRate || '8.5');
     // 3. KHOẢN VAY NGOÀI & NGHĨA VỤ TRẢ NỢ (External Loans & Debts)
-    const hasExternalLoan = simulatorConfig.hasExternalLoan;
+    const hasExternalLoan = Boolean(simulatorConfig?.hasExternalLoan);
     const setHasExternalLoan = (val) => updateSimulatorConfig({ hasExternalLoan: val });
-    const externalLoans = simulatorConfig.externalLoans;
+    const externalLoans = Array.isArray(simulatorConfig?.externalLoans) ? simulatorConfig.externalLoans : [];
     const setExternalLoans = (updater) => {
         if (typeof updater === 'function') {
             updateSimulatorConfig({ externalLoans: updater(externalLoans) });
@@ -69,9 +71,9 @@ export const WhatIfSimulatorView = () => {
         return spendingCategories.reduce((sum, item) => sum + item.monthlyExpense, 0);
     }, [spendingCategories]);
     // Thu nhập và chi tiêu cơ bản
-    const startingNetWorth = financialSummary.totalAssets || 200000000;
-    const monthlyIncome = planner.monthlyIncome || 32000000;
-    const baseMonthlyExpense = totalPersonalExpense > 0 ? totalPersonalExpense : (financialSummary.monthlyExpense || 14500000);
+    const startingNetWorth = financialSummary?.totalAssets ?? 0;
+    const monthlyIncome = planner?.monthlyIncome ?? 0;
+    const baseMonthlyExpense = totalPersonalExpense > 0 ? totalPersonalExpense : (financialSummary?.monthlyExpense ?? 0);
     const baseMonthlySavings = Math.max(0, monthlyIncome - baseMonthlyExpense);
     // Tổng số tiền tiết kiệm được từ các khoản cắt giảm chi tiêu đã chọn
     const totalCutSavings = useMemo(() => {
@@ -325,21 +327,25 @@ export const WhatIfSimulatorView = () => {
 
         if (existingDuplicate) {
             const confirmMsg = `${t('whatif.duplicatePrompt', 'Khoản chi')} "${tCategory(existingDuplicate.categoryName)}" ${t('whatif.duplicatePromptDesc', 'đã có sẵn trong danh sách! Bạn có muốn cộng dồn số tiền')} +${formatCurrency(amt, language)} ${t('whatif.duplicatePromptMerge', 'vào khoản chi hiện có không?')}`;
-            if (window.confirm(confirmMsg)) {
-                setSpendingCategories(spendingCategories.map((item) => {
-                    if (item.id !== existingDuplicate.id) return item;
-                    return {
-                        ...item,
-                        monthlyExpense: (item.monthlyExpense || 0) + amt,
-                        isSelected: expenseApplyCut ? true : item.isSelected,
-                        cutPercent: expenseApplyCut ? cutPct : item.cutPercent,
-                    };
-                }));
-                setExpenseModalOpen(false);
-                return;
-            } else {
-                return; // Giữ modal để người dùng đổi tên
-            }
+            showConfirm({
+                title: t('whatif.duplicateTitle', 'Trùng lặp khoản chi'),
+                message: confirmMsg,
+                confirmText: t('common.confirm', 'Cộng dồn'),
+                variant: 'info',
+                onConfirm: () => {
+                    setSpendingCategories(spendingCategories.map((item) => {
+                        if (item.id !== existingDuplicate.id) return item;
+                        return {
+                            ...item,
+                            monthlyExpense: (item.monthlyExpense || 0) + amt,
+                            isSelected: expenseApplyCut ? true : item.isSelected,
+                            cutPercent: expenseApplyCut ? cutPct : item.cutPercent,
+                        };
+                    }));
+                    setExpenseModalOpen(false);
+                },
+            });
+            return;
         }
 
         if (editingExpenseId) {
@@ -377,16 +383,28 @@ export const WhatIfSimulatorView = () => {
     // Xóa khoản chi tiêu
     const handleDeleteExpenseItem = (id, name) => {
         const msg = `${t('whatif.confirmDeleteMsg', 'Bạn có chắc chắn muốn xóa khoản chi')} "${tCategory(name)}" ${t('whatif.confirmDeleteSuffix', 'khỏi mô phỏng What-If không?')}`;
-        if (window.confirm(msg)) {
-            setSpendingCategories(spendingCategories.filter((c) => c.id !== id));
-        }
+        showConfirm({
+            title: t('whatif.deleteTitle', 'Xác nhận xóa'),
+            message: msg,
+            confirmText: t('common.delete', 'Xóa'),
+            variant: 'danger',
+            onConfirm: () => {
+                setSpendingCategories(spendingCategories.filter((c) => c.id !== id));
+            },
+        });
     };
 
     // Khôi phục về danh mục mặc định ban đầu
     const handleResetSpendingDefaults = () => {
-        if (window.confirm(t('whatif.confirmResetSpending', 'Khôi phục danh sách các khoản chi tiêu mặc định ban đầu?'))) {
-            setSpendingCategories(DEFAULT_SPENDING_ITEMS);
-        }
+        showConfirm({
+            title: t('whatif.resetTitle', 'Khôi phục mặc định'),
+            message: t('whatif.confirmResetSpending', 'Khôi phục danh sách các khoản chi tiêu mặc định ban đầu?'),
+            confirmText: t('common.confirm', 'Khôi phục'),
+            variant: 'warning',
+            onConfirm: () => {
+                setSpendingCategories(DEFAULT_SPENDING_ITEMS);
+            },
+        });
     };
     // Thêm khoản nợ vay mới
     const handleAddLoan = (e) => {
@@ -514,9 +532,9 @@ export const WhatIfSimulatorView = () => {
       </div>
 
       {/* 3. MULTI-ITEM CONTROLS */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* COLUMNS 1 & 2 */}
-        <div className="lg:col-span-2 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* COLUMN 1: SPENDING SURVEY & CUT SELECTIONS */}
+        <div className="space-y-6 min-w-0">
           {/* ========================================================================= */}
           {/* BƯỚC 1: MỨC TIÊU DÙNG CHI TIÊU CÁ NHÂN HIỆN TẠI (HIỆN MỨC TIÊU DÙNG TRƯỚC) */}
           {/* ========================================================================= */}
@@ -526,8 +544,7 @@ export const WhatIfSimulatorView = () => {
                 <div className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 text-[11px] font-bold uppercase tracking-wider mb-1">
                   <span>{t('whatif.step1Title', 'Bước 1 • Khảo sát mức tiêu dùng')}</span>
                 </div>
-                <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center space-x-2">
-                  <Wallet className="w-5 h-5 text-blue-600"/>
+                <h3 className="text-base font-bold text-slate-800 dark:text-white">
                   <span>{t('sim.spendingOptTitle', '1. Mức Tiêu Dùng Chi Tiêu Cá Nhân Hiện Tại')} ({spendingCategories.length})</span>
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
@@ -621,9 +638,9 @@ export const WhatIfSimulatorView = () => {
               </div>
             ) : (
               /* Grid */
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {spendingCategories.map((item) => (
-                  <div key={item.id} className={`p-3.5 rounded-2xl transition-all border ${item.isSelected
+                  <div key={item.id} className={`p-3.5 rounded-2xl transition-all border min-w-0 overflow-hidden ${item.isSelected
                     ? 'border-rose-500 bg-rose-50/40 dark:bg-rose-950/20 shadow-sm ring-1 ring-rose-500/30'
                     : 'border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 hover:border-slate-300'}`}>
                     {/* Top: Icon & Category name + Edit/Delete buttons */}
@@ -636,7 +653,7 @@ export const WhatIfSimulatorView = () => {
                           <h4 className="text-xs font-bold text-slate-800 dark:text-white truncate" title={tCategory(item.categoryName)}>
                             {tCategory(item.categoryName)}
                           </h4>
-                          <span className="text-[10px] text-slate-400 block">
+                          <span className="text-[10px] text-slate-400 block truncate">
                             {t('whatif.personalExpense', 'Chi tiêu cá nhân')}
                           </span>
                         </div>
@@ -679,9 +696,9 @@ export const WhatIfSimulatorView = () => {
                     )}
 
                     {/* Monthly expense input */}
-                    <div className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between text-xs">
-                      <span className="text-[11px] text-slate-500 font-medium">{t('whatif.spendingLevel', 'Mức tiêu dùng:')}</span>
-                      <div className="flex items-center space-x-1">
+                    <div className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between text-xs gap-1">
+                      <span className="text-[11px] text-slate-500 font-medium truncate">{t('whatif.spendingLevel', 'Mức tiêu dùng:')}</span>
+                      <div className="flex items-center space-x-1 shrink-0">
                         <input
                           type="text"
                           inputMode="numeric"
@@ -696,7 +713,7 @@ export const WhatIfSimulatorView = () => {
                               e.preventDefault();
                             }
                           }}
-                          className="w-28 px-2 py-0.5 text-right font-extrabold text-slate-800 dark:text-white bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs focus:ring-1 focus:ring-blue-500"
+                          className="w-24 sm:w-28 px-2 py-0.5 text-right font-extrabold text-slate-800 dark:text-white bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs focus:ring-1 focus:ring-blue-500"
                         />
                         <span className="text-[11px] font-semibold text-slate-400">{t('whatif.currencyPerMonth', '₫/T')}</span>
                       </div>
@@ -708,19 +725,19 @@ export const WhatIfSimulatorView = () => {
                       onClick={() => {
                         setSpendingCategories(spendingCategories.map((c) => c.id === item.id ? { ...c, isSelected: !c.isSelected } : c));
                       }}
-                      className={`w-full mt-2.5 py-1.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition-all ${item.isSelected
+                      className={`w-full mt-2.5 py-1.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition-all cursor-pointer ${item.isSelected
                         ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-sm'
                         : 'border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-rose-300 hover:bg-rose-50/50 dark:hover:bg-rose-950/30 text-slate-700 dark:text-slate-300 hover:text-rose-600'}`}
                     >
                       {item.isSelected ? (
                         <>
-                          <CheckCircle2 className="w-3.5 h-3.5 text-white"/>
-                          <span>{t('whatif.selectedCutClickCancel', 'Đang chọn cắt giảm (Bấm để hủy)')}</span>
+                          <CheckCircle2 className="w-3.5 h-3.5 text-white shrink-0"/>
+                          <span className="truncate">{t('whatif.selectedCutClickCancel', 'Đang cắt giảm (Hủy)')}</span>
                         </>
                       ) : (
                         <>
-                          <Plus className="w-3.5 h-3.5 text-rose-500"/>
-                          <span>{t('whatif.selectToCut', 'Chọn để cắt giảm')}</span>
+                          <Plus className="w-3.5 h-3.5 text-rose-500 shrink-0"/>
+                          <span className="truncate">{t('whatif.selectToCut', 'Chọn để cắt giảm')}</span>
                         </>
                       )}
                     </button>
@@ -739,8 +756,7 @@ export const WhatIfSimulatorView = () => {
                 <div className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 text-[11px] font-bold uppercase tracking-wider mb-1">
                   <span>{t('whatif.step2Title', 'Bước 2 • Tùy chỉnh cắt giảm')}</span>
                 </div>
-                <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center space-x-2">
-                  <Sliders className="w-5 h-5 text-rose-500"/>
+                <h3 className="text-base font-bold text-slate-800 dark:text-white">
                   <span>{t('whatif.selectedCutsHeading', '2. Các Khoản Đã Chọn Để Cắt Giảm')} ({selectedCuts.length})</span>
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
@@ -846,12 +862,110 @@ export const WhatIfSimulatorView = () => {
                 </div>
               </div>)}
           </div>
+        </div>
+
+        {/* COLUMN 2: TIMEFRAME & CHARTS + INVEST + LOANS */}
+        <div className="space-y-6 min-w-0">
+          {/* TIMEFRAME & CHARTS */}
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="text-sm font-bold text-slate-800 dark:text-white">
+                {t('whatif.forecastTimeframe', 'Khung Thời Gian Dự Phóng')}
+              </h3>
+              <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">
+                {projectionMonths} {t('whatif.monthsCount', 'Tháng')}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-4 gap-2">
+              {[6, 12, 24, 36].map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setProjectionMonths(m)}
+                  className={`py-2 text-xs font-extrabold rounded-xl border transition-all ${
+                    projectionMonths === m
+                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                      : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                  }`}
+                >
+                  {m}T
+                </button>
+              ))}
+            </div>
+
+            {/* Quick Chart */}
+            <div className="h-56 w-full pt-2">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={detailedMonthlyProjections}
+                  margin={{ top: 10, right: 5, left: -10, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient id="whatIfGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4} />
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.05} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="label" tick={{ fontSize: 10 }} />
+                  <YAxis
+                    tickFormatter={(val) => `${Math.round(val / 1000000)}Tr`}
+                    tick={{ fontSize: 10 }}
+                    width={40}
+                  />
+                  <Tooltip
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    formatter={(val) => formatCurrency(Number(val))}
+                    contentStyle={{
+                      backgroundColor: '#0f172a',
+                      borderColor: '#334155',
+                      borderRadius: '4px',
+                      color: '#fff',
+                      fontSize: '11px',
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="baselineTotal"
+                    name={t('whatif.baselineScenario', 'Kịch bản gốc')}
+                    stroke="#94a3b8"
+                    strokeWidth={1.5}
+                    strokeDasharray="3 3"
+                    fill="none"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="whatIfTotal"
+                    name={t('whatif.whatifActual', 'What-If Thực Tế')}
+                    stroke="#6366f1"
+                    strokeWidth={2.5}
+                    fillOpacity={1}
+                    fill="url(#whatIfGradient)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Insight Note */}
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+              <strong>{t('whatif.conclusion', 'Kết luận:')}</strong> {t('whatif.afterMonths', 'Sau')} {projectionMonths} {t('whatif.monthsYouCut', 'tháng, bạn cắt giảm được')}{' '}
+              <strong>{formatCurrency(totalCutSavings * projectionMonths)}</strong> {t('whatif.expensePaid', 'chi tiêu, trả được')}{' '}
+              <strong>{formatCurrency(finalRow.debtPaid * projectionMonths)}</strong> {t('whatif.debtProfitLoss', 'tiền nợ. Lợi nhuận/lỗ đầu tư là')}{' '}
+              <strong className={investmentRateScenario >= 0 ? 'text-emerald-600' : 'text-rose-600'}>
+                {formatCurrency(finalRow.investReturn * projectionMonths)}
+              </strong>
+              {t('whatif.totalSurplusDelta', '. Tổng chênh lệch tài sản dôi ra là')}{' '}
+              <span className="font-extrabold text-indigo-600 dark:text-indigo-400">
+                {formatCurrency(finalDelta)}
+              </span>
+              !
+            </div>
+          </div>
 
           {/* SECTION B: INVEST & RISK */}
           <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
             <div className="pb-3 border-b border-slate-100 dark:border-slate-800">
-              <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center space-x-2">
-                <TrendingUp className="w-5 h-5 text-emerald-500"/>
+              <h3 className="text-base font-bold text-slate-800 dark:text-white">
                 <span>{t('whatif.section3Title', '3. Kênh Đầu Tư / Gửi Tiết Kiệm & Tính Toán Rủi Ro Thua Lỗ')}</span>
               </h3>
               <p className="text-xs text-slate-400 mt-0.5">
@@ -953,8 +1067,7 @@ export const WhatIfSimulatorView = () => {
               <div className="flex items-center space-x-3">
                 <input type="checkbox" id="toggleLoans" checked={hasExternalLoan} onChange={(e) => setHasExternalLoan(e.target.checked)} className="w-4 h-4 accent-rose-600 rounded cursor-pointer"/>
                 <div>
-                  <label htmlFor="toggleLoans" className="text-base font-bold text-slate-800 dark:text-white cursor-pointer flex items-center space-x-2">
-                    <CreditCard className="w-5 h-5 text-amber-500"/>
+                  <label htmlFor="toggleLoans" className="text-base font-bold text-slate-800 dark:text-white cursor-pointer">
                     <span>{t('whatif.section4Title', '4. Tính Thêm Các Khoản Vay Ngoài & Nghĩa Vụ Trả Nợ')}</span>
                   </label>
                   <p className="text-xs text-slate-400 mt-0.5">
@@ -1008,78 +1121,13 @@ export const WhatIfSimulatorView = () => {
               </p>)}
           </div>
         </div>
-
-        {/* COLUMN 3: TIMEFRAME & CHARTS */}
-        <div className="space-y-6">
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <h3 className="text-sm font-bold text-slate-800 dark:text-white">
-                {t('whatif.forecastTimeframe', 'Khung Thời Gian Dự Phóng')}
-              </h3>
-              <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">
-                {projectionMonths} {t('whatif.monthsCount', 'Tháng')}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-4 gap-2">
-              {[6, 12, 24, 36].map((m) => (<button key={m} type="button" onClick={() => setProjectionMonths(m)} className={`py-2 text-xs font-extrabold rounded-xl border transition-all ${projectionMonths === m
-                ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'}`}>
-                  {m}T
-                </button>))}
-            </div>
-
-            {/* Quick Chart */}
-            <div className="h-56 w-full pt-2">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={detailedMonthlyProjections} margin={{ top: 10, right: 5, left: -10, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="whatIfGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4}/>
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.05}/>
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="label" tick={{ fontSize: 10 }}/>
-                  <YAxis tickFormatter={(val) => `${Math.round(val / 1000000)}Tr`} tick={{ fontSize: 10 }} width={40}/>
-                  <Tooltip 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    formatter={(val) => formatCurrency(Number(val))} contentStyle={{
-            backgroundColor: '#0f172a',
-            borderColor: '#334155',
-            borderRadius: '4px',
-            color: '#fff',
-            fontSize: '11px',
-        }}/>
-                  <Area type="monotone" dataKey="baselineTotal" name={t('whatif.baselineScenario', 'Kịch bản gốc')} stroke="#94a3b8" strokeWidth={1.5} strokeDasharray="3 3" fill="none"/>
-                  <Area type="monotone" dataKey="whatIfTotal" name={t('whatif.whatifActual', 'What-If Thực Tế')} stroke="#6366f1" strokeWidth={2.5} fillOpacity={1} fill="url(#whatIfGradient)"/>
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Insight Note */}
-            <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
-              📌 <strong>{t('whatif.conclusion', 'Kết luận:')}</strong> {t('whatif.afterMonths', 'Sau')} {projectionMonths} {t('whatif.monthsYouCut', 'tháng, bạn cắt giảm được')}{' '}
-              <strong>{formatCurrency(totalCutSavings * projectionMonths)}</strong> {t('whatif.expensePaid', 'chi tiêu, trả được')}{' '}
-              <strong>{formatCurrency(finalRow.debtPaid * projectionMonths)}</strong> {t('whatif.debtProfitLoss', 'tiền nợ. Lợi nhuận/lỗ đầu tư là')}{' '}
-              <strong className={investmentRateScenario >= 0 ? 'text-emerald-600' : 'text-rose-600'}>
-                {formatCurrency(finalRow.investReturn * projectionMonths)}
-              </strong>
-              {t('whatif.totalSurplusDelta', '. Tổng chênh lệch tài sản dôi ra là')}{' '}
-              <span className="font-extrabold text-indigo-600 dark:text-indigo-400">
-                {formatCurrency(finalDelta)}
-              </span>
-              !
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* 4. BẢNG PHÂN TÍCH CỤ THỂ CHI TIẾT TỪNG THÁNG (Detailed Month-by-Month Table) */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center space-x-2">
-              <FileSpreadsheet className="w-5 h-5 text-emerald-600"/>
+            <h3 className="text-base font-bold text-slate-800 dark:text-white">
               <span>{t('whatif.monthlyTableTitle', 'Bảng Phân Tích Dòng Tiền & Tài Sản Chi Tiết Từng Tháng')}</span>
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">

@@ -1,16 +1,15 @@
 'use client';
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
-import { Upload, LayoutDashboard, ReceiptText, PieChart, CalendarCheck, WalletCards, BarChart3, Settings, Plus, Bell, AlertTriangle, Flame, User, CheckCircle2, ChevronRight, Shield, Sparkles, Sun, Moon, Edit2, Check, Download, X, Mail, Phone, Calendar, Crown, Search, CreditCard, RefreshCw, Eye, EyeOff, } from 'lucide-react';
+import { Upload, LayoutDashboard, ReceiptText, PieChart, CalendarCheck, WalletCards, BarChart3, Settings, Plus, Bell, AlertTriangle, Flame, User, CheckCircle2, ChevronRight, Shield, Sparkles, Sun, Moon, Edit2, Check, Download, X, Mail, Phone, Calendar, Crown, Search, CreditCard, RefreshCw, Eye, EyeOff, LogOut, PanelLeft, PanelLeftClose, } from 'lucide-react';
 import { formatCurrency, calculateBudgetStatuses } from '@/lib/utils';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 const navItems = [
     { id: 'dashboard', key: 'nav.dashboard', defaultLabel: 'Dashboard', icon: LayoutDashboard },
-    { id: 'transactions', key: 'nav.transactions', defaultLabel: 'Transactions', icon: ReceiptText },
+    { id: 'transactions', key: 'nav.transactionsAndReports', defaultLabel: 'Sổ giao dịch & Báo cáo', icon: ReceiptText },
     { id: 'budgets', key: 'nav.budgets', defaultLabel: 'Budgets', icon: PieChart },
     { id: 'whatif', key: 'nav.whatif', defaultLabel: 'What-If Simulation', icon: Sparkles },
     { id: 'bills', key: 'nav.bills', defaultLabel: 'Recurring', icon: CalendarCheck },
-    { id: 'reports', key: 'nav.reports', defaultLabel: 'Reports', icon: BarChart3 },
     { id: 'wallets', key: 'nav.wallets', defaultLabel: 'Wallets & Accounts', icon: WalletCards },
     { id: 'settings', key: 'nav.settings', defaultLabel: 'Settings', icon: Settings },
 ];
@@ -18,11 +17,11 @@ const bottomNavItems = [
     { id: 'dashboard', key: 'nav.dashboard', defaultLabel: 'Dashboard', icon: LayoutDashboard },
     { id: 'transactions', key: 'nav.shortTransactions', defaultLabel: 'Tx', icon: ReceiptText },
     { id: 'budgets', key: 'nav.budgets', defaultLabel: 'Budgets', icon: PieChart },
-    { id: 'reports', key: 'nav.reports', defaultLabel: 'Reports', icon: BarChart3 },
+    { id: 'wallets', key: 'nav.wallets', defaultLabel: 'Wallets', icon: WalletCards },
     { id: 'settings', key: 'nav.settings', defaultLabel: 'Settings', icon: Settings },
 ];
 export const Navigation = () => {
-    const { activeTab, setActiveTab, openQuickAdd, budgets, transactions, bills, financialSummary, currentMonth, serverSyncStatus, syncDataFromServer, theme, toggleTheme, isDarkMode, userProfile, updateUserProfile, wallets, goals, exportDatabaseJSON, importDatabaseJSON, navigateToCategoryTransactions, navigateToBudget, navigateToBill, language, t, tCategory, tWalletType, tBillName, dismissedAlertIds, dismissAlert, restoreAlert, dismissAllAlerts, restoreAllAlerts, isAlertDismissed, } = useApp();
+    const { activeTab, setActiveTab, openQuickAdd, budgets, transactions, bills, financialSummary, currentMonth, serverSyncStatus, syncDataFromServer, theme, toggleTheme, isDarkMode, userProfile, updateUserProfile, wallets, goals, exportDatabaseJSON, importDatabaseJSON, navigateToCategoryTransactions, navigateToBudget, navigateToBill, language, t, tCategory, tWalletType, tBillName, dismissedAlertIds, dismissAlert, restoreAlert, dismissAllAlerts, restoreAllAlerts, isAlertDismissed, currentUser, logoutUser, isSidebarOpen, toggleSidebar, showConfirm, } = useApp();
     const [showNotificationModal, setShowNotificationModal] = useState(false);
     const [showDismissedSection, setShowDismissedSection] = useState(false);
     const [showProfileModal, setShowProfileModal] = useState(false);
@@ -58,8 +57,17 @@ export const Navigation = () => {
       {/* Mobile Top Header */}
       <header className="lg:hidden sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-100 dark:border-slate-800">
         <div className="flex items-center justify-between h-14 px-4">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-emerald-600 flex items-center justify-center text-white shadow-sm">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer mr-0.5"
+              aria-label={t('nav.openSidebar', 'Mở danh mục tính năng')}
+              title={t('nav.openSidebar', 'Mở danh mục tính năng')}
+            >
+              <PanelLeft className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            </button>
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-emerald-600 flex items-center justify-center text-white shadow-sm">
               <Flame className="w-4 h-4 fill-current"/>
             </div>
             <div>
@@ -112,52 +120,57 @@ export const Navigation = () => {
 
       {/* Desktop Top Header */}
       <header className="hidden lg:block sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-100 dark:border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-emerald-600 flex items-center justify-center text-white shadow-sm">
-              <Flame className="w-5 h-5 fill-current"/>
-            </div>
-            <div>
+            {/* Sidebar Toggle Button [ | ] */}
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              className={`p-2 rounded-xl transition-all cursor-pointer border ${
+                isSidebarOpen
+                  ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border-slate-200/80 dark:border-slate-700/80'
+              }`}
+              title={isSidebarOpen ? t('nav.closeSidebar', 'Thu gọn danh mục') : t('nav.openSidebar', 'Mở danh mục tính năng')}
+              aria-label={isSidebarOpen ? t('nav.closeSidebar', 'Thu gọn danh mục') : t('nav.openSidebar', 'Mở danh mục tính năng')}
+            >
+              <PanelLeft className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            </button>
+
+            {/* Brand Logo & Name */}
+            <div className="flex items-center space-x-2.5">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-emerald-600 flex items-center justify-center text-white shadow-sm">
+                <Flame className="w-4 h-4 fill-current"/>
+              </div>
               <div className="flex items-center space-x-2">
-                <span className="font-extrabold text-lg tracking-tight text-slate-900 dark:text-white">
+                <span className="font-extrabold text-base tracking-tight text-slate-900 dark:text-white">
                   FinTrack Pro
                 </span>
-                <span className="hidden sm:inline-block px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 rounded border border-emerald-200 dark:border-emerald-800">
+                <span className="hidden sm:inline-block px-1.5 py-0.5 text-[9px] font-bold tracking-wider uppercase bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 rounded border border-emerald-200 dark:border-emerald-800">
                   {t('app.tagline', 'Quản lý chi tiêu')}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">
-                {t('app.subtitle', 'Hệ thống tài chính cá nhân & Ngân sách thông minh')}
-              </p>
             </div>
-          </div>
 
-          <div className="hidden md:flex items-center space-x-4 bg-slate-50 dark:bg-slate-800/80 px-4 py-1.5 rounded-lg border border-slate-100 dark:border-slate-700/80 text-xs">
-            <div>
-              <span className="text-slate-500 dark:text-slate-400 mr-1.5">
-                {t('app.availableBalance', 'Số dư khả dụng:')}
-              </span>
-              <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                {formatCurrency(financialSummary.availableBalance)}
-              </span>
-            </div>
-            <div className="w-px h-3.5 bg-slate-300 dark:bg-slate-700"/>
-            <div>
-              <span className="text-slate-500 dark:text-slate-400 mr-1.5">
-                {t('app.totalAssets', 'Tài sản ròng:')}
-              </span>
-              <span className="font-bold text-slate-800 dark:text-slate-200">
-                {formatCurrency(financialSummary.totalAssets)}
-              </span>
+            {/* Quick Dashboard Tab / Symbol */}
+            <div className="hidden sm:flex items-center pl-3 border-l border-slate-200 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setActiveTab('dashboard')}
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  activeTab === 'dashboard'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
+                }`}
+                title={t('nav.dashboard', 'Tổng quan')}
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                <span>{t('nav.dashboard', 'Tổng quan')}</span>
+              </button>
             </div>
           </div>
 
           <div className="flex items-center space-x-2.5">
-            <button onClick={() => openQuickAdd('EXPENSE')} className="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-sm font-semibold shadow-md shadow-emerald-500/20 transition-all active:scale-95 cursor-pointer">
-              <Plus className="w-4 h-4"/>
-              <span>{t('app.quickAdd', 'Nhập nhanh')}</span>
-            </button>
-
             {/* Language Switcher on Desktop Header */}
             <LanguageSwitcher />
 
@@ -191,7 +204,7 @@ export const Navigation = () => {
               </button>
             </div>
 
-            <div className="relative">
+            <div className="flex items-center space-x-1.5 pl-2 border-l border-slate-200 dark:border-slate-800">
               <button onClick={() => {
             setEditName(userProfile.name);
             setEditEmail(userProfile.email);
@@ -199,34 +212,36 @@ export const Navigation = () => {
             setEditAvatarColor(userProfile.avatarColor || '#10b981');
             setIsEditingProfile(false);
             setShowProfileModal(true);
-        }} className="flex items-center space-x-2 p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer">
+        }} className="flex items-center space-x-2 p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer" title={language === 'en' ? 'Account Profile' : 'Hồ sơ tài khoản'}>
                 <div className="w-8 h-8 rounded-full text-white flex items-center justify-center font-bold text-xs shadow-sm shrink-0" style={{ backgroundColor: userProfile.avatarColor || '#10b981' }}>
-                  {userProfile.name ? userProfile.name.charAt(0).toUpperCase() : 'A'}
+                  {currentUser?.username ? currentUser.username.charAt(0).toUpperCase() : (userProfile.name ? userProfile.name.charAt(0).toUpperCase() : 'A')}
                 </div>
-                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 hidden lg:inline">
-                  {userProfile.name}
-                </span>
+                <div className="text-left hidden lg:block leading-tight">
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block truncate max-w-[100px]">
+                    {currentUser?.username || userProfile.name}
+                  </span>
+                  <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-md inline-block uppercase tracking-wider ${
+                    currentUser?.role === 'host'
+                      ? 'bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 border border-amber-300/50 dark:border-amber-800/50'
+                      : 'bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border border-blue-300/50 dark:border-blue-800/50'
+                  }`}>
+                    {currentUser?.role === 'host' ? 'HOST' : (language === 'en' ? 'GUEST' : 'KHÁCH')}
+                  </span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={logoutUser}
+                className="p-2 text-slate-400 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-all cursor-pointer"
+                title={language === 'en' ? 'Sign Out' : 'Đăng xuất tài khoản'}
+              >
+                <LogOut className="w-4 h-4" />
               </button>
             </div>
           </div>
         </div>
       </header>
-
-      {/* Desktop Tab Navigation */}
-      <nav className="hidden lg:block bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto flex space-x-1 overflow-x-auto no-scrollbar py-2">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
-            return (<button key={item.id} onClick={() => setActiveTab(item.id)} className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all cursor-pointer ${isActive
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'}`}>
-                <Icon className="w-4 h-4"/>
-                <span>{t(item.key, item.defaultLabel)}</span>
-              </button>);
-        })}
-        </div>
-      </nav>
 
       {/* Mobile Bottom Navigation */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 px-2 pb-safe shadow-[0_-4px_20px_rgba(15,23,42,0.06)]">
@@ -267,9 +282,9 @@ export const Navigation = () => {
       {/* Notification Dropdown (shared) */}
       {showNotificationModal && (<>
           {/* Backdrop for closing */}
-          <div className="fixed inset-0 z-30" onClick={() => setShowNotificationModal(false)}/>
+          <div className="fixed inset-0 z-40 bg-black/20 backdrop-blur-xs" onClick={() => setShowNotificationModal(false)}/>
 
-          <div className="fixed lg:absolute lg:right-8 lg:top-16 lg:w-[430px] inset-x-3 top-16 lg:top-auto lg:inset-x-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-4 z-40 max-h-[85vh] overflow-hidden flex flex-col animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="fixed top-16 right-4 sm:right-8 md:right-12 w-[calc(100vw-2rem)] sm:w-[420px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-4 z-50 max-h-[85vh] overflow-hidden flex flex-col animate-in fade-in slide-in-from-top-2 duration-200">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
               <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                 <Bell className="w-4 h-4 text-emerald-600 dark:text-emerald-400"/>
@@ -532,7 +547,7 @@ export const Navigation = () => {
 
             {/* Footer tip */}
             <div className="pt-2.5 mt-1 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-400 text-center shrink-0">
-              {t('nav.alertHint', '💡 Bấm trực tiếp vào cảnh báo để chuyển ngay đến mục tương ứng')}
+              {t('nav.alertHint', 'Bấm trực tiếp vào cảnh báo để chuyển ngay đến mục tương ứng')}
             </div>
           </div>
         </>)}
@@ -667,10 +682,33 @@ export const Navigation = () => {
                     e.target.value = '';
                     if (!file)
                         return;
-                    if (!confirm(t('nav.restoreConfirm', 'Khôi phục sẽ THAY THẾ toàn bộ dữ liệu hiện tại bằng nội dung file sao lưu. Tiếp tục?')))
-                        return;
-                    file.text().then((text) => {
-                        alert(importDatabaseJSON(text) ? t('nav.restoreSuccess', 'Đã khôi phục dữ liệu từ bản sao lưu.') : t('nav.restoreInvalid', 'File sao lưu không hợp lệ.'));
+                    showConfirm({
+                        title: t('nav.restoreTitle', 'Khôi phục dữ liệu'),
+                        message: t('nav.restoreConfirm', 'Khôi phục sẽ THAY THẾ toàn bộ dữ liệu hiện tại bằng nội dung file sao lưu. Tiếp tục?'),
+                        confirmText: t('common.confirm', 'Khôi phục'),
+                        variant: 'warning',
+                        onConfirm: () => {
+                            file.text().then(async (text) => {
+                                const ok = await importDatabaseJSON(text);
+                                if (!ok) {
+                                    showConfirm({
+                                        title: language === 'en' ? 'Restore Failed' : 'Khôi phục thất bại',
+                                        message: language === 'en' ? 'The backup file is invalid or corrupted.' : 'File sao lưu không hợp lệ hoặc bị lỗi cấu trúc.',
+                                        confirmText: 'OK',
+                                        cancelText: null,
+                                        variant: 'danger',
+                                    });
+                                } else {
+                                    showConfirm({
+                                        title: language === 'en' ? 'Restore Succeeded' : 'Khôi phục thành công',
+                                        message: language === 'en' ? 'Data restored successfully from backup!' : 'Dữ liệu đã được khôi phục thành công từ file sao lưu!',
+                                        confirmText: 'OK',
+                                        cancelText: null,
+                                        variant: 'info',
+                                    });
+                                }
+                            });
+                        },
                     });
                 }}/>
                       </label>
@@ -680,6 +718,13 @@ export const Navigation = () => {
                 }} className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium transition-colors cursor-pointer">
                         <Settings className="w-3.5 h-3.5"/>
                         <span>{t('nav.generalSettingsBtn', 'Cài đặt chung')}</span>
+                      </button>
+                      <button onClick={() => {
+                    setShowProfileModal(false);
+                    logoutUser();
+                }} className="col-span-2 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 hover:bg-rose-100 dark:hover:bg-rose-900/80 text-rose-600 dark:text-rose-400 text-xs font-bold transition-colors cursor-pointer">
+                        <LogOut className="w-3.5 h-3.5"/>
+                        <span>{language === 'en' ? 'Sign Out Account' : 'Đăng xuất tài khoản'}</span>
                       </button>
                     </div>
                   </div>

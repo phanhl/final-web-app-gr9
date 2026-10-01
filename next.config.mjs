@@ -8,6 +8,7 @@ const __dirname = path.dirname(__filename);
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['lucide-react'],
+  outputFileTracingRoot: path.resolve(__dirname),
 };
 
 export default nextConfig;

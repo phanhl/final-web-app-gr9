@@ -1,8 +1,16 @@
 import { NextResponse } from 'next/server';
+import { recomputeWalletBalances } from '@/lib/utils';
 import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
 import { INITIAL_WALLETS, INITIAL_TRANSACTIONS, INITIAL_BUDGETS, INITIAL_BILLS, INITIAL_GOALS, INITIAL_PLANNER, DEFAULT_CATEGORIES, INITIAL_SIMULATOR_CONFIG, } from '@/lib/mock-data';
+import {
+    getSessionUser,
+    getUserDataFilePath,
+    getDefaultUserData,
+    USERS_DIR
+} from '@/lib/auth-server';
+
 let inMemoryData = null;
 // Chuỗi promise tuần tự hóa các thao tác ghi để 2 request POST không ghi xen kẽ vào cùng 1 file
 let writeQueue = Promise.resolve();
@@ -25,6 +33,28 @@ function getDataDir() {
 }
 const DATA_DIR = getDataDir();
 const DB_FILE = path.join(DATA_DIR, 'database.json');
+
+async function resolveStorageTarget() {
+    try {
+        const sessionUser = await getSessionUser();
+        if (sessionUser) {
+            if (sessionUser.role === 'host' || sessionUser.id === 'admin') {
+                const adminFile = path.join(USERS_DIR, 'admin.json');
+                try {
+                    await fs.access(adminFile);
+                    return { filePath: adminFile, user: sessionUser };
+                } catch {
+                    return { filePath: DB_FILE, user: sessionUser };
+                }
+            }
+            return { filePath: getUserDataFilePath(sessionUser.id), user: sessionUser };
+        }
+    } catch (e) {
+        console.warn('Failed to resolve session user:', e);
+    }
+    return { filePath: DB_FILE, user: null };
+}
+
 function getDefaultData() {
     const now = new Date();
     return {
@@ -49,9 +79,9 @@ async function atomicWriteJSON(filePath, data) {
     await fs.writeFile(tmpFile, JSON.stringify(data, null, 2), 'utf-8');
     await fs.rename(tmpFile, filePath);
 }
-async function persist(data) {
+async function persist(filePath, data) {
     try {
-        await atomicWriteJSON(DB_FILE, data);
+        await atomicWriteJSON(filePath, data);
         inMemoryData = null;
     }
     catch (fsErr) {
@@ -63,17 +93,24 @@ async function persist(data) {
     }
 }
 /**
- * Đọc DB. Trả về null nếu file chưa tồn tại.
+ * Đọc DB theo target. Trả về null nếu file chưa tồn tại.
  * Nếu file tồn tại nhưng hỏng -> ném lỗi (KHÔNG ghi đè, để còn khôi phục thủ công).
  */
-async function readDatabase() {
+async function readDatabase(target) {
+    const filePath = target.filePath;
     let content;
     try {
-        content = await fs.readFile(DB_FILE, 'utf-8');
+        content = await fs.readFile(filePath, 'utf-8');
     }
     catch (err) {
-        if (err.code === 'ENOENT')
+        if (err.code === 'ENOENT') {
+            if (target.user) {
+                const initial = getDefaultUserData(target.user.username);
+                await persist(filePath, initial);
+                return initial;
+            }
             return inMemoryData;
+        }
         throw err;
     }
     try {
@@ -82,15 +119,15 @@ async function readDatabase() {
     catch (parseErr) {
         // Sao lưu bản hỏng để có thể cứu dữ liệu, tuyệt đối không ghi đè bằng dữ liệu mẫu.
         // Mỗi phiên bản file hỏng chỉ sao lưu 1 lần (client poll liên tục).
-        const stat = await fs.stat(DB_FILE).catch(() => null);
+        const stat = await fs.stat(filePath).catch(() => null);
         const fingerprint = `${stat?.mtimeMs}:${stat?.size}`;
         if (lastCorruptBackup.fingerprint !== fingerprint) {
-            const backupPath = `${DB_FILE}.corrupt-${Date.now()}`;
-            await fs.copyFile(DB_FILE, backupPath).catch(() => { });
+            const backupPath = `${filePath}.corrupt-${Date.now()}`;
+            await fs.copyFile(filePath, backupPath).catch(() => { });
             lastCorruptBackup = { fingerprint, path: backupPath };
         }
         const backup = lastCorruptBackup.path;
-        const error = new Error(`database.json bị hỏng, đã sao lưu sang ${path.basename(backup)}`);
+        const error = new Error(`${path.basename(filePath)} bị hỏng, đã sao lưu sang ${path.basename(backup)}`);
         error.code = 'DB_CORRUPT';
         throw error;
     }
@@ -107,21 +144,122 @@ function validatePayload(payload) {
     if (!Array.isArray(payload.wallets) || !Array.isArray(payload.transactions)) {
         return 'Thiếu dữ liệu ví hoặc giao dịch';
     }
-    for (let i = 0; i < payload.transactions.length; i++) {
-        const tx = payload.transactions[i];
-        if (!tx || typeof tx !== 'object' || !tx.id) {
-            return `Giao dịch tại vị trí ${i} không hợp lệ`;
-        }
-        if (!Number.isFinite(Number(tx.amount))) {
-            return `Số tiền giao dịch tại vị trí ${i} không phải là số hợp lệ`;
-        }
-    }
+
+    const walletIds = new Set();
+
     for (let i = 0; i < payload.wallets.length; i++) {
         const w = payload.wallets[i];
-        if (!w || typeof w !== 'object' || !w.id || !Number.isFinite(Number(w.balance))) {
+
+        if (
+            !w ||
+            typeof w !== 'object' ||
+            Array.isArray(w) ||
+            typeof w.id !== 'string' ||
+            !w.id.trim()
+        ) {
             return `Ví tại vị trí ${i} không hợp lệ`;
         }
+
+        if (walletIds.has(w.id)) {
+            return `Ví bị trùng ID: ${w.id}`;
+        }
+
+        walletIds.add(w.id);
+
+        const balance = Number(w.balance);
+
+        if (
+            w.balance === null ||
+            w.balance === '' ||
+            !Number.isFinite(balance)
+        ) {
+            return `Số dư của ví tại vị trí ${i} không hợp lệ`;
+        }
     }
+
+    const transactionIds = new Set();
+
+    for (let i = 0; i < payload.transactions.length; i++) {
+        const tx = payload.transactions[i];
+
+        if (
+            !tx ||
+            typeof tx !== 'object' ||
+            Array.isArray(tx) ||
+            typeof tx.id !== 'string' ||
+            !tx.id.trim()
+        ) {
+            return `Giao dịch tại vị trí ${i} không hợp lệ`;
+        }
+
+        if (transactionIds.has(tx.id)) {
+            return `Giao dịch bị trùng ID: ${tx.id}`;
+        }
+
+        transactionIds.add(tx.id);
+
+        if (!['INCOME', 'EXPENSE', 'TRANSFER'].includes(tx.type)) {
+            return `Loại giao dịch của ${tx.id} không hợp lệ`;
+        }
+
+        const amount = Number(tx.amount);
+
+        if (
+            tx.amount === null ||
+            tx.amount === '' ||
+            !Number.isFinite(amount) ||
+            amount <= 0
+        ) {
+            return `Số tiền giao dịch tại vị trí ${i} không hợp lệ`;
+        }
+
+        if (tx.walletId !== undefined) {
+            if (
+                typeof tx.walletId !== 'string' ||
+                !walletIds.has(tx.walletId)
+            ) {
+                return `Giao dịch ${tx.id} tham chiếu ví không tồn tại`;
+            }
+        }
+
+        if (tx.toWalletId !== undefined) {
+            if (
+                typeof tx.toWalletId !== 'string' ||
+                !walletIds.has(tx.toWalletId)
+            ) {
+                return `Giao dịch ${tx.id} tham chiếu ví đích không tồn tại`;
+            }
+        }
+        
+        if (tx.type === 'TRANSFER') {
+            if (typeof tx.walletId !== 'string' || !walletIds.has(tx.walletId)) {
+                return `Giao dịch chuyển khoản ${tx.id} thiếu ví nguồn hợp lệ`;
+            }
+
+            if (typeof tx.toWalletId !== 'string' || !walletIds.has(tx.toWalletId)) {
+                return `Giao dịch chuyển khoản ${tx.id} thiếu ví đích hợp lệ`;
+            }
+
+            if (tx.walletId === tx.toWalletId) {
+                return `Giao dịch chuyển khoản ${tx.id} không thể chuyển trong cùng một ví`;
+            }
+
+            const fee = Number(tx.fee);
+
+            if (
+                tx.fee !== undefined &&
+                (
+                    tx.fee === null ||
+                    tx.fee === '' ||
+                    !Number.isFinite(fee) ||
+                    fee < 0
+                )
+            ) {
+                return `Phí chuyển khoản của giao dịch ${tx.id} không hợp lệ`;
+            }
+        }
+    }
+
     return null;
 }
 function pickDataFields(source) {
@@ -205,18 +343,27 @@ function recordFailure(ip) {
  * Kiểm tra quyền truy cập. PIN chỉ nhận qua header x-app-pin (không nhận qua URL để không lọt vào log).
  * Trả về null nếu hợp lệ, hoặc NextResponse lỗi.
  */
-function checkAuth(req, currentData) {
+function checkAuth(req, currentData, user) {
     const envPin = process.env.APP_PIN;
     const sec = normalizeSecurity(currentData?.security);
-    if (!envPin && !sec.pinEnabled)
-        return null;
+
+    // Nếu người dùng đã xác thực qua phiên làm việc (Guest hoặc Host):
+    if (user) {
+        if (!sec.pinEnabled) {
+            return null;
+        }
+    } else {
+        if (!envPin && !sec.pinEnabled)
+            return null;
+    }
+
     const ip = getClientIp(req);
     if (isRateLimited(ip)) {
         return NextResponse.json({ success: false, requiresPin: true, code: 'RATE_LIMITED', error: 'Nhập sai PIN quá nhiều lần, vui lòng thử lại sau 15 phút' }, { status: 429, headers: NO_CACHE_HEADERS });
     }
     const provided = req.headers.get('x-app-pin');
     if (provided) {
-        const ok = envPin ? safeEqualString(provided, envPin) : verifyPinHash(provided, sec.pinSalt, sec.pinHash);
+        const ok = (!user && envPin) ? safeEqualString(provided, envPin) : verifyPinHash(provided, sec.pinSalt, sec.pinHash);
         if (ok) {
             failedAttempts.delete(ip);
             return null;
@@ -233,13 +380,14 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export async function GET(req) {
     try {
-        let data = await readDatabase();
-        const authError = checkAuth(req, data);
+        const target = await resolveStorageTarget();
+        let data = await readDatabase(target);
+        const authError = checkAuth(req, data, target.user);
         if (authError)
             return authError;
         if (!data) {
-            data = getDefaultData();
-            await persist(data);
+            data = target.user ? getDefaultUserData(target.user.username) : getDefaultData();
+            await persist(target.filePath, data);
         }
         return NextResponse.json({ success: true, data: toClientData(data) }, { headers: NO_CACHE_HEADERS });
     }
@@ -249,12 +397,12 @@ export async function GET(req) {
         return NextResponse.json({ success: false, error: error.message || 'Không đọc được dữ liệu' }, { status: 500, headers: NO_CACHE_HEADERS });
     }
 }
-async function handleUpdateSecurity(req, payload) {
-    const current = await readDatabase();
-    const authError = checkAuth(req, current);
+async function handleUpdateSecurity(req, payload, target) {
+    const current = await readDatabase(target);
+    const authError = checkAuth(req, current, target.user);
     if (authError)
         return authError;
-    if (process.env.APP_PIN) {
+    if (!target.user && process.env.APP_PIN) {
         return NextResponse.json({ success: false, code: 'PIN_ENV_MANAGED', error: 'PIN đang được quản lý bằng biến môi trường APP_PIN trên server' }, { status: 400 });
     }
     const pinCode = payload.pinCode !== undefined && payload.pinCode !== null ? String(payload.pinCode).trim() : '';
@@ -272,8 +420,8 @@ async function handleUpdateSecurity(req, payload) {
         return NextResponse.json({ success: false, code: 'PIN_NOT_SET', error: 'Cần đặt mã PIN trước khi bật khóa' }, { status: 400 });
     }
     // Không đổi updatedAt: thay đổi bảo mật không phải thay đổi dữ liệu nên không gây xung đột đồng bộ
-    const dataToSave = { ...(current || getDefaultData()), security: next };
-    await persist(dataToSave);
+    const dataToSave = { ...(current || (target.user ? getDefaultUserData(target.user.username) : getDefaultData())), security: next };
+    await persist(target.filePath, dataToSave);
     return NextResponse.json({ success: true, security: publicSecurity(next) }, { headers: NO_CACHE_HEADERS });
 }
 export async function POST(req) {
@@ -296,12 +444,13 @@ export async function POST(req) {
         }
     }
     const run = async () => {
+        const target = await resolveStorageTarget();
         if (isSecurityUpdate)
-            return handleUpdateSecurity(req, payload);
+            return handleUpdateSecurity(req, payload, target);
         let current = null;
         let corrupt = false;
         try {
-            current = await readDatabase();
+            current = await readDatabase(target);
         }
         catch (err) {
             if (err.code !== 'DB_CORRUPT')
@@ -311,10 +460,10 @@ export async function POST(req) {
         if (corrupt && !process.env.APP_PIN && req.headers.get('x-forwarded-for')) {
             // DB hỏng -> không còn biết cấu hình PIN. Chỉ cho phép khôi phục từ máy chủ (không qua tunnel),
             // hoặc khi PIN được đặt bằng biến môi trường APP_PIN.
-            return NextResponse.json({ success: false, error: 'database.json bị hỏng (đã sao lưu). Hãy khôi phục từ máy chủ.' }, { status: 503 });
+            return NextResponse.json({ success: false, error: 'Dữ liệu bị hỏng (đã sao lưu). Hãy khôi phục từ máy chủ.' }, { status: 503 });
         }
         // DB hỏng đã được sao lưu -> cho phép client ghi lại bản đầy đủ của mình
-        const authError = checkAuth(req, current);
+        const authError = checkAuth(req, current, target.user);
         if (authError)
             return authError;
         // Optimistic concurrency: client phải gửi updatedAt của bản server mà nó đang dựa vào.
@@ -322,12 +471,19 @@ export async function POST(req) {
         if (current?.updatedAt && payload.baseUpdatedAt !== current.updatedAt) {
             return NextResponse.json({ success: false, conflict: true, data: toClientData(current) }, { status: 409, headers: NO_CACHE_HEADERS });
         }
+        
+        const serverWallets = recomputeWalletBalances(
+            payload.wallets,
+            payload.transactions
+        );
+
         const dataToSave = {
             ...pickDataFields(payload),
             security: normalizeSecurity(current?.security),
             updatedAt: new Date().toISOString(),
+            wallets: serverWallets,
         };
-        await persist(dataToSave);
+        await persist(target.filePath, dataToSave);
         return NextResponse.json({
             success: true,
             message: 'Đã lưu dữ liệu',

@@ -37,20 +37,10 @@ if [ "${NO_TUNNEL:-0}" = "1" ]; then
   exit 0
 fi
 
-if [ -z "$APP_PASSWORD" ] && [ -z "$APP_PIN" ]; then
-  echo "=================================================================="
-  echo "CANH BAO: chua dat APP_PASSWORD hoac APP_PIN -> KHONG mo tunnel ra Internet."
-  echo "Toan bo du lieu tai chinh se bi lo neu public ma khong co mat khau."
-  echo "Chay lai: APP_PASSWORD='mat-khau-manh' ./start.sh  (hoac APP_PIN='123456' ./start.sh)"
-  echo "May tinh: http://localhost:$PORT"
-  echo "=================================================================="
-  exit 0
-fi
-
 NGROK="$(find_bin ngrok "$NGROK_BIN")"
 CLOUDFLARED="$(find_bin cloudflared "$CLOUDFLARED_BIN")"
 
-# 2. Khoi chay Ngrok
+# 2. Khoi chay Ngrok (neu co)
 if [ -n "$NGROK" ]; then
   NGROK_ARGS=(http "$PORT" --log=stdout)
   [ -n "$NGROK_DOMAIN" ] && NGROK_ARGS+=(--domain="$NGROK_DOMAIN")
@@ -58,7 +48,7 @@ if [ -n "$NGROK" ]; then
   echo $! > .ngrok.pid
 fi
 
-# 3. Khoi chay Cloudflare lam du phong
+# 3. Khoi chay Cloudflare Tunnel cho khach truy cap tu xa
 if [ -n "$CLOUDFLARED" ]; then
   nohup setsid "$CLOUDFLARED" tunnel --url "http://localhost:$PORT" > tunnel.log 2>&1 &
   echo $! > .cloudflared.pid
@@ -67,12 +57,22 @@ fi
 sleep 3
 NGROK_URL=$(curl -s http://127.0.0.1:4040/api/tunnels 2>/dev/null | grep -o 'https://[^"]*ngrok[^"]*' | head -1)
 CF_URL=$(grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' tunnel.log 2>/dev/null | head -1)
+ONLINE_URL="${NGROK_URL:-$CF_URL}"
 
 echo "=================================================================="
-echo "FinTrack Pro da duoc khoi chay thanh cong!"
-echo "1. May tinh:      http://localhost:$PORT"
-[ -n "$NGROK_URL" ] && echo "2. Ngrok:         $NGROK_URL"
-[ -n "$CF_URL" ] && echo "3. Cloudflare:    $CF_URL"
-[ -n "$APP_PASSWORD" ] && echo "Dang nhap bang user: ${APP_USER:-admin} va APP_PASSWORD da dat."
-[ -n "$APP_PIN" ] && echo "Ung dung yeu cau nhap APP_PIN de mo khoa du lieu."
+echo "FinTrack Pro da duoc khoi chay thanh cong voi he thong Da nguoi dung!"
+echo ""
+echo "👉 LINK 1 (DANH CHO HOST / BAN):"
+echo "   http://localhost:$PORT"
+echo "   * Dang nhap bang tai khoan: admin"
+echo "   * Neu la lan dau: tu dat mat khau ngay tren form dang nhap"
+echo ""
+if [ -n "$ONLINE_URL" ]; then
+  echo "👉 LINK 2 (DANH CHO KHACH / TRUY CAP ONLINE):"
+  echo "   $ONLINE_URL"
+  echo "   * Khach vao link tren, bam 'Tao Tai Khoan Khach' de dang ky."
+  echo "   * Moi khach co User ID rieng va du lieu hoan toan doc lap voi Host."
+else
+  echo "👉 LINK 2 (ONLINE): Dang khoi tao tunnel... (Xem tai file tunnel.log hoac ngrok.log)"
+fi
 echo "=================================================================="

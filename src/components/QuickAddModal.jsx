@@ -1,8 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
-import { X, Upload, Plus, AlertTriangle, FileSpreadsheet, Tag as TagIcon, Check } from 'lucide-react';
-import { POPULAR_TAGS } from '@/lib/mock-data';
+import { X, Upload, Plus, AlertTriangle, FileSpreadsheet, Check } from 'lucide-react';
 import { IconHelper } from './IconHelper';
 import {
   formatCurrency,
@@ -33,7 +32,6 @@ export const QuickAddModal = () => {
     t,
     tCategory,
     tWalletType,
-    tTag,
     tWalletName,
   } = useApp();
 
@@ -45,8 +43,6 @@ export const QuickAddModal = () => {
   const [walletId, setWalletId] = useState('');
   const [date, setDate] = useState('');
   const [note, setNote] = useState('');
-  const [tags, setTags] = useState([]);
-  const [customTagInput, setCustomTagInput] = useState('');
   const [receiptImage, setReceiptImage] = useState(undefined);
 
   useEffect(() => {
@@ -76,8 +72,6 @@ export const QuickAddModal = () => {
       setWalletId(targetWalletId);
       setDate(toLocalDateTimeInput());
       setNote('');
-      setTags([]);
-      setCustomTagInput('');
       setReceiptImage(undefined);
     }
     // Chỉ khởi tạo form khi mở modal; không phụ thuộc wallets/categories để đồng bộ nền
@@ -90,23 +84,6 @@ export const QuickAddModal = () => {
   const handleQuickAmount = (val) => {
     const current = Number(amount) || 0;
     setAmount(String(current + val));
-  };
-
-  const handleTagToggle = (tagKey) => {
-    const displayTag = tTag(tagKey);
-    if (tags.includes(tagKey) || tags.includes(displayTag)) {
-      setTags(tags.filter((t) => t !== tagKey && t !== displayTag));
-    } else {
-      setTags([...tags, tagKey]);
-    }
-  };
-
-  const handleAddCustomTag = () => {
-    const clean = customTagInput.trim().replace(/^#/, '');
-    if (clean && !tags.includes(clean)) {
-      setTags([...tags, clean]);
-      setCustomTagInput('');
-    }
   };
 
   const handleImageUpload = async (e) => {
@@ -181,7 +158,7 @@ export const QuickAddModal = () => {
       walletName: selectedWallet?.name,
       date: txDate,
       note: note || finalCategoryName || t('tx.transaction', 'Giao dịch'),
-      tags,
+      tags: [],
       receiptImage,
     });
 
@@ -214,7 +191,7 @@ export const QuickAddModal = () => {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto no-scrollbar [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {/* Bank Statement Upload Prompt Banner */}
           <div className="flex items-center justify-between p-2.5 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl border border-emerald-200 dark:border-emerald-800/60">
             <div className="flex items-center gap-2">
@@ -462,40 +439,6 @@ export const QuickAddModal = () => {
             </div>
           )}
 
-          {/* Category Quick Badges */}
-          {!isCustomCategory && (
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                {t('qa.quickSelectCategory', 'Chọn nhanh danh mục')}
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {filteredCategories.slice(0, 8).map((cat) => (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    onClick={() => {
-                      setCategoryId(cat.id);
-                      setIsCustomCategory(false);
-                    }}
-                    className={`flex items-center space-x-2 p-2 rounded-xl border text-left text-xs font-medium transition-all cursor-pointer ${
-                      categoryId === cat.id && !isCustomCategory
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-semibold shadow-sm'
-                        : 'border-slate-200 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-800/40 text-slate-700 dark:text-slate-300 hover:border-slate-300'
-                    }`}
-                  >
-                    <span
-                      className="w-5 h-5 rounded-md flex items-center justify-center text-white shrink-0"
-                      style={{ backgroundColor: cat.color }}
-                    >
-                      <IconHelper name={cat.icon} size={12} />
-                    </span>
-                    <span className="truncate">{tCategory(cat.name)}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Date & Note */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -526,75 +469,6 @@ export const QuickAddModal = () => {
                 }
                 className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
               />
-            </div>
-          </div>
-
-          {/* Tags */}
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-              {t('qa.tags', 'Nhãn (Tags)')}
-            </label>
-            <div className="flex flex-wrap gap-1.5">
-              {POPULAR_TAGS.map((rawTag) => {
-                const displayTag = tTag ? tTag(rawTag) : rawTag;
-                const isSelected = tags.includes(rawTag) || tags.includes(displayTag);
-                return (
-                  <button
-                    key={rawTag}
-                    type="button"
-                    onClick={() => handleTagToggle(rawTag)}
-                    className={`px-3 py-1 rounded-full text-xs font-medium transition-all cursor-pointer ${
-                      isSelected
-                        ? 'bg-blue-600 text-white font-semibold'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
-                    }`}
-                  >
-                    #{displayTag}
-                  </button>
-                );
-              })}
-
-              {/* Show any extra custom tags added by the user */}
-              {tags
-                .filter((tg) => !POPULAR_TAGS.includes(tg) && !POPULAR_TAGS.some((p) => tTag(p) === tg))
-                .map((customTag) => (
-                  <button
-                    key={customTag}
-                    type="button"
-                    onClick={() => setTags(tags.filter((t) => t !== customTag))}
-                    className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-600 text-white flex items-center gap-1 cursor-pointer"
-                  >
-                    #{tTag ? tTag(customTag) : customTag}
-                    <X className="w-3 h-3 ml-0.5" />
-                  </button>
-                ))}
-            </div>
-
-            {/* Custom Tag Input */}
-            <div className="flex items-center gap-2 mt-2">
-              <div className="relative flex-1">
-                <TagIcon className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <input
-                  type="text"
-                  value={customTagInput}
-                  onChange={(e) => setCustomTagInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleAddCustomTag();
-                    }
-                  }}
-                  placeholder={t('qa.addCustomTagPlaceholder', 'Nhập nhãn tùy chỉnh rồi bấm Thêm (+)...')}
-                  className="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={handleAddCustomTag}
-                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold cursor-pointer shrink-0 transition-colors"
-              >
-                + {t('qa.addTagBtn', 'Thêm tag')}
-              </button>
             </div>
           </div>
 

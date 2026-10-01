@@ -15,6 +15,7 @@ done
 
 PORT_PID=$(lsof -ti:"$PORT" 2>/dev/null)
 if [ -n "$PORT_PID" ]; then
-  kill $PORT_PID 2>/dev/null
+  kill -9 $PORT_PID 2>/dev/null
 fi
+fuser -k "$PORT/tcp" 2>/dev/null || true
 echo "Da tat may chu va cac duong truyen."

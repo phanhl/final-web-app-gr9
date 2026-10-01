@@ -1,0 +1,30 @@
+{
+  "wallets": [
+    {
+      "id": "wal-cash",
+      "name": "Tiền mặt ví tay",
+      "type": "CASH",
+      "balance": 0,
+      "initialBalance": 0,
+      "currency": "VND",
+      "color": "#10b981",
+      "icon": "Banknote",
+      "createdAt": "2026-01-01"
+    }
+  ],
+  "transactions": [],
+  "categories": [],
+  "budgets": [],
+  "bills": [],
+  "goals": [],
+  "planner": {
+    "necessitiesPercent": 50,
+    "financialFreedomPercent": 20,
+    "educationPercent": 10,
+    "playPercent": 10,
+    "givePercent": 10,
+    "emergencyPercent": 10
+  },
+  "currentMonth": "2026-10",
+  "updatedAt": "2026-10-01T00:00:00.000Z"
+}

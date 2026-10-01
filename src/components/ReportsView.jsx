@@ -217,9 +217,9 @@ export const ReportsView = () => {
         </div>
       </div>
 
-      {/* 2. TIME PERIOD FILTER BUTTONS (MATCHING TRANSACTIONSVIEW DYNAMIC MONTHS) */}
+      {/* 2. TIME PERIOD FILTER (COMPACT SELECTOR) */}
       <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 print:hidden">
-        <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto scrollbar-none">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-bold text-slate-500 dark:text-slate-400 mr-1 flex items-center gap-1">
             <Calendar className="w-3.5 h-3.5 text-blue-500"/>
             {t('rep.timePeriod', 'Kỳ báo cáo:')}
@@ -232,12 +232,29 @@ export const ReportsView = () => {
             {t('tx.allMonths', 'Tất cả các tháng')}
           </button>
 
-          {/* Available Months Pills */}
-          {availableMonths.map((m) => (<button key={m} type="button" onClick={() => setSelectedPeriod(m)} className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${selectedPeriod === m
-                ? 'bg-blue-600 text-white shadow-xs ring-2 ring-blue-500/30'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'}`}>
-              {formatMonthLabel(m, language)}
-            </button>))}
+          {/* Clean select dropdown for specific months */}
+          <div className="relative">
+            <select
+              value={!['ALL', 'THIS_YEAR', 'CUSTOM'].includes(selectedPeriod) ? selectedPeriod : ''}
+              onChange={(e) => {
+                if (e.target.value) setSelectedPeriod(e.target.value);
+              }}
+              className={`px-3 py-1.5 pr-7 rounded-xl text-xs font-bold border transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                !['ALL', 'THIS_YEAR', 'CUSTOM'].includes(selectedPeriod)
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+              }`}
+            >
+              <option value="" disabled className="bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300">
+                {!['ALL', 'THIS_YEAR', 'CUSTOM'].includes(selectedPeriod) ? formatMonthLabel(selectedPeriod, language) : t('tx.chooseMonth', 'Chọn tháng cụ thể...')}
+              </option>
+              {availableMonths.map((m) => (
+                <option key={m} value={m} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">
+                  {formatMonthLabel(m, language)} {m === currentMonth ? `(${t('tx.quickMonth', 'Hiện tại')})` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
 
           {/* This Year */}
           <button type="button" onClick={() => setSelectedPeriod('THIS_YEAR')} className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${selectedPeriod === 'THIS_YEAR'

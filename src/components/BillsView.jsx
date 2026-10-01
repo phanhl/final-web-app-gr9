@@ -4,7 +4,7 @@ import { useApp } from '@/context/AppContext';
 import { CalendarCheck, Plus, CheckCircle2, Edit2, Trash2, Check, RotateCcw, X, Bell, } from 'lucide-react';
 import { formatCurrency, formatNumberWithDots, getLocalDateString, formatDisplayDate, isBillPaidForCycle, getBillDueInfo } from '@/lib/utils';
 export const BillsView = () => {
-    const { bills, wallets, categories, addBill, editBill, deleteBill, payBill, unpayBill, findBillPaymentTx, navTargetBillId, setNavTargetBillId, billToAutoPayId, setBillToAutoPayId, t, tCategory, tWalletType, tBillName, tBillNote, tWalletName, language, } = useApp();
+    const { bills, wallets, categories, addBill, editBill, deleteBill, payBill, unpayBill, findBillPaymentTx, navTargetBillId, setNavTargetBillId, billToAutoPayId, setBillToAutoPayId, t, tCategory, tWalletType, tBillName, tBillNote, tWalletName, language, showConfirm, } = useApp();
     const [billModalOpen, setBillModalOpen] = useState(false);
     const [editingBill, setEditingBill] = useState(null);
     // Form State
@@ -138,10 +138,15 @@ export const BillsView = () => {
             return;
         }
         const walletName = wallets.find((w) => w.id === paymentTx.walletId)?.name || paymentTx.walletName || '';
-        const revert = confirm(t('bill.confirmRevertPayment', 'Xóa giao dịch thanh toán {amount} và hoàn tiền về ví {wallet}?\n\nOK: xóa giao dịch & hoàn tiền\nHủy: chỉ đặt lại trạng thái')
-            .replace('{amount}', formatCurrency(paymentTx.amount))
-            .replace('{wallet}', walletName));
-        unpayBill(bill.id, revert);
+        showConfirm({
+            title: t('bill.revertPaymentTitle', 'Hoàn tác thanh toán hóa đơn'),
+            message: t('bill.confirmRevertPayment', 'Xóa giao dịch thanh toán {amount} và hoàn tiền về ví {wallet}?')
+                .replace('{amount}', formatCurrency(paymentTx.amount))
+                .replace('{wallet}', walletName),
+            confirmText: t('common.confirm', 'Xác nhận xóa & hoàn tiền'),
+            variant: 'warning',
+            onConfirm: () => unpayBill(bill.id, true),
+        });
     };
     const handleConfirmPay = () => {
         if (!billToPay)
@@ -349,10 +354,14 @@ export const BillsView = () => {
                       <Edit2 className="w-3.5 h-3.5"/>
                     </button>
                     <button onClick={() => {
-                    if (confirm(t('bill.deleteConfirm', 'Xác nhận xóa hóa đơn này?'))) {
-                        deleteBill(bill.id);
-                    }
-                }} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors">
+                        showConfirm({
+                            title: t('bill.deleteTitle', 'Xác nhận xóa hóa đơn'),
+                            message: t('bill.deleteConfirm', 'Xác nhận xóa hóa đơn này?'),
+                            confirmText: t('common.delete', 'Xóa'),
+                            variant: 'danger',
+                            onConfirm: () => deleteBill(bill.id),
+                        });
+                    }} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer" title={t('bill.deleteTitle', 'Xóa hóa đơn')}>
                       <Trash2 className="w-3.5 h-3.5"/>
                     </button>
                   </div>

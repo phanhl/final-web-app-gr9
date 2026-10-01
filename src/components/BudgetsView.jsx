@@ -6,7 +6,7 @@ import { formatCurrency, calculateBudgetStatuses, formatNumberWithDots, formatMo
 import { IconHelper } from './IconHelper';
 import confetti from 'canvas-confetti';
 export const BudgetsView = () => {
-    const { budgets, transactions, categories, goals, wallets, bills, planner, currentMonth, addBudget, editBudget, deleteBudget, updatePlanner, addGoal, editGoal, deleteGoal, depositToGoal, withdrawFromGoal, navTargetBudgetId, setNavTargetBudgetId, navigateToCategoryTransactions, saveDataNow, serverSyncStatus, t, tCategory, tWalletType, tWalletName, language, isAlertDismissed, dismissAlert, restoreAlert, } = useApp();
+    const { budgets, transactions, categories, goals, wallets, bills, planner, currentMonth, addBudget, editBudget, deleteBudget, updatePlanner, addGoal, editGoal, deleteGoal, depositToGoal, withdrawFromGoal, navTargetBudgetId, setNavTargetBudgetId, navigateToCategoryTransactions, saveDataNow, serverSyncStatus, t, tCategory, tWalletType, tWalletName, language, isAlertDismissed, dismissAlert, restoreAlert, showConfirm, } = useApp();
     const [activeSubTab, setActiveSubTab] = useState('CATEGORY_BUDGETS');
     const [isSavingPlanner, setIsSavingPlanner] = useState(false);
     const [plannerSavedToast, setPlannerSavedToast] = useState(false);
@@ -391,10 +391,14 @@ export const BudgetsView = () => {
                         <Edit2 className="w-3.5 h-3.5"/>
                       </button>
                       <button onClick={() => {
-                        if (confirm(t('budget.deleteBudgetConfirm', 'Xác nhận xóa ngân sách danh mục này?'))) {
-                            deleteBudget(budget.id);
-                        }
-                    }} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors" title={t('budget.deleteBudgetTitle', 'Xóa ngân sách')}>
+                        showConfirm({
+                            title: t('budget.deleteBudgetTitle', 'Xác nhận xóa ngân sách'),
+                            message: t('budget.deleteBudgetConfirm', 'Xác nhận xóa ngân sách danh mục này?'),
+                            confirmText: t('common.delete', 'Xóa'),
+                            variant: 'danger',
+                            onConfirm: () => deleteBudget(budget.id),
+                        });
+                    }} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer" title={t('budget.deleteBudgetTitle', 'Xóa ngân sách')}>
                         <Trash2 className="w-3.5 h-3.5"/>
                       </button>
                     </div>
@@ -410,22 +414,18 @@ export const BudgetsView = () => {
       {activeSubTab === 'PLANNER' && (<div className="space-y-6">
           {/* Concept explanation card */}
           <div className="p-6 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl text-white shadow-lg">
-            <div className="flex items-start space-x-3">
-              <Sparkles className="w-6 h-6 text-yellow-300 shrink-0 mt-1"/>
-              <div>
-                <h3 className="text-lg font-bold">{t('budget.plannerHeading', 'Thêm thu nhập cá nhân → Tạo Budget khả dụng để tiêu')}</h3>
-                <p className="text-xs text-blue-100 mt-1 leading-relaxed">
-                  {t('budget.plannerDesc')}
-                </p>
-              </div>
+            <div>
+              <h3 className="text-lg font-bold">{t('budget.plannerHeading', 'Thêm thu nhập cá nhân → Tạo Budget khả dụng để tiêu')}</h3>
+              <p className="text-xs text-blue-100 mt-1 leading-relaxed">
+                {t('budget.plannerDesc')}
+              </p>
             </div>
           </div>
 
           {/* Income & Allocation Form */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-              <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center space-x-2">
-                <DollarSign className="w-5 h-5 text-emerald-500"/>
+              <h3 className="text-base font-bold text-slate-800 dark:text-white">
                 <span>{t('budget.incomeAndRatios', 'Thu nhập & Tỷ lệ phân bổ')}</span>
               </h3>
 
@@ -509,9 +509,8 @@ export const BudgetsView = () => {
                 {/* 4. Emergency / Contingency Fund */}
                 <div>
                   <div className="flex justify-between text-xs font-semibold mb-1">
-                    <span className="text-amber-600 dark:text-amber-400 font-bold flex items-center space-x-1">
-                      <ShieldAlert className="w-3.5 h-3.5 text-amber-500 inline mr-0.5"/>
-                      <span>4. {t('budget.emergency', 'Dự phòng')}</span>
+                    <span className="text-amber-600 dark:text-amber-400 font-bold">
+                      4. {t('budget.emergency', 'Dự phòng')}
                     </span>
                     <span className="font-bold text-slate-800 dark:text-white">{emergencyPercent}%</span>
                   </div>
@@ -586,9 +585,8 @@ export const BudgetsView = () => {
                 </div>
 
                 <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50">
-                  <span className="text-xs font-bold text-amber-700 dark:text-amber-300 flex items-center space-x-1">
-                    <ShieldAlert className="w-3.5 h-3.5 text-amber-600 inline mr-0.5"/>
-                    <span>{t('budget.emergencyBudget', 'Khoản Dự phòng')} ({emergencyPercent}%)</span>
+                  <span className="text-xs font-bold text-amber-700 dark:text-amber-300">
+                    {t('budget.emergencyBudget', 'Khoản Dự phòng')} ({emergencyPercent}%)
                   </span>
                   <p className="text-lg font-black text-amber-900 dark:text-amber-100 mt-1">
                     {formatCurrency(emergencyBudget)}
@@ -617,9 +615,8 @@ export const BudgetsView = () => {
                     <span className="font-bold text-blue-600">-{formatCurrency(savingsBudget)}</span>
                   </div>
                   <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
-                    <span className="text-slate-500 flex items-center space-x-1">
-                      <ShieldAlert className="w-3.5 h-3.5 text-amber-500 inline"/>
-                      <span>{t('budget.minusEmergency', 'Trừ Khoản trích lập dự phòng khẩn cấp & rủi ro:')} ({emergencyPercent}%):</span>
+                    <span className="text-slate-500">
+                      {t('budget.minusEmergency', 'Trừ Khoản trích lập dự phòng khẩn cấp & rủi ro:')} ({emergencyPercent}%):
                     </span>
                     <span className="font-bold text-amber-600">-{formatCurrency(emergencyBudget)}</span>
                   </div>
@@ -753,10 +750,14 @@ export const BudgetsView = () => {
                     </button>
 
                     <button onClick={() => {
-                        if (confirm(t('budget.deleteGoalConfirm', 'Bạn có chắc muốn xóa hũ này?'))) {
-                            deleteGoal(g.id);
-                        }
-                    }} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors">
+                        showConfirm({
+                            title: t('budget.deleteGoalTitle', 'Xác nhận xóa hũ tích lũy'),
+                            message: t('budget.deleteGoalConfirm', 'Bạn có chắc muốn xóa hũ này?'),
+                            confirmText: t('common.delete', 'Xóa'),
+                            variant: 'danger',
+                            onConfirm: () => deleteGoal(g.id),
+                        });
+                    }} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors cursor-pointer" title={t('budget.deleteGoalTitle', 'Xóa hũ')}>
                       <Trash2 className="w-4 h-4"/>
                     </button>
                   </div>

@@ -1,146 +1,179 @@
-# FinTrack Pro - Web App Quản Lý Chi Tiêu & Mô Phỏng Tài Chính
+# FinTrack Pro - Hệ Thống Quản Lý Chi Tiêu & Mô Phỏng Tài Chính Đa Người Dùng
 
-Ứng dụng quản lý tài chính cá nhân: ghi nhận thu chi nhiều ví, ngân sách, hóa đơn định kỳ, mục tiêu tích lũy, nhập sao kê ngân hàng tự động và **mô phỏng tài chính What-If**. Dữ liệu được lưu trên máy chủ và đồng bộ giữa nhiều thiết bị (máy tính ↔ điện thoại). Giao diện song ngữ **Tiếng Việt / English**.
+Ứng dụng quản lý tài chính cá nhân toàn diện: ghi nhận thu chi nhiều ví, ngân sách thông minh, hóa đơn định kỳ, mục tiêu tích lũy, nhập sao kê ngân hàng tự động và **mô phỏng tài chính What-If**. 
+
+Hệ thống hỗ trợ **Đa người dùng (Multi-User Isolation)** với cơ chế bảo mật nghiêm ngặt: Host và Khách truy cập qua 2 đường link riêng, tài khoản được cấp `User ID` độc lập, dữ liệu cá nhân được lưu trữ an toàn trên máy chủ và **hoàn toàn không bị đẩy lên GitHub khi commit mã nguồn**. Giao diện song ngữ **Tiếng Việt / English**, hỗ trợ chế độ **Sáng / Tối**.
 
 ---
 
-## 🌟 1. Tính năng
+## 🌟 1. Tính năng nổi bật
 
-### 💳 Ví & Tài khoản
-- 4 loại ví: **Tiền mặt**, **Ngân hàng**, **Thẻ tín dụng** (hạn mức, dư nợ), **Sổ tiết kiệm** (lãi suất).
-- Tự tổng hợp **số dư khả dụng** và **tổng tài sản ròng**; dư nợ thẻ tín dụng được tách riêng khỏi tài sản.
-- **Chuyển khoản nội bộ** giữa các ví (có phí) và **thanh toán dư nợ thẻ** từ ví tiền mặt / ngân hàng.
-- **Số dư luôn khớp lịch sử**: số dư = số dư ban đầu + toàn bộ giao dịch. Có nút **"Tính lại số dư"** để đối soát. Khi xóa ví, giao dịch chuyển khoản với ví khác được giữ lại dưới dạng thu/chi của ví còn lại.
+### 🔐 Tài khoản & Phân quyền Đa người dùng (Mới)
+- **Bắt buộc xác thực:** Màn hình chào đón và form Đăng nhập / Đăng ký hiện đại (Glassmorphism), ngăn chặn truy cập trái phép.
+- **Tài khoản Chủ sở hữu (Host):** Tài khoản `admin` giữ trọn vẹn toàn bộ dữ liệu tài chính thật của bạn (các ví thẻ, ngân hàng, lịch sử chi tiêu). Mật khẩu được tự thiết lập ở lần đăng nhập đầu tiên.
+- **Tài khoản Khách (Guest):** Khách mở link online, chọn tab **"Tạo Tài Khoản Khách"** để tự đăng ký. Hệ thống cấp một `User ID` riêng biệt (`usr_...`) với kho dữ liệu mẫu độc lập 100%. Khách không thể xem hay chỉnh sửa dữ liệu của Host và ngược lại.
+- **Quản lý phiên:** Tích hợp huy hiệu phân quyền (Host / Khách) trên thanh điều hướng và nút **Đăng xuất (Sign Out)** an toàn.
 
-### 📝 Giao dịch
-- Khoản chi, khoản thu, chuyển khoản; danh mục, tag, ghi chú, **ảnh chứng từ** (tự nén trước khi lưu).
-- **Nhập nhanh (Quick Add)** ở mọi màn hình, có các nút cộng nhanh số tiền.
-- Kiểm tra số dư (không cho chi âm quỹ, không vượt hạn mức thẻ), không cho ghi giao dịch ở ngày tương lai.
-- Sửa / xóa giao dịch tự hoàn tác số dư ví. Xóa giao dịch thanh toán hóa đơn hoặc nạp hũ thì hóa đơn / hũ mục tiêu cũng được cập nhật tương ứng.
+### 💳 Quản lý Ví & Tài sản
+- **4 loại ví chuyên biệt:** Tiền mặt, Tài khoản ngân hàng, Thẻ tín dụng (hạn mức, ngày sao kê, dư nợ riêng), Sổ tiết kiệm (kỳ hạn, lãi suất).
+- Tự động tính toán **Số dư khả dụng** và **Tổng tài sản ròng**; dư nợ thẻ tín dụng được tách riêng để không gây ảo tưởng tài chính.
+- **Chuyển khoản nội bộ** giữa các ví (hỗ trợ phí giao dịch) và **Thanh toán dư nợ thẻ tín dụng**.
+- **Đối soát số dư:** Tính năng *"Tính lại số dư"* tự động đối chiếu số dư ban đầu với toàn bộ lịch sử thu chi.
 
-### 📥 Nhập sao kê ngân hàng
-- Tải file **Excel (.xlsx, .xls)** hoặc **CSV**. Tự nhận diện ngân hàng (Techcombank, Vietcombank, MB, VPBank, ACB, BIDV, VietinBank, TPBank, VIB, Agribank, Sacombank, Timo, HDBank, Cake…) và ghép với ví tương ứng, chưa có ví thì đề xuất tạo ví mới.
-- Đọc đúng ô ngày của Excel, cột Nợ/Có, nhiều sheet; tự gợi ý danh mục.
-- **Chống trùng lặp** với giao dịch đã có. Chọn **cộng trừ theo biến động ròng** hoặc **khớp đúng số dư cuối kỳ** của sao kê.
+### 📝 Ghi chép & Nhập nhanh giao dịch
+- Quản lý khoản chi, khoản thu, chuyển tiền; phân loại theo danh mục, nhãn (tags), ghi chú và đính kèm **ảnh chứng từ** (tự nén ảnh trước khi lưu).
+- **Nhập nhanh (Quick Add Modal):** Mở tức thì ở mọi màn hình, hỗ trợ các nút cộng nhanh số tiền tiện lợi.
+- Kiểm tra số dư thông minh: Cảnh báo chi âm quỹ, ngăn chặn chi vượt hạn mức thẻ, chặn ghi ngày tương lai.
 
-### 🎯 Ngân sách & Mục tiêu
-- Hạn mức chi theo từng danh mục, cảnh báo **80%** (vàng) và **vượt 100%** (đỏ).
-- Phân bổ thu nhập theo quy tắc **50/30/20** kèm quỹ dự phòng; trừ chi phí cố định và tích lũy để ra ngân sách khả dụng.
-- **Hũ tiết kiệm / mục tiêu**: nạp, rút từ ví (ghi thành giao dịch), có hiệu ứng chúc mừng khi đạt 100%.
+### 📥 Nhập sao kê ngân hàng tự động (Smart Statement Parser)
+- Tải file **Excel (.xlsx, .xls)** hoặc **CSV**. Tự động nhận diện cấu trúc hơn 15 ngân hàng Việt Nam (Techcombank, Vietcombank, MB Bank, ACB, VPBank, BIDV, VietinBank, TPBank, VIB, Agribank, Sacombank, Timo, Cake, MoMo...).
+- Tự động đối chiếu tránh trùng lặp giao dịch, gợi ý danh mục chi tiêu theo nội dung chuyển khoản.
+
+### 🎯 Ngân sách & Hũ mục tiêu tích lũy
+- Thiết lập hạn mức chi cho từng danh mục, tự động cảnh báo **tiệm cận 80%** (vàng) và **vượt 100%** (đỏ).
+- Phân bổ thu nhập theo mô hình hũ chi tiêu kèm quỹ khẩn cấp.
+- **Mục tiêu tài chính:** Nạp/rút tiền trực tiếp từ ví, hiệu ứng pháo hoa chúc mừng khi hoàn thành mục tiêu.
 
 ### ⏰ Hóa đơn định kỳ
-- Tần suất **hàng tháng / quý / năm**, ngày đến hạn tính đúng theo lịch (tháng 28–31 ngày), nhắc trước N ngày, cảnh báo quá hạn.
-- **"Thanh toán ngay"** tạo giao dịch chi và trừ ví. Hóa đơn chỉ chuyển sang "Đã thanh toán" khi giao dịch ghi thành công.
-- Tự chuyển về "Chưa thanh toán" khi sang kỳ mới. **"Đặt lại"** cho phép hoàn tiền (xóa giao dịch thanh toán) về ví.
+- Quản lý tiền điện, nước, internet, thuê nhà theo chu kỳ **Tháng / Quý / Năm**.
+- Tự động tính đúng ngày đến hạn theo lịch thực tế, đếm ngược ngày và cảnh báo hóa đơn đến hạn / quá hạn.
+- Nút **"Thanh toán ngay"** tự động tạo giao dịch chi tương ứng và trừ tiền trong ví.
 
-### 🔮 Mô phỏng What-If
-- Thanh trượt **cắt giảm chi tiêu** theo từng khoản (0–50%), **gửi tiết kiệm / đầu tư thêm** mỗi tháng, kịch bản lãi / lỗ đầu tư, khoản vay ngoài và nghĩa vụ trả nợ.
-- Khung dự phóng **6 / 12 / 24 / 36 tháng**, biểu đồ so sánh **Baseline** và **What-If** cùng số tiền chênh lệch.
-- Tự thêm khoản chi từ danh mục hoặc tạo khoản tùy chỉnh (chọn biểu tượng có hiển thị tên, chọn màu).
+### 🔮 Mô phỏng tài chính What-If
+- Thử nghiệm các kịch bản tài chính tương lai: thanh trượt cắt giảm chi tiêu (0–50%), tích lũy thêm mỗi tháng, biến động lãi suất đầu tư, nghĩa vụ trả nợ vay.
+- Dự phóng dòng tiền theo các mốc **6 / 12 / 24 / 36 tháng** với biểu đồ so sánh trực quan giữa thực tế (Baseline) và kịch bản mô phỏng.
 
-### 📊 Báo cáo
-- Biểu đồ cơ cấu chi tiêu theo danh mục, so sánh thu – chi theo tháng, xu hướng dòng tiền.
-- Xuất **CSV (UTF-8)**, **Excel nhiều sheet** (giao dịch, ví, ngân sách, chỉ số tổng hợp) theo ngôn ngữ đang chọn, và in trang báo cáo.
-
-### ⚙️ Khác
-- **Song ngữ Việt / Anh**, giao diện **Sáng / Tối / Theo hệ thống**, tối ưu cho điện thoại.
-- **Sao lưu / khôi phục** toàn bộ dữ liệu bằng file JSON.
-- **Khóa PIN** bảo vệ dữ liệu khi mở ứng dụng ra Internet (xem mục 4).
+### 📊 Báo cáo & Xuất dữ liệu
+- Biểu đồ phân tích cơ cấu chi tiêu, xu hướng dòng tiền thu - chi qua các tháng.
+- Xuất file **Excel đa trang tính** (giao dịch, ví, ngân sách, chỉ số tổng hợp) và file **CSV UTF-8** theo ngôn ngữ được chọn.
 
 ---
 
-## 💻 2. Công nghệ
+## 🔒 2. Kiến trúc bảo mật nghiêm ngặt
+
+FinTrack Pro được trang bị hệ thống bảo mật 6 tầng:
+
+| Tầng bảo mật | Giải pháp kỹ thuật |
+|---|---|
+| **Mã hóa mật khẩu** | Mật khẩu được băm một chiều bằng thuật toán **`scrypt`** kết hợp chuỗi muối ngẫu nhiên 16-byte (`salt`). Không lưu mật khẩu thô. So sánh mật khẩu bằng `crypto.timingSafeEqual` chống tấn công đo thời gian (Timing Attack). |
+| **Chống Brute-Force** | Tự động giới hạn tốc độ (Rate Limiting): Nhập sai mật khẩu quá **5 lần / IP** sẽ bị khóa tạm thời trong 15 phút (`HTTP 429`). |
+| **Bảo vệ phiên** | Cookie phiên `fintrack_session` được ký số **HMAC-SHA256** với khóa bí mật riêng (`.session_secret`), gắn cờ `HttpOnly` (chống XSS) và `SameSite=lax` (chống CSRF). |
+| **Cô lập dữ liệu** | Server tự trích xuất `userId` từ chữ ký phiên làm việc (Zero Trust Client). Bộ lọc chống Path Traversal (`replace(/[^a-zA-Z0-9_-]/g, '')`) ngăn chặn đọc lén file. |
+| **Phân quyền hệ thống tệp** | Thư mục `data/` và `data/users/` được thiết lập quyền Linux **`chmod 700`**, các file dữ liệu **`chmod 600`** (chỉ có tài khoản hệ điều hành của bạn mới có quyền truy cập). |
+| **Bảo mật tuyệt đối khi Git** | File `.gitignore` loại trừ hoàn toàn `data/*.json`, `data/users/`, `data/users.json`, `data/.session_secret`. Khi push code lên GitHub, **toàn bộ dữ liệu tài chính và tài khoản được giữ lại trên máy, không bao giờ bị rò rỉ**. |
+
+---
+
+## 💻 3. Công nghệ sử dụng
 
 | Thành phần | Công nghệ |
 |---|---|
-| Framework | **Next.js 15** (App Router), **React 19**, JavaScript (JSX) |
-| Giao diện | **Tailwind CSS v4**, **Lucide React** (icon), canvas-confetti |
-| Biểu đồ | **Recharts** |
-| Excel / CSV | **SheetJS (xlsx)** |
-| Trạng thái | React Context (`src/context/AppContext.jsx`) |
-| Lưu trữ | API route `src/app/api/storage/route.js` ghi file `data/database.json`; `localStorage` làm bộ nhớ đệm offline |
+| **Framework** | **Next.js 15** (App Router), **React 19**, JavaScript (JSX) |
+| **Giao diện** | **Tailwind CSS v4**, **Lucide React** (icons), Canvas-Confetti |
+| **Biểu đồ** | **Recharts** |
+| **Xử lý bảng tính** | **SheetJS (xlsx)** |
+| **Xác thực & Mã hóa** | Node.js Built-in `crypto` (scrypt, HMAC-SHA256, timingSafeEqual) |
+| **Quản trị trạng thái** | React Context (`src/context/AppContext.jsx`) |
+| **Lưu trữ** | Document-based JSON Server Disk (Ghi nguyên tử `atomicWriteJSON` chống hỏng file) |
 
-### Cấu trúc thư mục
+### Cấu trúc mã nguồn
 ```
 src/
 ├── app/
-│   ├── api/storage/route.js   # API đọc/ghi dữ liệu, kiểm tra PIN, chống ghi đè xung đột
-│   ├── page.jsx, layout.jsx, not-found.jsx
-├── components/                # Mỗi màn hình 1 file: DashboardView, TransactionsView, BudgetsView,
-│                              # WhatIfSimulatorView, BillsView, ReportsView, WalletsView, SettingsView,
-│                              # Navigation, QuickAddModal, BankStatementModal, IconHelper...
-├── context/AppContext.jsx     # Toàn bộ state & nghiệp vụ (giao dịch, ví, hóa đơn, đồng bộ, PIN)
+│   ├── api/
+│   │   ├── auth/
+│   │   │   ├── login/route.js     # Đăng nhập, khởi tạo pass Host, giới hạn sai mật khẩu (Rate Limit)
+│   │   │   ├── register/route.js  # Đăng ký tài khoản khách, cấp User ID và dữ liệu riêng
+│   │   │   ├── me/route.js        # Kiểm tra phiên đăng nhập hiện tại
+│   │   │   └── logout/route.js    # Đăng xuất, xóa cookie phiên
+│   │   └── storage/route.js       # Đọc/ghi dữ liệu theo từng User ID, chống ghi đè xung đột
+│   ├── page.jsx, layout.jsx, not-found.jsx, globals.css
+├── components/                    # Các view giao diện: DashboardView, TransactionsView, BudgetsView,
+│                                  # WhatIfSimulatorView, BillsView, ReportsView, WalletsView, SettingsView,
+│                                  # Navigation, AuthModal, QuickAddModal, BankStatementModal...
+├── context/AppContext.jsx         # Quản lý state toàn cục, nạp dữ liệu theo User, đồng bộ realtime
 ├── lib/
-│   ├── bank-statement-parser.js  # Đọc & nhận diện sao kê ngân hàng
-│   ├── i18n.js                   # Bản dịch Việt / Anh
-│   ├── utils.js                  # Định dạng tiền/ngày, tính số dư, merge đồng bộ, xuất file
-│   └── mock-data.js              # Dữ liệu mẫu ban đầu
-├── types/index.js             # File giữ chỗ (dự án dùng JavaScript, không có TypeScript types)
-└── middleware.js              # HTTP Basic Auth (khi đặt APP_PASSWORD)
-data/database.json             # Dữ liệu thật (không commit thay đổi của file này)
+│   ├── auth-server.js             # Thư viện xử lý băm mật khẩu, ký phiên HMAC, quản lý users
+│   ├── bank-statement-parser.js   # Bộ phân tích sao kê ngân hàng tự động
+│   ├── i18n.js                    # Từ điển song ngữ Việt / Anh
+│   ├── utils.js                   # Xử lý tính toán số dư, định dạng tiền tệ, merge dữ liệu
+│   └── mock-data.js               # Cấu trúc dữ liệu mặc định ban đầu
+└── middleware.js                  # Điều hướng các request ứng dụng
+data/
+├── database.template.json         # Tệp mẫu cấu trúc dữ liệu trắng (được theo dõi trên Git)
+├── database.json                  # Dữ liệu tài chính của Host (được bảo vệ, nằm trong .gitignore)
+├── users.json                     # Danh sách tài khoản đã mã hóa (nằm trong .gitignore)
+├── .session_secret                # Khóa bí mật ký session (nằm trong .gitignore)
+└── users/                         # Thư mục lưu dữ liệu riêng của từng người dùng (nằm trong .gitignore)
+    ├── admin.json                 # Dữ liệu của Host
+    └── usr_<id>.json              # Dữ liệu độc lập của từng Khách
 ```
 
 ---
 
-## 🚀 3. Cài đặt & chạy
+## 🚀 4. Cài đặt & Vận hành
 
-Yêu cầu: **Node.js 18.18+** (khuyến nghị 20 hoặc 22).
+### Yêu cầu hệ thống
+* **Node.js 18.18+** (Khuyên dùng bản LTS Node 20 hoặc Node 22).
+* Hệ điều hành: Linux / macOS / Windows (WSL2).
 
+### Cài đặt ban đầu
 ```bash
 git clone https://github.com/vietnamlm05-bit/final-web-app.git
 cd final-web-app
 npm install
-
-npm run dev                    # chế độ phát triển: http://localhost:3000
-# hoặc chạy production:
-npm run build && npm start
 ```
 
-Máy khác trong cùng mạng LAN có thể truy cập qua `http://<IP-máy-chủ>:3000` (server lắng nghe `0.0.0.0`).
+### Chạy ứng dụng với 2 đường link (Khuyên dùng)
+Hệ thống tích hợp sẵn script tự động hóa khởi chạy máy chủ production kèm đường truyền ra Internet:
 
-### Chạy bằng script (production + tunnel cho điện thoại)
 ```bash
-APP_PASSWORD='mat-khau-manh' ./start.sh   # build (nếu cần) + chạy + mở tunnel ngrok/cloudflared
-APP_PIN='123456' ./start.sh               # hoặc chỉ khóa dữ liệu bằng PIN
-NO_TUNNEL=1 ./start.sh                    # chỉ chạy local
-./stop.sh                                 # dừng server và tunnel
+./start.sh
 ```
 
-| Biến môi trường | Ý nghĩa |
-|---|---|
-| `APP_PASSWORD`, `APP_USER` | Bật HTTP Basic Auth cho toàn bộ trang và API (user mặc định `admin`) |
-| `APP_PIN` | Mã PIN 4–8 số cố định để mở khóa dữ liệu (ghi đè PIN đặt trong Cài đặt) |
-| `NO_TUNNEL=1` | Không mở tunnel ra Internet |
-| `NGROK_DOMAIN`, `NGROK_BIN`, `CLOUDFLARED_BIN`, `PORT` | Tùy chọn tunnel / cổng |
+Sau khi khởi chạy thành công, terminal sẽ hiển thị 2 đường link:
+```text
+==================================================================
+FinTrack Pro da duoc khoi chay thanh cong voi he thong Da nguoi dung!
 
-`start.sh` sẽ **không** mở tunnel nếu chưa đặt `APP_PASSWORD` hoặc `APP_PIN`.
+👉 LINK 1 (DÀNH CHO BẠN / HOST):
+   http://localhost:3000
+   * Đăng nhập bằng tài khoản: admin
+   * Nếu là lần đầu: tự đặt mật khẩu ngay trên form đăng nhập.
+
+👉 LINK 2 (DÀNH CHO KHÁCH / TRUY CẬP ONLINE):
+   https://<domain-cua-ban>.ngrok-free.dev (hoặc link Cloudflare Tunnel)
+   * Khách mở link, chọn "Tạo Tài Khoản Khách" để đăng ký.
+   * Mỗi khách có User ID riêng và quản lý chi tiêu hoàn toàn độc lập với Host.
+==================================================================
+```
+
+### Dừng dịch vụ
+```bash
+./stop.sh
+```
+
+### Tùy chọn khác
+* **Chỉ chạy Local (không mở tunnel online):**
+  ```bash
+  NO_TUNNEL=1 ./start.sh
+  ```
+* **Chế độ phát triển (Development):**
+  ```bash
+  npm run dev
+  ```
 
 ---
 
-## 🔒 4. Bảo mật
+## 🗄️ 5. Quản lý Dữ liệu & Sao lưu
 
-- **Khóa PIN**: bật trong **Cài đặt → Bảo mật**, hoặc dùng `APP_PIN`. Khi bật, mọi thiết bị phải nhập PIN trước khi xem hay sửa dữ liệu.
-  - PIN được lưu dạng băm **scrypt + salt**, server không bao giờ trả PIN về trình duyệt.
-  - PIN chỉ gửi qua header `x-app-pin` (không đặt trên URL).
-  - Nhập sai **5 lần / IP** (hoặc 30 lần trên toàn hệ thống) trong 15 phút sẽ bị khóa tạm thời.
-- **HTTP Basic Auth** (`APP_PASSWORD`): bảo vệ cả trang lẫn API ở tầng middleware, nên dùng khi chia sẻ link ngrok / cloudflared.
+- **Ghi dữ liệu nguyên tử (Atomic Write):** Khi có giao dịch mới, server ghi ra file tạm `.tmp` rồi mới đổi tên (`fs.rename`), ngăn chặn triệt để nguy cơ tệp dữ liệu bị hỏng khi mất điện đột ngột.
+- **Đồng bộ thời gian thực đa thiết bị:** Ứng dụng tự động kiểm tra biến động dữ liệu. Nếu 2 thiết bị cùng sửa đổi, server kích hoạt cơ chế giải quyết xung đột (HTTP 409) và tự động hợp nhất 3 chiều (`mergeSnapshots`), bảo toàn toàn bộ số dư và giao dịch.
+- **Sao lưu thủ công:** Bạn có thể vào mục hồ sơ tài khoản và bấm **"Sao lưu dữ liệu"** để tải về tệp JSON dự phòng bất cứ lúc nào.
 
 ---
 
-## 🗄️ 5. Dữ liệu & đồng bộ
+## 📚 6. Tài liệu tham khảo
 
-- Dữ liệu nằm ở `data/database.json` trên máy chủ, mỗi lần lưu được **ghi nguyên tử** (ghi file tạm rồi đổi tên) và **xếp hàng tuần tự**.
-- **Đồng bộ nhiều thiết bị**: trình duyệt kiểm tra thay đổi mỗi ~3,5 giây. Khi 2 thiết bị cùng sửa, server từ chối bản cũ (HTTP 409), trình duyệt **tự hợp nhất 3 chiều** rồi lưu lại, không làm mất dữ liệu của thiết bị nào. Số dư ví được tính lại sau khi hợp nhất.
-- **Offline**: thay đổi được giữ trong `localStorage` và đẩy lên server khi có kết nối.
-- Nếu `database.json` bị hỏng, server **không ghi đè bằng dữ liệu mẫu** mà sao lưu sang `database.json.corrupt-<thời gian>` và báo lỗi để khôi phục thủ công.
-- **Sao lưu / khôi phục**: menu tài khoản → *Sao lưu dữ liệu* (tải file JSON) / *Khôi phục bản sao lưu*.
-- `data/database.json` có trong `.gitignore` nhưng vẫn đang được git theo dõi (để giữ dữ liệu mẫu). **Không commit thay đổi của file này**, vì nó chứa dữ liệu tài chính thật.
-
-> Trên Vercel, dữ liệu chỉ lưu tạm trong `/tmp` và sẽ mất khi server khởi động lại. Nên chạy trên máy chủ có ổ đĩa (máy cá nhân / VPS) bằng `start.sh`.
-
----
-
-## 📚 6. Tài liệu khác
-
-- [`TRACKING_CHANGES.md`](TRACKING_CHANGES.md): nhật ký chi tiết các lần sửa lỗi / nâng cấp.
-- [`PROJECT_CHEAT_SHEET.md`](PROJECT_CHEAT_SHEET.md): bảng tra cứu nhanh màn hình ↔ file mã nguồn khi thuyết trình.
+- [`PROJECT_CHEAT_SHEET.md`](PROJECT_CHEAT_SHEET.md): Bảng tra cứu nhanh sơ đồ màn hình và file mã nguồn tương ứng.
+- [`TRACKING_CHANGES.md`](TRACKING_CHANGES.md): Nhật ký chi tiết lịch sử nâng cấp và vá lỗi qua từng phiên bản.

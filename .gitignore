@@ -35,11 +35,16 @@ Thumbs.db
 *.pem
 .vercel
 
-# Du lieu tai chinh ca nhan (khong commit)
-data/database.json
+# Du lieu tai chinh ca nhan & tai khoan nguoi dung (khong commit len git)
+data/*.json
+data/users/
+data/users.json
+data/.session_secret
 data/database.json.*
+!data/database.template.json
 
 # PID cua start.sh
 .server.pid
 .ngrok.pid
 .cloudflared.pid
+current_url.txt

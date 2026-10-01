@@ -9,7 +9,8 @@ export const SettingsView = () => {
         theme, setTheme, language, setLanguage, t, 
         security, updateSecuritySettings,
         userProfile, updateUserProfile,
-        exportDatabaseJSON, importDatabaseJSON
+        exportDatabaseJSON, importDatabaseJSON,
+        showConfirm
     } = useApp();
 
     const [pinCodeInput, setPinCodeInput] = useState('');
@@ -92,9 +93,21 @@ export const SettingsView = () => {
             if (typeof content === 'string') {
                 const ok = await importDatabaseJSON(content);
                 if (ok) {
-                    alert(language === 'en' ? 'Data imported successfully!' : 'Đã nhập dữ liệu thành công!');
+                    showConfirm({
+                        title: language === 'en' ? 'Import Succeeded' : 'Nhập dữ liệu thành công',
+                        message: language === 'en' ? 'Data imported successfully from backup!' : 'Đã nhập dữ liệu thành công từ file sao lưu!',
+                        confirmText: 'OK',
+                        cancelText: null,
+                        variant: 'info'
+                    });
                 } else {
-                    alert(language === 'en' ? 'Failed to import data: invalid JSON format!' : 'Lỗi khi nhập dữ liệu: định dạng tệp JSON không hợp lệ!');
+                    showConfirm({
+                        title: language === 'en' ? 'Import Failed' : 'Nhập dữ liệu thất bại',
+                        message: language === 'en' ? 'Failed to import data: invalid backup structure or corrupted file!' : 'Lỗi khi nhập dữ liệu: định dạng file sao lưu không hợp lệ!',
+                        confirmText: 'OK',
+                        cancelText: null,
+                        variant: 'danger'
+                    });
                 }
             }
         };

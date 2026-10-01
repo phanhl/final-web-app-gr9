@@ -1,14 +1,16 @@
 'use client';
 import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
-import { Search, Filter, ArrowDownLeft, ArrowUpRight, ArrowRightLeft, Calendar, FileSpreadsheet, Plus, Edit2, Trash2, FileCheck, X, Upload, BarChart3, AlertTriangle, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, } from 'lucide-react';
+import { Search, Filter, ArrowDownLeft, ArrowUpRight, ArrowRightLeft, Calendar, FileSpreadsheet, Plus, Edit2, Trash2, FileCheck, X, Upload, BarChart3, ReceiptText, AlertTriangle, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, } from 'lucide-react';
 import { formatCurrency, formatDate, exportToCSV, exportToExcel, formatNumberWithDots, formatMonthLabel, toLocalDateTimeInput, normalizeSaveDate, toLocalDateKey, getLocalDateString, compressImageFile } from '@/lib/utils';
 import { POPULAR_TAGS } from '@/lib/mock-data';
 import { ReceiptModal } from './ReceiptModal';
+import { ReportsView } from './ReportsView';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, } from 'recharts';
 const pieChartColors = ['#f97316', '#ec4899', '#8b5cf6', '#0ea5e9', '#eab308', '#10b981', '#64748b', '#ef4444'];
 export const TransactionsView = () => {
-    const { transactions, wallets, categories, budgets, financialSummary, currentMonth, availableMonths, openQuickAdd, openStatementModal, deleteTransaction, navTargetCategoryId, setNavTargetCategoryId, language, t, tCategory, tWalletType, tTag, tWalletName, tNote, } = useApp();
+    const { transactions, wallets, categories, budgets, financialSummary, currentMonth, availableMonths, openQuickAdd, openStatementModal, deleteTransaction, navTargetCategoryId, setNavTargetCategoryId, language, t, tCategory, tWalletType, tTag, tWalletName, tNote, showConfirm, } = useApp();
+    const [activeSubTab, setActiveSubTab] = useState('LIST'); // 'LIST' | 'REPORTS'
     const [showCharts, setShowCharts] = useState(true);
     // Search & Filters State
     const [searchTerm, setSearchTerm] = useState('');
@@ -314,67 +316,117 @@ export const TransactionsView = () => {
         endDate !== '' ||
         selectedMonth !== 'ALL';
     return (<div className="space-y-6 pb-12">
-      {/* 1. HEADER & ACTIONS */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      {/* 0. SUB-TAB SWITCHER (UNIFY TRANSACTIONS & REPORTS) */}
+      <div className="flex items-center justify-between flex-wrap gap-4 pb-2 border-b border-slate-200 dark:border-slate-800">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">
-            {t('tx.title', 'Sổ Giao Dịch')}
+            {activeSubTab === 'LIST' ? t('tx.title', 'Sổ Giao Dịch') : t('reports.title', 'Báo Cáo Tài Chính')}
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            {t('tx.subtitle', 'Theo dõi dòng tiền thu chi theo dòng thời gian (Timeline) với bộ lọc chuyên sâu')}
+            {activeSubTab === 'LIST'
+              ? t('tx.subtitle', 'Theo dõi dòng tiền thu chi theo dòng thời gian (Timeline) với bộ lọc chuyên sâu')
+              : t('reports.subtitle', 'Phân tích cơ cấu chi tiêu, xu hướng dòng tiền và so sánh các kỳ')}
           </p>
         </div>
 
-        <div className="flex items-center space-x-2.5">
-          <button onClick={() => setShowCharts((s) => !s)} className="flex items-center space-x-1.5 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold shadow-sm transition-colors cursor-pointer" title={showCharts ? t('tx.hideCharts', 'Ẩn biểu đồ') : t('tx.showCharts', 'Xem biểu đồ')}>
-            <BarChart3 className="w-4 h-4 text-indigo-500"/>
-            <span>{showCharts ? t('tx.hideCharts', 'Ẩn biểu đồ') : t('tx.showCharts', 'Xem biểu đồ')}</span>
+        <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-2xl border border-slate-200 dark:border-slate-700/80">
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('LIST')}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeSubTab === 'LIST'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <ReceiptText className="w-3.5 h-3.5" />
+            <span>{t('tx.tabList', 'Danh sách giao dịch')}</span>
           </button>
-
-          <button onClick={() => exportToCSV(filteredTransactions, undefined, language)} className="flex items-center space-x-1.5 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold shadow-sm transition-colors cursor-pointer" title="CSV">
-            <FileSpreadsheet className="w-4 h-4 text-emerald-600"/>
-            <span>{t('tx.exportCSV', 'Xuất CSV')}</span>
-          </button>
-
-          <button onClick={() => exportToExcel(filteredTransactions, budgets, wallets, financialSummary, undefined, currentMonth, language)} className="flex items-center space-x-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors cursor-pointer" title="Excel">
-            <FileSpreadsheet className="w-4 h-4"/>
-            <span>{t('tx.exportExcel', 'Xuất Excel (.xlsx)')}</span>
-          </button>
-
-          <button onClick={() => openStatementModal()} className="flex items-center space-x-1.5 px-3.5 py-2 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-300 dark:border-emerald-700/60 text-emerald-700 dark:text-emerald-300 rounded-xl text-xs font-bold shadow-sm transition-colors cursor-pointer" title={t('tx.importStatementTitle', 'Tải file sao kê ngân hàng Excel / CSV để cộng trừ tự động')}>
-            <Upload className="w-4 h-4 text-emerald-600 dark:text-emerald-400"/>
-            <span>{t('tx.importStatement', 'Tải sao kê lên')}</span>
-          </button>
-
-          <button onClick={() => openQuickAdd('EXPENSE')} className="flex items-center space-x-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors cursor-pointer">
-            <Plus className="w-4 h-4"/>
-            <span>{t('tx.newTx', 'Giao dịch mới')}</span>
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('REPORTS')}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeSubTab === 'REPORTS'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <BarChart3 className="w-3.5 h-3.5" />
+            <span>{t('tx.tabReports', 'Báo cáo & Phân tích')}</span>
           </button>
         </div>
       </div>
 
-      {/* 1.5. MONTH SELECTOR QUICK BAR */}
-      <div className="flex items-center justify-between flex-wrap gap-2 p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-        <div className="flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-blue-500"/>
-          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-            {t('tx.filterMonth', 'Kỳ hiển thị:')}
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <button type="button" onClick={() => setSelectedMonth('ALL')} className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${selectedMonth === 'ALL'
-            ? 'bg-blue-600 text-white shadow-sm'
-            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'}`}>
-            {t('tx.allMonths', 'Tất cả các tháng')}
-          </button>
-          {availableMonths.map((m) => (<button key={m} type="button" onClick={() => setSelectedMonth(m)} className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${selectedMonth === m
+      {activeSubTab === 'REPORTS' ? (
+        <ReportsView />
+      ) : (
+        <>
+          {/* 1. HEADER & ACTIONS */}
+          <div className="flex flex-wrap items-center justify-end gap-2.5">
+            <button onClick={() => setShowCharts((s) => !s)} className="flex items-center space-x-1.5 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold shadow-sm transition-colors cursor-pointer" title={showCharts ? t('tx.hideCharts', 'Ẩn biểu đồ') : t('tx.showCharts', 'Xem biểu đồ')}>
+              <BarChart3 className="w-4 h-4 text-indigo-500"/>
+              <span>{showCharts ? t('tx.hideCharts', 'Ẩn biểu đồ') : t('tx.showCharts', 'Xem biểu đồ')}</span>
+            </button>
+
+            <button onClick={() => exportToCSV(filteredTransactions, undefined, language)} className="flex items-center space-x-1.5 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold shadow-sm transition-colors cursor-pointer" title="CSV">
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600"/>
+              <span>{t('tx.exportCSV', 'Xuất CSV')}</span>
+            </button>
+
+            <button onClick={() => exportToExcel(filteredTransactions, budgets, wallets, financialSummary, undefined, currentMonth, language)} className="flex items-center space-x-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors cursor-pointer" title="Excel">
+              <FileSpreadsheet className="w-4 h-4"/>
+              <span>{t('tx.exportExcel', 'Xuất Excel (.xlsx)')}</span>
+            </button>
+
+            <button onClick={() => openStatementModal()} className="flex items-center space-x-1.5 px-3.5 py-2 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-300 dark:border-emerald-700/60 text-emerald-700 dark:text-emerald-300 rounded-xl text-xs font-bold shadow-sm transition-colors cursor-pointer" title={t('tx.importStatementTitle', 'Tải file sao kê ngân hàng Excel / CSV để cộng trừ tự động')}>
+              <Upload className="w-4 h-4 text-emerald-600 dark:text-emerald-400"/>
+              <span>{t('tx.importStatement', 'Tải sao kê lên')}</span>
+            </button>
+
+            <button onClick={() => openQuickAdd('EXPENSE')} className="flex items-center space-x-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors cursor-pointer">
+              <Plus className="w-4 h-4"/>
+              <span>{t('tx.newTx', 'Giao dịch mới')}</span>
+            </button>
+          </div>
+
+          {/* 1.5. COMPACT MONTH SELECTOR */}
+          <div className="flex items-center justify-between flex-wrap gap-2.5 p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-blue-500"/>
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                {t('tx.filterMonth', 'Kỳ hiển thị:')}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button type="button" onClick={() => setSelectedMonth('ALL')} className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${selectedMonth === 'ALL'
                 ? 'bg-blue-600 text-white shadow-sm'
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'}`}>
-              {formatMonthLabel(m, language)}
-              {m === currentMonth ? ` (${t('tx.quickMonth', 'Hiện tại')})` : ''}
-            </button>))}
-        </div>
-      </div>
+                {t('tx.allMonths', 'Tất cả các tháng')}
+              </button>
+              <div className="relative">
+                <select
+                  value={selectedMonth === 'ALL' ? '' : selectedMonth}
+                  onChange={(e) => {
+                    if (e.target.value) setSelectedMonth(e.target.value);
+                  }}
+                  className={`px-3 py-1.5 pr-7 rounded-xl text-xs font-bold border transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    selectedMonth !== 'ALL'
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                  }`}
+                >
+                  <option value="" disabled className="bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300">
+                    {selectedMonth === 'ALL' ? t('tx.chooseMonth', 'Chọn tháng cụ thể...') : formatMonthLabel(selectedMonth, language)}
+                  </option>
+                  {availableMonths.map((m) => (
+                    <option key={m} value={m} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">
+                      {formatMonthLabel(m, language)} {m === currentMonth ? `(${t('tx.quickMonth', 'Hiện tại')})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
 
       {/* 2. STATS SUMMARY BAR OF FILTERED TRANSACTIONS */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -927,10 +979,14 @@ export const TransactionsView = () => {
                           <Edit2 className="w-4 h-4"/>
                         </button>
                         <button onClick={() => {
-                    if (confirm(t('tx.confirmDelete', 'Bạn có chắc chắn muốn xóa giao dịch này không? Số dư ví sẽ được hoàn tác an toàn.'))) {
-                        deleteTransaction(tx.id);
-                    }
-                }} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer" title={t('tx.delete', 'Xóa')}>
+                          showConfirm({
+                            title: t('tx.deleteTitle', 'Xác nhận xóa giao dịch'),
+                            message: t('tx.confirmDelete', 'Bạn có chắc chắn muốn xóa giao dịch này không? Số dư ví sẽ được hoàn tác an toàn.'),
+                            confirmText: t('common.delete', 'Xóa'),
+                            variant: 'danger',
+                            onConfirm: () => deleteTransaction(tx.id),
+                          });
+                        }} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer" title={t('tx.delete', 'Xóa')}>
                           <Trash2 className="w-4 h-4"/>
                         </button>
                       </div>
@@ -975,6 +1031,7 @@ export const TransactionsView = () => {
             </div>
           </div>)}
       </div>
+      </>)}
 
       {/* Modals */}
       <ReceiptModal isOpen={Boolean(receiptToView)} onClose={() => setReceiptToView(null)} imageUrl={receiptToView || undefined} title={t('receipt.title', 'Chi tiết ảnh hóa đơn đính kèm')}/>
@@ -983,7 +1040,7 @@ export const TransactionsView = () => {
     </div>);
 };
 const EditTransactionModal = ({ isOpen, onClose, transaction, }) => {
-    const { wallets, categories, editTransaction, deleteTransaction, language, t, tCategory, tWalletType, tTag, tWalletName } = useApp();
+    const { wallets, categories, editTransaction, deleteTransaction, language, t, tCategory, tWalletType, tTag, tWalletName, showConfirm } = useApp();
     const [type, setType] = useState('EXPENSE');
     const [amount, setAmount] = useState(0);
     const [categoryId, setCategoryId] = useState('');
@@ -1066,10 +1123,16 @@ const EditTransactionModal = ({ isOpen, onClose, transaction, }) => {
         }
     };
     const handleDelete = () => {
-        if (confirm(t('tx.confirmDelete', 'Bạn có chắc chắn muốn xóa giao dịch này? Số dư ví sẽ được tự động hoàn tác.'))) {
-            deleteTransaction(transaction.id);
-            onClose();
-        }
+        showConfirm({
+            title: t('tx.deleteTitle', 'Xác nhận xóa giao dịch'),
+            message: t('tx.confirmDelete', 'Bạn có chắc chắn muốn xóa giao dịch này? Số dư ví sẽ được tự động hoàn tác.'),
+            confirmText: t('common.delete', 'Xóa'),
+            variant: 'danger',
+            onConfirm: () => {
+                deleteTransaction(transaction.id);
+                onClose();
+            },
+        });
     };
     const filteredCategories = categories.filter((c) => c.type === (type === 'INCOME' ? 'INCOME' : 'EXPENSE'));
     return (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">

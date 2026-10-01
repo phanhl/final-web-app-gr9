@@ -2,11 +2,19 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { INITIAL_WALLETS, INITIAL_TRANSACTIONS, INITIAL_BUDGETS, INITIAL_BILLS, INITIAL_GOALS, INITIAL_PLANNER, DEFAULT_CATEGORIES, INITIAL_SIMULATOR_CONFIG, } from '@/lib/mock-data';
 import { calculateFinancialSummary, checkWalletSufficientFunds, formatCurrency, getLocalDateString, toLocalDateKey, normalizeSaveDate, applyTxToWallets, recomputeWalletBalances, sumWalletTxEffect, mergeSnapshots, generateId, MAX_TX_AMOUNT } from '@/lib/utils';
+import { validateBackupData } from '@/lib/backup-validation';
 import { translate, translateCategory, translateWalletType, translateTag, translateBillName, translateBillNote, translateWalletName, translateNote } from '@/lib/i18n';
-import { KeyRound } from 'lucide-react';
+import { KeyRound, ShieldCheck } from 'lucide-react';
+import { AuthModal } from '@/components/AuthModal';
+import { ConfirmModal } from '@/components/ConfirmModal';
 const AppContext = createContext(undefined);
 const STORAGE_KEY = 'quan_ly_chi_tieu_data_v2';
 export const AppProvider = ({ children }) => {
+    const [currentUser, setCurrentUser] = useState(null);
+    const [authLoading, setAuthLoading] = useState(true);
+    const [isHostPasswordSet, setIsHostPasswordSet] = useState(false);
+    const currentUserRef = useRef(currentUser);
+    currentUserRef.current = currentUser;
     const [mounted, setMounted] = useState(false);
     const [wallets, setWallets] = useState(INITIAL_WALLETS);
     const [transactions, setTransactions] = useState(INITIAL_TRANSACTIONS);
@@ -17,6 +25,49 @@ export const AppProvider = ({ children }) => {
     const [planner, setPlanner] = useState(INITIAL_PLANNER);
     const [currentMonth, setCurrentMonth] = useState('2026-09');
     const [activeTab, setActiveTab] = useState('dashboard');
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [confirmModalConfig, setConfirmModalConfig] = useState(null);
+
+    const showConfirm = useCallback(({
+        title,
+        message,
+        confirmText,
+        cancelText,
+        variant = 'danger',
+        onConfirm,
+    }) => {
+        setConfirmModalConfig({
+            title,
+            message,
+            confirmText,
+            cancelText,
+            variant,
+            onConfirm,
+        });
+    }, []);
+
+    const closeConfirm = useCallback(() => {
+        setConfirmModalConfig(null);
+    }, []);
+
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem('fintrack_sidebar_open');
+            if (saved !== null) {
+                setIsSidebarOpen(saved === 'true');
+            } else if (typeof window !== 'undefined' && window.innerWidth >= 1280) {
+                setIsSidebarOpen(true);
+            }
+        } catch (e) {}
+    }, []);
+
+    const toggleSidebar = useCallback(() => {
+        setIsSidebarOpen(prev => {
+            const next = !prev;
+            try { localStorage.setItem('fintrack_sidebar_open', String(next)); } catch (e) {}
+            return next;
+        });
+    }, []);
     const [quickAddOpen, setQuickAddOpen] = useState(false);
     const [quickAddDefaultType, setQuickAddDefaultType] = useState('EXPENSE');
     const [quickAddDefaultWalletId, setQuickAddDefaultWalletId] = useState(undefined);
@@ -231,41 +282,24 @@ export const AppProvider = ({ children }) => {
     // Bản server gần nhất mà state local dựa vào (dùng làm base khi merge xung đột)
     const lastServerSnapshotRef = useRef(null);
     // Khóa PIN bảo vệ /api/storage (server chỉ trả về pinEnabled/hasPin, không bao giờ trả mã PIN)
-    const PIN_STORAGE_KEY = 'fintrack_pin';
     const [security, setSecurity] = useState({ pinEnabled: false, hasPin: false });
     const appPinRef = useRef('');
     const [isPinLocked, setIsPinLocked] = useState(false);
     const [pinUnlockError, setPinUnlockError] = useState('');
     const setAppPin = (pin) => {
         appPinRef.current = pin || '';
-        try {
-            if (pin)
-                localStorage.setItem(PIN_STORAGE_KEY, pin);
-            else
-                localStorage.removeItem(PIN_STORAGE_KEY);
-        }
-        catch (e) {
-            // ignore
-        }
     };
     const getApiHeaders = useCallback((extra = {}) => {
-        let pin = appPinRef.current;
-        if (!pin) {
-            try {
-                pin = localStorage.getItem(PIN_STORAGE_KEY) || '';
-                appPinRef.current = pin;
-            }
-            catch (e) {
-                pin = '';
-            }
-        }
         const headers = {
             'Cache-Control': 'no-cache, no-store',
             Pragma: 'no-cache',
             ...extra,
         };
-        if (pin)
-            headers['x-app-pin'] = pin;
+
+        if (appPinRef.current) {
+            headers['x-app-pin'] = appPinRef.current;
+        }
+
         return headers;
     }, []);
     // 401 do thiếu/sai PIN -> hiện màn hình khóa
@@ -336,7 +370,9 @@ export const AppProvider = ({ children }) => {
         }
         try {
             const { security: _security, ...cacheable } = d;
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(cacheable));
+            const uid = currentUserRef.current?.id;
+            const key = uid ? `quan_ly_chi_tieu_data_v2_${uid}` : STORAGE_KEY;
+            localStorage.setItem(key, JSON.stringify(cacheable));
         }
         catch (e) {
             console.warn('Failed to update localStorage cache:', e);
@@ -373,9 +409,11 @@ export const AppProvider = ({ children }) => {
             return false;
         }
     }, [applyServerData, getApiHeaders, handleAuthFailure]);
-    const readLocalCache = () => {
+    const readLocalCache = (customUid) => {
         try {
-            const saved = localStorage.getItem(STORAGE_KEY);
+            const uid = customUid || currentUserRef.current?.id;
+            const key = uid ? `quan_ly_chi_tieu_data_v2_${uid}` : STORAGE_KEY;
+            const saved = localStorage.getItem(key);
             return saved ? JSON.parse(saved) : null;
         }
         catch (e) {
@@ -463,52 +501,165 @@ export const AppProvider = ({ children }) => {
             return { success: false, error: e.message };
         }
     };
-    // Initial load: prioritize server disk as single source of truth across all devices
+    // Kiểm tra đăng nhập và nạp dữ liệu ban đầu theo User ID
     useEffect(() => {
         let isSubscribed = true;
-        async function loadData() {
-            let serverData = null;
-            let locked = false;
+        async function checkAuthAndLoad() {
             try {
-                const res = await fetch('/api/storage', {
-                    cache: 'no-store',
-                    headers: getApiHeaders(),
-                });
-                if (res.status === 401) {
-                    locked = true;
-                    if (isSubscribed)
-                        setIsPinLocked(true);
-                }
-                else if (res.ok) {
-                    const result = await res.json();
-                    if (result.success && result.data) {
-                        serverData = result.data;
+                const authRes = await fetch('/api/auth/me', { cache: 'no-store' });
+                const authData = await authRes.json().catch(() => ({ authenticated: false }));
+                if (!isSubscribed) return;
+
+                setIsHostPasswordSet(Boolean(authData.isHostPasswordSet));
+
+                if (authData.authenticated && authData.user) {
+                    currentUserRef.current = authData.user;
+                    setCurrentUser(authData.user);
+
+                    let serverData = null;
+                    let locked = false;
+                    try {
+                        const res = await fetch('/api/storage', {
+                            cache: 'no-store',
+                            headers: getApiHeaders(),
+                        });
+                        if (res.status === 401) {
+                            const errData = await res.json().catch(() => ({}));
+                            if (errData.requiresPin) {
+                                locked = true;
+                                if (isSubscribed) setIsPinLocked(true);
+                            }
+                        }
+                        else if (res.ok) {
+                            const result = await res.json();
+                            if (result.success && result.data) {
+                                serverData = result.data;
+                            }
+                        }
                     }
+                    catch (e) {
+                        console.warn('Could not connect to server storage API:', e);
+                    }
+
+                    if (!isSubscribed) return;
+                    if (locked) {
+                        setServerSyncStatus('offline');
+                        setAuthLoading(false);
+                        return;
+                    }
+
+                    applyInitialData(serverData, readLocalCache(authData.user.id));
+                    setServerSyncStatus(serverData ? 'synced' : 'offline');
+                    setMounted(true);
+                } else {
+                    currentUserRef.current = null;
+                    setCurrentUser(null);
+                    setMounted(false);
                 }
             }
-            catch (e) {
-                console.warn('Could not connect to server storage API:', e);
+            catch (err) {
+                console.error('Failed to check auth:', err);
+                if (isSubscribed) {
+                    currentUserRef.current = null;
+                    setCurrentUser(null);
+                    setMounted(false);
+                }
             }
-            if (!isSubscribed)
-                return;
-            if (locked) {
-                // Chưa có PIN: không nạp dữ liệu và không bật auto-save (tránh đẩy dữ liệu mẫu / ghi đè cache local).
-                // verifyAndUnlockApp sẽ nạp dữ liệu sau khi mở khóa.
-                setServerSyncStatus('offline');
-                return;
+            finally {
+                if (isSubscribed) {
+                    setAuthLoading(false);
+                }
             }
-            applyInitialData(serverData, readLocalCache());
-            setServerSyncStatus(serverData ? 'synced' : 'offline');
-            setMounted(true);
         }
-        loadData();
+        checkAuthAndLoad();
         return () => {
             isSubscribed = false;
         };
     }, [applyInitialData, getApiHeaders]);
+
+    const handleLoginSuccess = async (user) => {
+        currentUserRef.current = user;
+        setCurrentUser(user);
+        setAuthLoading(true);
+
+        // Xóa sạch dữ liệu cache cũ trên localStorage để tạo tài khoản mới hoàn toàn sạch
+        try {
+            localStorage.removeItem('quan_ly_chi_tieu_data_v2');
+            localStorage.removeItem('fintrack_user_profile');
+            localStorage.removeItem(`quan_ly_chi_tieu_data_v2_${user.id}`);
+        } catch (e) {}
+
+        // Đặt lại state về trạng thái rỗng trước khi nạp dữ liệu cá nhân của user
+        setWallets([]);
+        setTransactions([]);
+        setBudgets([]);
+        setBills([]);
+        setGoals([]);
+        setPlanner({
+            monthlyIncome: 0,
+            needsPercent: 50,
+            wantsPercent: 30,
+            savingsPercent: 20,
+            emergencyPercent: 0,
+            notes: '',
+        });
+
+        try {
+            const res = await fetch('/api/storage', {
+                cache: 'no-store',
+                headers: getApiHeaders(),
+            });
+            if (res.ok) {
+                const result = await res.json();
+                if (result.success && result.data) {
+                    applyServerData(result.data, true);
+                    setServerSyncStatus('synced');
+                    setMounted(true);
+                }
+            }
+        }
+        catch (err) {
+            console.error('Failed to load data after login:', err);
+        }
+        finally {
+            setAuthLoading(false);
+        }
+    };
+
+    const logoutUser = async () => {
+        try {
+            await fetch('/api/auth/logout', { method: 'POST' });
+        } catch {}
+        try {
+            for (let i = localStorage.length - 1; i >= 0; i--) {
+                const key = localStorage.key(i);
+                if (key && (key.startsWith('quan_ly_chi_tieu_data_v2') || key.startsWith('fintrack_user_profile'))) {
+                    localStorage.removeItem(key);
+                }
+            }
+        } catch {}
+        currentUserRef.current = null;
+        setCurrentUser(null);
+        setMounted(false);
+        setIsPinLocked(false);
+        setWallets([]);
+        setTransactions([]);
+        setBudgets([]);
+        setBills([]);
+        setGoals([]);
+        setPlanner({
+            monthlyIncome: 0,
+            needsPercent: 50,
+            wantsPercent: 30,
+            savingsPercent: 20,
+            emergencyPercent: 0,
+            notes: '',
+        });
+    };
+
     // Real-time polling & focus/visibility sync across multi-devices (Phone <-> PC)
     useEffect(() => {
-        if (!mounted)
+        if (!mounted || !currentUser)
             return;
         let isChecking = false;
         const checkForUpdates = async () => {
@@ -603,7 +754,9 @@ export const AppProvider = ({ children }) => {
                 baseUpdatedAt: lastServerUpdatedAtRef.current,
             };
             try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+                const uid = currentUser?.id;
+                const key = uid ? `quan_ly_chi_tieu_data_v2_${uid}` : STORAGE_KEY;
+                localStorage.setItem(key, JSON.stringify(payload));
             }
             catch (e) {
                 console.error('Failed to save to localStorage:', e);
@@ -640,7 +793,7 @@ export const AppProvider = ({ children }) => {
     };
     // Auto-save local changes to server disk
     useEffect(() => {
-        if (!mounted || isPinLocked)
+        if (!mounted || isPinLocked || !currentUser)
             return;
         const currentData = getCurrentData();
         const currentSignature = computeDataSignature(currentData);
@@ -650,7 +803,9 @@ export const AppProvider = ({ children }) => {
         }
         // 1. Fast local cache save
         try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...currentData, updatedAt: new Date().toISOString() }));
+            const uid = currentUser?.id;
+            const key = uid ? `quan_ly_chi_tieu_data_v2_${uid}` : STORAGE_KEY;
+            localStorage.setItem(key, JSON.stringify({ ...currentData, updatedAt: new Date().toISOString() }));
         }
         catch (e) {
             console.error('Failed to save to localStorage:', e);
@@ -1338,31 +1493,72 @@ export const AppProvider = ({ children }) => {
     const importDatabaseJSON = (jsonStr) => {
         try {
             const data = JSON.parse(jsonStr);
-            if (!data || typeof data !== 'object' || !Array.isArray(data.wallets) || !Array.isArray(data.transactions)) {
+
+            // Bước 1: kiểm tra toàn bộ backup trước khi thay đổi state
+            const validationErrors = validateBackupData(data);
+
+            if (validationErrors.length > 0) {
+                console.error(
+                    'Backup validation failed:',
+                    validationErrors
+                );
+
                 return false;
             }
-            setWallets(data.wallets.map((w) => ({
+
+            // Chuẩn hóa wallet.
+            // Không tin balance trong file backup.
+            const importedWallets = data.wallets.map((w) => ({
                 ...w,
-                balance: Number(w.balance) || 0,
-                initialBalance: w.initialBalance !== undefined ? Number(w.initialBalance) || 0 : Number(w.balance) || 0,
-            })));
+                initialBalance:
+                    w.initialBalance !== undefined
+                        ? Number(w.initialBalance) || 0
+                        : Number(w.balance) || 0,
+                balance:
+                    Number(w.balance) || 0,
+            }));
+
+            // Tính lại số dư dựa trên initialBalance + transaction history.
+            const recalculatedWallets =
+                recomputeWalletBalances(
+                    importedWallets,
+                    data.transactions
+                );
+
+            // Chỉ bắt đầu thay đổi state sau khi mọi validation đã pass.
+            setWallets(recalculatedWallets);
             setTransactions(data.transactions);
-            if (data.categories && Array.isArray(data.categories))
+
+            if (data.categories && Array.isArray(data.categories)) {
                 setCategories(data.categories);
-            if (data.budgets && Array.isArray(data.budgets))
+            }
+
+            if (data.budgets && Array.isArray(data.budgets)) {
                 setBudgets(data.budgets);
-            if (data.bills && Array.isArray(data.bills))
+            }
+
+            if (data.bills && Array.isArray(data.bills)) {
                 setBills(data.bills);
-            if (data.goals && Array.isArray(data.goals))
+            }
+
+            if (data.goals && Array.isArray(data.goals)) {
                 setGoals(data.goals);
+            }
+
             if (data.planner) {
                 setPlanner({
                     ...data.planner,
-                    emergencyPercent: data.planner.emergencyPercent !== undefined ? data.planner.emergencyPercent : 10,
+                    emergencyPercent:
+                        data.planner.emergencyPercent !== undefined
+                            ? data.planner.emergencyPercent
+                            : 10,
                 });
             }
-            if (data.simulatorConfig)
+
+            if (data.simulatorConfig) {
                 setSimulatorConfig(data.simulatorConfig);
+            }
+
             return true;
         }
         catch (e) {
@@ -1384,6 +1580,9 @@ export const AppProvider = ({ children }) => {
             serverSyncStatus,
             activeTab,
             setActiveTab,
+            isSidebarOpen,
+            setIsSidebarOpen,
+            toggleSidebar,
             quickAddOpen,
             setQuickAddOpen,
             quickAddDefaultType,
@@ -1466,8 +1665,34 @@ export const AppProvider = ({ children }) => {
             pinUnlockError,
             verifyAndUnlockApp,
             updateSecuritySettings,
+            currentUser,
+            authLoading,
+            isHostPasswordSet,
+            logoutUser,
+            handleLoginSuccess,
+            showConfirm,
         }}>
-      {children}
+      {authLoading ? (
+        <div className="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-slate-950 text-white">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-600 flex items-center justify-center shadow-lg shadow-blue-500/30 mb-4 animate-pulse">
+            <ShieldCheck className="w-8 h-8 text-white" />
+          </div>
+          <p className="text-sm font-bold tracking-wide animate-pulse">FinTrack Pro</p>
+          <p className="text-xs text-slate-400 mt-1">
+            {language === 'en' ? 'Checking security session...' : 'Đang kiểm tra phiên bảo mật...'}
+          </p>
+        </div>
+      ) : !currentUser ? (
+        <AuthModal
+          onLoginSuccess={handleLoginSuccess}
+          isHostPasswordSet={isHostPasswordSet}
+          language={language}
+        />
+      ) : (
+        <>
+          {children}
+        </>
+      )}
       {isPinLocked && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4">
           <div className="max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-7 text-center space-y-5 animate-in fade-in zoom-in-95 duration-200">
@@ -1500,6 +1725,7 @@ export const AppProvider = ({ children }) => {
             </form>
           </div>
         </div>)}
+      <ConfirmModal config={confirmModalConfig} onClose={closeConfirm} />
     </AppContext.Provider>);
 };
 export const useApp = () => {
