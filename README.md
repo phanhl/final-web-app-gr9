@@ -75,6 +75,7 @@ src/
 │   ├── i18n.js                   # Bản dịch Việt / Anh
 │   ├── utils.js                  # Định dạng tiền/ngày, tính số dư, merge đồng bộ, xuất file
 │   └── mock-data.js              # Dữ liệu mẫu ban đầu
+├── types/index.js             # File giữ chỗ (dự án dùng JavaScript, không có TypeScript types)
 └── middleware.js              # HTTP Basic Auth (khi đặt APP_PASSWORD)
 data/database.json             # Dữ liệu thật (không commit thay đổi của file này)
 ```

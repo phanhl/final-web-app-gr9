@@ -1,78 +1,113 @@
 # BẢNG TRA CỨU NHANH KHI CHẤM BÀI PROJECT (DEFENSE CHEAT SHEET)
 
-> **Mẹo vàng khi thuyết trình/chấm bài:**
-> Nhấn **`Ctrl + P`** (hoặc `Cmd + P` trên Mac) trong VS Code / Cursor, gõ vài chữ cái đầu của tên file là file mở ra ngay lập tức trong 1 giây!
+> **Mẹo khi thuyết trình/chấm bài:**
+> Nhấn **`Ctrl + P`** (hoặc `Cmd + P` trên Mac) trong VS Code / Cursor, gõ vài chữ cái đầu của tên file là mở được ngay.
+>
+> Dự án viết bằng **JavaScript (JSX)**: component là `.jsx`, thư viện / API là `.js` (không phải TypeScript).
 
 ---
 
-## 1. Bản Đồ Màn Hình Web <-> Tên File (Quy Tắc 1 - 1 Cực Dễ Nhớ)
+## 1. Bản đồ màn hình web ↔ file mã nguồn
 
-Mọi màn hình bạn nhìn thấy trên giao diện web đều nằm ở thư mục **`src/components/`** với tên gọi tiếng Anh tương ứng:
+Mỗi màn hình trên giao diện nằm trong thư mục **`src/components/`** với tên tiếng Anh tương ứng:
 
-| Bạn đang nhìn trên Web | File mã nguồn tương ứng (`Ctrl + P`) | Nội dung file đảm nhận |
+| Bạn đang nhìn trên Web | File mã nguồn (`Ctrl + P`) | Nội dung file đảm nhận |
 |---|---|---|
-| 🏠 **Tổng quan (Dashboard)** | `DashboardView.tsx` | Số dư khả dụng, Tài sản ròng, Thẻ thu/chi tháng, Lối tắt What-If, Giao dịch gần đây. |
-| 📒 **Sổ giao dịch** | `TransactionsView.tsx` | Bộ lọc nâng cao, Nút bật/tắt biểu đồ (Bar/Pie chart), danh sách giao dịch chi tiết, xuất file Excel/CSV. |
-| 🎯 **Ngân sách** | `BudgetsView.tsx` | Quy tắc 50/30/20, ngân sách từng danh mục, thanh tiến độ chi tiêu và hạn mức. |
-| ✨ **Mô phỏng What-If** | `WhatIfSimulatorView.tsx` | Mô phỏng các kịch bản tài chính: Mua nhà, thêm nguồn thu, cắt giảm chi tiêu,... |
-| 📅 **Định kỳ (Hóa đơn)** | `BillsView.tsx` | Quản lý hóa đơn định kỳ hàng tháng, đánh dấu đã thanh toán, tự động trừ tiền vào ví. |
-| 📊 **Báo cáo tài chính** | `ReportsView.tsx` | Phân tích cơ cấu tài sản, biểu đồ dòng tiền theo tháng/quý/năm, so sánh thu - chi. |
-| 💳 **Quản lý Ví** | `WalletsView.tsx` | Xem chi tiết thu chi từng ví, chỉnh sửa ví, danh sách ví (Tiền mặt, Ngân hàng, Thẻ tín dụng, Tiết kiệm), thống kê dòng tiền (Inflow/Outflow/Net Flow), chuyển khoản giữa các ví. |
-| ⚙️ **Cài đặt & Giao diện** | `SettingsView.tsx` | Tùy chọn Sáng/Tối/Hệ thống, Xuất/Nhập file JSON sao lưu, Xóa dữ liệu, Thông tin kiến trúc. |
-| 🧭 **Menu & Header trên cùng** | `Navigation.tsx` | Nút Sáng/Tối ☀️🌙, Chuông cảnh báo ngân sách 80%/100%, Avatar, thanh Tab điều hướng. |
-| ➕ **Modal Thêm giao dịch** | `QuickAddModal.jsx` | Hộp thoại nhập nhanh khoản thu, khoản chi, chuyển ví, đính kèm ảnh hóa đơn, gắn tag. |
-| 📥 **Tải Sao kê Ngân hàng** | `BankStatementModal.jsx` & `bank-statement-parser.js` | Tải file sao kê Excel/CSV, tự động bóc tách dòng tiền vào/ra, cộng trừ số dư, chống trùng lặp. |
+| 🏠 **Tổng quan (Dashboard)** | `DashboardView.jsx` | Số dư khả dụng, tài sản ròng, thu/chi tháng, cảnh báo, giao dịch gần đây. |
+| 📒 **Sổ giao dịch** | `TransactionsView.jsx` | Bộ lọc, biểu đồ, danh sách giao dịch, modal sửa giao dịch, xuất Excel/CSV. |
+| 🎯 **Ngân sách & Mục tiêu** | `BudgetsView.jsx` | Quy tắc 50/30/20, ngân sách từng danh mục, hũ tiết kiệm (nạp/rút). |
+| ✨ **Mô phỏng What-If** | `WhatIfSimulatorView.jsx` | Cắt giảm chi tiêu, tiết kiệm / đầu tư thêm, khoản vay, biểu đồ Baseline vs What-If, chọn icon/màu cho khoản chi. |
+| 📅 **Định kỳ (Hóa đơn)** | `BillsView.jsx` | Hóa đơn tháng/quý/năm, ngày đến hạn, thanh toán (tạo giao dịch), đặt lại & hoàn tiền. |
+| 📊 **Báo cáo** | `ReportsView.jsx` | Cơ cấu chi tiêu, so sánh thu – chi, xu hướng dòng tiền, xuất file, in báo cáo. |
+| 💳 **Quản lý Ví** | `WalletsView.jsx` | Danh sách ví (Tiền mặt, Ngân hàng, Thẻ tín dụng, Tiết kiệm), dòng tiền từng ví, trả nợ thẻ, tính lại số dư, xóa ví. |
+| ⚙️ **Cài đặt** | `SettingsView.jsx` | Hồ sơ, giao diện Sáng/Tối, ngôn ngữ, **khóa PIN**, sao lưu/khôi phục, xóa dữ liệu. |
+| 🧭 **Menu & Header** | `Navigation.jsx` | Thanh tab, chuông cảnh báo, trạng thái đồng bộ, menu tài khoản (sao lưu / khôi phục). |
+| ➕ **Modal Thêm giao dịch** | `QuickAddModal.jsx` | Nhập nhanh thu/chi, ví, danh mục, tag, ảnh chứng từ (tự nén). |
+| 📥 **Tải sao kê ngân hàng** | `BankStatementModal.jsx` + `src/lib/bank-statement-parser.js` | Đọc Excel/CSV, nhận diện ngân hàng, chống trùng lặp, khớp số dư cuối kỳ. |
+| 🔐 **Màn hình nhập PIN** | `src/context/AppContext.jsx` (cuối file) | Lớp phủ khóa khi server yêu cầu PIN. |
+| 🖼️ **Biểu tượng** | `IconHelper.jsx` | Bảng icon Lucide và tên hiển thị song ngữ của từng icon. |
 
 ---
 
-## 2. Bảng Tra Cứu Khi Người Chấm Hỏi Các Câu Hỏi "Kinh Điển"
+## 2. Bảng tra cứu các câu hỏi thường gặp
 
-### Câu 1: *"Dữ liệu được lưu ở đâu? Khi tắt server hay mở trình duyệt khác thì dữ liệu có bị mất không?"*
-* **Mở file:** `src/app/api/storage/route.ts` và chỉ vào file `data/database.json`.
-* **Cách trả lời tự tin:**
-  > *"Em đã xây dựng API lưu trữ máy chủ tại file `src/app/api/storage/route.ts`. Khi người dùng thêm, sửa hoặc xóa bất kỳ giao dịch nào, hệ thống sẽ tự động đồng bộ và ghi an toàn vào tệp `data/database.json` trên ổ cứng server. Vì vậy dù có tắt server `npm run dev`, mở tab ẩn danh hay truy cập từ máy khác thì toàn bộ dữ liệu vẫn được bảo toàn nguyên vẹn."*
-
----
-
-### Câu 2: *"Toàn bộ Logic quản lý trạng thái (State Management) của ứng dụng nằm ở đâu?"*
-* **Mở file:** `src/context/AppContext.tsx`
-* **Cách trả lời tự tin:**
-  > *"Toàn bộ logic quản lý trạng thái tập trung được viết bằng React Context API trong file `AppContext.tsx`. File này quản lý danh sách ví, giao dịch, ngân sách, hóa đơn, cơ chế đồng bộ 2 chiều (Server Disk + LocalStorage fallback) và cơ chế chuyển đổi giao diện Sáng / Tối."*
+### Câu 1: *"Dữ liệu được lưu ở đâu? Tắt server hay mở trình duyệt khác có mất dữ liệu không?"*
+* **Mở file:** `src/app/api/storage/route.js` và `data/database.json`.
+* **Cách trả lời:**
+  > *"Em xây dựng API lưu trữ tại `src/app/api/storage/route.js`. Mỗi lần thêm, sửa, xóa, trình duyệt gửi dữ liệu lên API và server ghi vào `data/database.json`. Server ghi theo kiểu nguyên tử (ghi file tạm rồi đổi tên) và xếp hàng các lần ghi, nên file không bị hỏng giữa chừng. Vì dữ liệu nằm trên ổ cứng server nên tắt server, mở tab ẩn danh hay dùng máy khác đều không mất. Nếu file bị hỏng, server sao lưu ra `database.json.corrupt-*` chứ không ghi đè bằng dữ liệu mẫu."*
 
 ---
 
-### Câu 3: *"Các công thức tính toán tài chính và cảnh báo ngân sách nằm ở đâu?"*
-* **Mở file:** `src/lib/utils.ts`
-* **Cách trả lời tự tin:**
-  > *"Tất cả thuật toán tài chính được tách biệt vào file `src/lib/utils.ts`, bao gồm:
-  > - `calculateFinancialSummary`: Tính khả dụng, tổng tài sản, thu/chi tháng.
-  > - `calculateBudgetStatuses`: Kiểm tra ngưỡng cảnh báo thông minh 80% (Warning) và vượt 100% (Exceeded).
-  > - `formatCurrency`: Định dạng tiền tệ theo chuẩn VND."*
+### Câu 2: *"Logic quản lý trạng thái (State Management) nằm ở đâu?"*
+* **Mở file:** `src/context/AppContext.jsx`
+* **Cách trả lời:**
+  > *"Toàn bộ state và nghiệp vụ được viết bằng React Context trong `AppContext.jsx`: ví, giao dịch, ngân sách, hóa đơn, mục tiêu, giao diện Sáng/Tối, ngôn ngữ và khóa PIN. Các hàm chính: `addTransaction`, `editTransaction`, `deleteTransaction` (tự cập nhật số dư ví), `payBill` / `unpayBill`, `depositToGoal` / `withdrawFromGoal`, `importBankStatementTransactions`."*
 
 ---
 
-### Câu 4: *"Cơ sở dữ liệu hoặc cấu trúc kiểu dữ liệu (Schema / Types) khai báo ở đâu?"*
-* **Mở file:** `src/types/index.ts`
-* **Cách trả lời tự tin:**
-  > *"Toàn bộ mô hình thực thể (Entities) được định nghĩa chặt chẽ bằng TypeScript interfaces tại file `src/types/index.ts`, bao gồm `Transaction`, `Wallet`, `Budget`, `RecurringBill`, `SavingsGoal`,..."*
+### Câu 3: *"Hai thiết bị cùng sửa dữ liệu thì có bị mất không?"*
+* **Mở file:** `src/context/AppContext.jsx` (hàm `pushToServer`) và `src/lib/utils.js` (hàm `mergeSnapshots`).
+* **Cách trả lời:**
+  > *"Mỗi lần lưu, trình duyệt gửi kèm `baseUpdatedAt`, là phiên bản server mà nó đang dựa vào. Nếu thiết bị khác vừa lưu trước, server trả HTTP 409. Trình duyệt sẽ hợp nhất 3 chiều (bản gốc, bản trên máy, bản mới trên server) theo id bằng `mergeSnapshots`, tính lại số dư ví từ lịch sử rồi lưu lại. Nhờ vậy không thiết bị nào bị mất thay đổi. Ngoài ra trình duyệt kiểm tra thay đổi mới khoảng 3,5 giây một lần."*
 
 ---
 
-### Câu 5: *"Cơ chế đổi màu Sáng / Tối (Dark / Light Mode) hoạt động như thế nào?"*
-* **Mở file:** `src/app/globals.css` và `src/app/layout.tsx`
-* **Cách trả lời tự tin:**
-  > *"Ứng dụng sử dụng Tailwind CSS v4 với cấu hình biến thể `@custom-variant dark` trong `globals.css`. Trạng thái theme (Sáng / Tối / Tự động theo hệ thống) được lưu vào `localStorage`. File `layout.tsx` có sẵn script kích hoạt tức thì giúp chống chớp trắng màn hình khi tải trang."*
+### Câu 4: *"Các công thức tính toán tài chính nằm ở đâu?"*
+* **Mở file:** `src/lib/utils.js`
+* **Cách trả lời:**
+  > *"Các thuật toán được tách riêng vào `src/lib/utils.js`:*
+  > - *`calculateFinancialSummary`: số dư khả dụng, tổng tài sản, dư nợ thẻ, thu/chi tháng.*
+  > - *`calculateBudgetStatuses`: cảnh báo ngân sách 80% (Warning) và vượt 100% (Exceeded).*
+  > - *`getTxWalletDelta`, `recomputeWalletBalances`: số dư ví = số dư ban đầu + lịch sử giao dịch (thẻ tín dụng tính theo chiều dư nợ).*
+  > - *`checkWalletSufficientFunds`: không cho chi âm quỹ / vượt hạn mức thẻ.*
+  > - *`isBillPaidForCycle`, `getBillDueInfo`: chu kỳ hóa đơn tháng/quý/năm và ngày đến hạn.*
+  > - *`formatCurrency`: định dạng tiền VND."*
 
 ---
 
-### Câu 6: *"Làm sao để máy khác hoặc điện thoại kết nối vào web?"*
-* **Mở file:** `package.json`
-* **Cách trả lời tự tin:**
-  > *"Trong `package.json`, em đã cấu hình cờ `-H 0.0.0.0` cho lệnh `next dev`. Nhờ đó server lắng nghe trên toàn bộ card mạng, cho phép các thiết bị khác trong cùng Wi-Fi truy cập dễ dàng qua địa chỉ IP mạng LAN."*
+### Câu 5: *"Cấu trúc dữ liệu (schema) khai báo ở đâu?"*
+* **Mở file:** `src/lib/mock-data.js` và hàm `validatePayload` trong `src/app/api/storage/route.js`.
+* **Cách trả lời:**
+  > *"Dự án dùng JavaScript nên không có TypeScript interface (`src/types/index.js` chỉ là file giữ chỗ). Hình dạng dữ liệu của `wallets`, `transactions`, `categories`, `budgets`, `bills`, `goals` thể hiện qua dữ liệu mẫu trong `mock-data.js`. Phía server, `validatePayload` kiểm tra dữ liệu gửi lên: các trường phải là mảng, giao dịch phải có `id` và số tiền hợp lệ, ví phải có số dư là số. Server cũng chỉ lưu các trường đã biết."*
 
 ---
 
-### Câu 7: *"Project này so với phiên bản ban đầu đã sửa những gì?"*
-* **Mở file:** `TRACKING_CHANGES.md` ngay thư mục gốc.
-* **Cách trả lời tự tin:**
-  > *"Em có lưu một file nhật ký theo dõi chi tiết toàn bộ các lần chỉnh sửa `TRACKING_CHANGES.md` gồm 6 lần cập nhật, có đầy đủ mục đích, bảng so sánh Before vs After và các dòng code được thay đổi."*
+### Câu 6: *"Ứng dụng được bảo mật thế nào khi mở ra Internet?"*
+* **Mở file:** `src/app/api/storage/route.js` (hàm `checkAuth`), `src/middleware.js`, `start.sh`.
+* **Cách trả lời:**
+  > *"Có 2 lớp bảo vệ. Lớp 1 là khóa PIN: PIN được băm bằng scrypt kèm salt, so sánh constant-time, chỉ nhận qua header `x-app-pin`. Nhập sai 5 lần / IP trong 15 phút thì bị khóa tạm. Lớp 2 là HTTP Basic Auth trong `middleware.js`, bật khi đặt `APP_PASSWORD`. Script `start.sh` không mở tunnel ngrok/cloudflared nếu chưa đặt `APP_PASSWORD` hoặc `APP_PIN`."*
+
+---
+
+### Câu 7: *"Nhập sao kê ngân hàng hoạt động thế nào?"*
+* **Mở file:** `src/lib/bank-statement-parser.js`
+* **Cách trả lời:**
+  > *"`parseBankStatementFile` đọc file Excel/CSV bằng SheetJS. `detectBankAndAccount` nhận diện ngân hàng và số tài khoản. `parseDate` / `parseAmount` chuẩn hóa ngày và số tiền. `detectCategoryAndTags` gợi ý danh mục theo nội dung giao dịch. `checkDuplicates` đánh dấu giao dịch đã có để tránh cộng trừ 2 lần."*
+
+---
+
+### Câu 8: *"Đa ngôn ngữ (Việt / Anh) làm thế nào?"*
+* **Mở file:** `src/lib/i18n.js`
+* **Cách trả lời:**
+  > *"Mọi chữ trên giao diện gọi hàm `t('key', 'chữ mặc định')`. Bảng `TRANSLATIONS` chứa bản `vi` và `en`. Tên danh mục, tag, ví, hóa đơn và ghi chú do hệ thống tự sinh được dịch lúc hiển thị bằng `tCategory`, `tTag`, `tWalletName`, `tBillName`, `tNote`, nên dữ liệu lưu trong DB không cần đổi khi chuyển ngôn ngữ."*
+
+---
+
+### Câu 9: *"Cơ chế Sáng / Tối (Dark / Light Mode) hoạt động thế nào?"*
+* **Mở file:** `src/app/globals.css` và `src/app/layout.jsx`
+* **Cách trả lời:**
+  > *"Ứng dụng dùng Tailwind CSS v4 với `@custom-variant dark` trong `globals.css`. Lựa chọn theme (Sáng / Tối / Theo hệ thống) lưu trong `localStorage`. `layout.jsx` có script chạy ngay khi tải trang để gắn class `dark`, tránh chớp trắng màn hình."*
+
+---
+
+### Câu 10: *"Làm sao để điện thoại / máy khác truy cập được?"*
+* **Mở file:** `package.json` và `start.sh`
+* **Cách trả lời:**
+  > *"Trong `package.json`, lệnh `next dev` / `next start` có cờ `-H 0.0.0.0` nên server lắng nghe trên mọi card mạng, các thiết bị cùng Wi-Fi vào được qua IP LAN. Muốn truy cập từ ngoài Internet thì chạy `start.sh`: script build, chạy production và mở tunnel ngrok/cloudflared (bắt buộc đặt mật khẩu hoặc PIN)."*
+
+---
+
+### Câu 11: *"Project đã sửa những gì so với phiên bản ban đầu?"*
+* **Mở file:** `TRACKING_CHANGES.md` ở thư mục gốc.
+* **Cách trả lời:**
+  > *"Em ghi nhật ký chi tiết từng lần chỉnh sửa trong `TRACKING_CHANGES.md`, mỗi lần đều có bối cảnh, lỗi gặp phải và cách khắc phục. Lịch sử commit trên GitHub cũng có thể đối chiếu."*
