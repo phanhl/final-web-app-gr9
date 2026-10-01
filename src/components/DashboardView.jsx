@@ -5,7 +5,7 @@ import { Wallet, ArrowUpRight, ArrowDownLeft, ArrowRightLeft, ChevronRight, Chev
 import { formatCurrency, formatDate, calculateBudgetStatuses, formatMonthLabel } from '@/lib/utils';
 import { ReceiptModal } from './ReceiptModal';
 export const DashboardView = () => {
-    const { financialSummary, transactions, budgets, bills, currentMonth, setCurrentMonth, availableMonths, openQuickAdd, setActiveTab, t, tCategory, tWalletType, language, isAlertDismissed, dismissAlert, } = useApp();
+    const { financialSummary, transactions, budgets, bills, currentMonth, setCurrentMonth, availableMonths, openQuickAdd, setActiveTab, t, tCategory, tWalletType, tWalletName, language, isAlertDismissed, dismissAlert, } = useApp();
     const [selectedReceipt, setSelectedReceipt] = useState(null);
     const [showBalance, setShowBalance] = useState(true);
     const budgetStatuses = calculateBudgetStatuses(budgets, transactions, currentMonth);
@@ -270,7 +270,7 @@ export const DashboardView = () => {
                   {tx.receiptImage && (<span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-1.5 py-0.5 rounded">{t('bills.title', 'Hóa đơn')}</span>)}
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                  {formatDate(tx.date, 'full')} • {tx.walletName}
+                  {formatDate(tx.date, 'full', language)} • {tWalletName ? tWalletName(tx.walletName) : tx.walletName}
                 </p>
               </div>
               <div className="text-right shrink-0">

@@ -43,21 +43,198 @@ export const CATEGORY_TRANSLATIONS = {
     'Chi phí khác': { en: 'Other Expenses' },
     'Chi phí phát sinh khác': { en: 'Incidental Expenses' },
     'Thu nhập khác': { en: 'Other Income' },
+    'Hóa đơn': { en: 'Bills' },
 };
-export function translateCategory(name, lang) {
-    if (!name || lang === 'vi')
-        return name;
-    const trimmed = name.trim();
-    if (CATEGORY_TRANSLATIONS[trimmed]) {
-        return CATEGORY_TRANSLATIONS[trimmed][lang] || trimmed;
+
+export const TAG_TRANSLATIONS = {
+    // Current database tags
+    'Sao kê': { en: 'Statement', vi: 'Sao kê' },
+    'Statement': { en: 'Statement', vi: 'Sao kê' },
+    'Lãi': { en: 'Interest', vi: 'Lãi' },
+    'Interest': { en: 'Interest', vi: 'Lãi' },
+    'Thưởng': { en: 'Bonus', vi: 'Thưởng' },
+    'Bonus': { en: 'Bonus', vi: 'Thưởng' },
+    'Giáo dục': { en: 'Education', vi: 'Giáo dục' },
+    'Education': { en: 'Education', vi: 'Giáo dục' },
+    'Hóa đơn': { en: 'Bills', vi: 'Hóa đơn' },
+    'Bills': { en: 'Bills', vi: 'Hóa đơn' },
+    'Ăn uống': { en: 'Food & Dining', vi: 'Ăn uống' },
+    'Food & Dining': { en: 'Food & Dining', vi: 'Ăn uống' },
+    'Food': { en: 'Food', vi: 'Ăn uống' },
+    'Dining': { en: 'Dining', vi: 'Ăn uống' },
+    'Mua sắm': { en: 'Shopping', vi: 'Mua sắm' },
+    'Shopping': { en: 'Shopping', vi: 'Mua sắm' },
+
+    // Additional common tags
+    'Ăn trưa': { en: 'Lunch', vi: 'Ăn trưa' },
+    'Lunch': { en: 'Lunch', vi: 'Ăn trưa' },
+    'Cafe': { en: 'Coffee', vi: 'Cafe' },
+    'Coffee': { en: 'Coffee', vi: 'Cafe' },
+    'Tiệc tùng': { en: 'Party & Dining', vi: 'Tiệc tùng' },
+    'Party': { en: 'Party & Dining', vi: 'Tiệc tùng' },
+    'Gia đình': { en: 'Family', vi: 'Gia đình' },
+    'Family': { en: 'Family', vi: 'Gia đình' },
+    'Công tác': { en: 'Business Trip', vi: 'Công tác' },
+    'Grab/Be': { en: 'Grab/Taxi', vi: 'Grab/Be' },
+    'Xăng xe': { en: 'Gas & Fuel', vi: 'Xăng xe' },
+    'Fuel': { en: 'Gas & Fuel', vi: 'Xăng xe' },
+    'Siêu thị': { en: 'Supermarket', vi: 'Siêu thị' },
+    'Online': { en: 'Online', vi: 'Online' },
+    'Du lịch': { en: 'Travel', vi: 'Du lịch' },
+    'Travel': { en: 'Travel', vi: 'Du lịch' },
+    'Sức khỏe': { en: 'Healthcare', vi: 'Sức khỏe' },
+    'Health': { en: 'Healthcare', vi: 'Sức khỏe' },
+    'Khẩn cấp': { en: 'Emergency', vi: 'Khẩn cấp' },
+    'Đầu tư': { en: 'Investment', vi: 'Đầu tư' },
+    'Investment': { en: 'Investment', vi: 'Đầu tư' },
+    'Lương': { en: 'Salary', vi: 'Lương' },
+    'Salary': { en: 'Salary', vi: 'Lương' },
+    'Tiết kiệm': { en: 'Savings', vi: 'Tiết kiệm' },
+    'Savings': { en: 'Savings', vi: 'Tiết kiệm' },
+    'Chuyển khoản': { en: 'Transfer', vi: 'Chuyển khoản' },
+    'Transfer': { en: 'Transfer', vi: 'Chuyển khoản' },
+    'Nợ': { en: 'Debt', vi: 'Nợ' },
+    'Debt': { en: 'Debt', vi: 'Nợ' },
+    'Trả nợ': { en: 'Debt Payment', vi: 'Trả nợ' },
+    'Thu nợ': { en: 'Debt Collection', vi: 'Thu nợ' },
+    'Cho vay': { en: 'Loan Given', vi: 'Cho vay' },
+    'Vay': { en: 'Loan', vi: 'Vay' },
+    'Bảo hiểm': { en: 'Insurance', vi: 'Bảo hiểm' },
+    'Insurance': { en: 'Insurance', vi: 'Bảo hiểm' },
+    'Từ thiện': { en: 'Charity', vi: 'Từ thiện' },
+    'Charity': { en: 'Charity', vi: 'Từ thiện' },
+    'Đi lại': { en: 'Transportation', vi: 'Đi lại' },
+    'Thuê nhà': { en: 'Rent', vi: 'Thuê nhà' },
+    'Rent': { en: 'Rent', vi: 'Thuê nhà' },
+    'Điện nước': { en: 'Utilities', vi: 'Điện nước' },
+    'Utilities': { en: 'Utilities', vi: 'Điện nước' },
+    'Internet': { en: 'Internet', vi: 'Internet' },
+    'Sửa chữa': { en: 'Maintenance', vi: 'Sửa chữa' },
+    'Khác': { en: 'Other', vi: 'Khác' },
+    'Other': { en: 'Other', vi: 'Khác' },
+};
+
+export const WALLET_NAME_TRANSLATIONS = {
+    'Tiền mặt ví tay': { en: 'Cash in Hand', vi: 'Tiền mặt ví tay' },
+    'Ví tay': { en: 'Cash Wallet', vi: 'Ví tay' },
+    'Tiền mặt': { en: 'Cash in Hand', vi: 'Tiền mặt' },
+    'Techcombank Chi tiêu': { en: 'Techcombank Spending', vi: 'Techcombank Chi tiêu' },
+    'Vietcombank Tiết kiệm': { en: 'Vietcombank Savings', vi: 'Vietcombank Tiết kiệm' },
+    'VPBank StepUp Cashback': { en: 'VPBank StepUp Cashback', vi: 'VPBank StepUp Cashback' },
+    'Sổ vàng tiết kiệm SJC': { en: 'SJC Gold Savings', vi: 'Sổ vàng tiết kiệm SJC' },
+    'Tech': { en: 'Techcombank', vi: 'Tech' },
+    'MB': { en: 'MB Bank', vi: 'MB' },
+    'Cống hiến cho anh 7': { en: 'Contribution for CR7', vi: 'Cống hiến cho anh 7' },
+};
+
+export const BILL_TRANSLATIONS = {
+    'Tiền thuê căn hộ tháng 9': { en: 'Apartment Rent (Sep)', vi: 'Tiền thuê căn hộ tháng 9' },
+    'Tiền điện EVN Hà Nội': { en: 'EVN Electricity Bill', vi: 'Tiền điện EVN Hà Nội' },
+    'Cáp quang FPT Telecom': { en: 'FPT Fiber Internet', vi: 'Cáp quang FPT Telecom' },
+    'Gói xem phim Netflix Premium': { en: 'Netflix Premium', vi: 'Gói xem phim Netflix Premium' },
+    'Nước sinh hoạt Vinaconex': { en: 'Vinaconex Water Bill', vi: 'Nước sinh hoạt Vinaconex' },
+};
+
+export const BILL_NOTE_TRANSLATIONS = {
+    'Chuyển khoản chủ nhà qua Techcombank': { en: 'Bank transfer to landlord via Techcombank', vi: 'Chuyển khoản chủ nhà qua Techcombank' },
+    'Mã khách hàng PD08876522': { en: 'Customer ID PD08876522', vi: 'Mã khách hàng PD08876522' },
+    'Gói Super 200Mbps': { en: 'Super 200Mbps Plan', vi: 'Gói Super 200Mbps' },
+    'Thanh toán tự động qua thẻ VPBank': { en: 'Auto-debit via VPBank card', vi: 'Thanh toán tự động qua thẻ VPBank' },
+    'Đóng tiền nước định kỳ': { en: 'Periodic water fee', vi: 'Đóng tiền nước định kỳ' },
+};
+
+export function translateTag(tag, lang = 'vi') {
+    if (!tag) return '';
+    const clean = tag.replace(/^#/, '').trim();
+    if (TAG_TRANSLATIONS[clean]) {
+        return TAG_TRANSLATIONS[clean][lang] || (lang === 'vi' ? clean : TAG_TRANSLATIONS[clean].en || clean);
     }
-    const lower = trimmed.toLowerCase();
-    for (const [key, trans] of Object.entries(CATEGORY_TRANSLATIONS)) {
+    const lower = clean.toLowerCase();
+    for (const [key, trans] of Object.entries(TAG_TRANSLATIONS)) {
         if (key.toLowerCase() === lower) {
-            return trans[lang] || trimmed;
+            return trans[lang] || (lang === 'vi' ? trans.vi || key : trans.en || key);
+        }
+        if (trans.en && trans.en.toLowerCase() === lower) {
+            return lang === 'vi' ? trans.vi || key : trans.en;
+        }
+        if (trans.vi && trans.vi.toLowerCase() === lower) {
+            return lang === 'vi' ? trans.vi : trans.en;
         }
     }
-    return name;
+    // Fallback: check if the tag matches a category translation
+    const catTrans = translateCategory(clean, lang);
+    if (catTrans && catTrans.toLowerCase() !== lower) {
+        return catTrans;
+    }
+    return clean;
+}
+
+export function translateWalletName(name, lang = 'vi') {
+    if (!name) return '';
+    const trimmed = name.trim();
+    if (WALLET_NAME_TRANSLATIONS[trimmed]) {
+        return WALLET_NAME_TRANSLATIONS[trimmed][lang] || (lang === 'vi' ? trimmed : WALLET_NAME_TRANSLATIONS[trimmed].en || trimmed);
+    }
+    const lower = trimmed.toLowerCase();
+    for (const [key, trans] of Object.entries(WALLET_NAME_TRANSLATIONS)) {
+        if (key.toLowerCase() === lower) {
+            return trans[lang] || (lang === 'vi' ? trans.vi || key : trans.en || key);
+        }
+        if (trans.en && trans.en.toLowerCase() === lower) {
+            return lang === 'vi' ? trans.vi || key : trans.en;
+        }
+        if (trans.vi && trans.vi.toLowerCase() === lower) {
+            return lang === 'vi' ? trans.vi : trans.en;
+        }
+    }
+    return trimmed;
+}
+
+export function translateBillName(name, lang = 'vi') {
+    if (!name) return '';
+    const trimmed = name.trim();
+    if (BILL_TRANSLATIONS[trimmed]) {
+        return BILL_TRANSLATIONS[trimmed][lang] || trimmed;
+    }
+    return trimmed;
+}
+
+export function translateBillNote(note, lang = 'vi') {
+    if (!note) return '';
+    const trimmed = note.trim();
+    if (BILL_NOTE_TRANSLATIONS[trimmed]) {
+        return BILL_NOTE_TRANSLATIONS[trimmed][lang] || trimmed;
+    }
+    return trimmed;
+}
+
+export function translateCategory(name, lang = 'vi') {
+    if (!name)
+        return '';
+    const trimmed = name.trim();
+    if (lang === 'en') {
+        if (CATEGORY_TRANSLATIONS[trimmed]) {
+            return CATEGORY_TRANSLATIONS[trimmed].en || trimmed;
+        }
+        const lower = trimmed.toLowerCase();
+        for (const [key, trans] of Object.entries(CATEGORY_TRANSLATIONS)) {
+            if (key.toLowerCase() === lower) {
+                return trans.en || trimmed;
+            }
+        }
+        return trimmed;
+    }
+    // lang === 'vi'
+    if (CATEGORY_TRANSLATIONS[trimmed]) {
+        return trimmed;
+    }
+    const lower = trimmed.toLowerCase();
+    for (const [viKey, trans] of Object.entries(CATEGORY_TRANSLATIONS)) {
+        if (trans.en && trans.en.toLowerCase() === lower) {
+            return viKey;
+        }
+    }
+    return trimmed;
 }
 export function translateWalletType(type, lang) {
     if (lang === 'en') {
@@ -167,6 +344,8 @@ export const TRANSLATIONS = {
         'bill.dueOnDay': "Đến hạn ngày {day} hàng tháng",
         'bill.remindBefore': "Nhắc trước {days} ngày",
         'bill.resetUnpaid': "Đặt lại",
+        'bill.confirmRevertPayment': "Xóa giao dịch thanh toán {amount} và hoàn tiền về ví {wallet}?\n\nOK: xóa giao dịch & hoàn tiền\nHủy: chỉ đặt lại trạng thái",
+        'bill.noPaymentTxFound': "Không tìm thấy giao dịch thanh toán của hóa đơn này (có thể đã bị xóa hoặc được đánh dấu thủ công). Chỉ đặt lại trạng thái, số dư ví không thay đổi.",
         'bill.deleteConfirm': "Xác nhận xóa hóa đơn này?",
         'bill.billName': "Tên hóa đơn cố định",
         'bill.paymentAmount': "Số tiền thanh toán (VNĐ)",
@@ -578,10 +757,22 @@ export const TRANSLATIONS = {
         "qa.deleteReceipt": "Xóa",
         "qa.payWallet": "Ví thanh toán",
         "qa.receiveWallet": "Ví nhận tiền",
+        "qa.hasBankStatement": "Có file sao kê Excel / CSV từ ngân hàng?",
+        "qa.uploadStatementBtn": "Tải sao kê lên ➜",
+        "qa.customCategory": "Tự nhập danh mục khác...",
+        "qa.enterCustomCategory": "Nhập tên danh mục bạn muốn...",
+        "qa.addCustomTagPlaceholder": "Nhập nhãn tùy chỉnh rồi bấm Thêm (+)...",
+        "qa.addTagBtn": "Thêm tag",
         "qa.pureDebtNotice": "Đây là khoản dư nợ thuần túy (không có hạn mức thẻ để chi tiêu). Để thanh toán giảm khoản nợ này, vui lòng dùng chức năng Chuyển tiền từ ví tiền mặt hoặc ngân hàng.",
         "wallets.assetGroup": "Ví & Tài khoản tiền thật (Tiền có sẵn)",
         "wallets.creditGroupLabel": "Thẻ tín dụng & Khoản nợ (Dư nợ)",
         "wallets.pureDebtLabel": "Khoản nợ, không thể chi tiêu",
+        "wallets.cashAndBankGroup": "Tài khoản & Ví chi tiêu",
+        "wallets.creditDebtGroup": "Thẻ tín dụng & Khoản nợ",
+        "wallets.balance": "Số dư",
+        "wallets.debtBalance": "Dư nợ",
+        "wallets.availableLimit": "Hạn mức khả dụng",
+        "wallets.cannotSpendDebt": "Khoản nợ, không thể chi tiêu",
         "qa.availableBalance": "Khả dụng",
         "qa.transferFeeHint": "Phí chuyển tiền (nếu có)",
         "qa.exceedBalance": "Số tiền vượt quá quỹ khả dụng!",
@@ -924,6 +1115,24 @@ export const TRANSLATIONS = {
         "Vui lòng nhập số tiền chuyển hợp lệ (> 0)": "Vui lòng nhập số tiền chuyển hợp lệ (> 0)",
         "Ví nhận phải khác ví chuyển": "Ví nhận phải khác ví chuyển",
         "Lỗi: File JSON không đúng định dạng sao lưu của ứng dụng": "Lỗi: File JSON không đúng định dạng sao lưu của ứng dụng",
+        "bs.changeBankWallet": "Đổi ví ngân hàng trừ tiền:",
+        "bs.detectedStatement": "Phát hiện sao kê",
+        "bs.noWalletForBank": "Chưa có ví ngân hàng này",
+        "bs.statementAccNum": "Số TK sao kê",
+        "bs.accHolder": "Chủ TK",
+        "bs.customWalletPrompt": "Tùy chỉnh tên ví & số dư ban đầu...",
+        "bs.orUseExisting": "Hoặc dùng ví sẵn có:",
+        "bs.selectOtherWallet": "-- Chọn ví khác --",
+        "bs.manualWalletPrompt": "Chưa nhận diện được ngân hàng cụ thể từ file. Vui lòng chọn ví nhận giao dịch:",
+        "bs.autoDetectInfo": "Hệ thống tự động nhận diện ngân hàng (Techcombank, Vietcombank, MB Bank, VPBank...) và tự động khớp ví tương ứng để trừ tiền.",
+        "qa.transferSource": "Ví chuyển (Nguồn)",
+        "qa.transferDest": "Ví nhận (Đích)",
+        "qa.transferFee": "Phí chuyển khoản (VNĐ)",
+        "qa.payDebtNotice": "Thanh toán trả nợ - Dư nợ:",
+        "qa.cannotSpendDebt": "Khoản nợ, không thể chi tiêu",
+        "wallets.creditAvailShort": "Hạn mức còn:",
+        "wallets.debtShort": "Dư nợ:",
+        "insufficientFunds": "Số dư ví chuyển không đủ!",
     },
     en: {
         'qa.fee': "Fee",
@@ -1014,6 +1223,8 @@ export const TRANSLATIONS = {
         'bill.dueOnDay': "Due on day {day} monthly",
         'bill.remindBefore': "Remind {days} days before",
         'bill.resetUnpaid': "Reset",
+        'bill.confirmRevertPayment': "Delete the {amount} payment transaction and refund it to wallet {wallet}?\n\nOK: delete transaction & refund\nCancel: only reset the status",
+        'bill.noPaymentTxFound': "No payment transaction was found for this bill (it may have been deleted or marked paid manually). Only the status is reset; wallet balances are unchanged.",
         'bill.deleteConfirm': "Confirm deleting this recurring bill?",
         'bill.billName': "Bill Name",
         'bill.paymentAmount': "Payment Amount (VND)",
@@ -1425,10 +1636,22 @@ export const TRANSLATIONS = {
         "qa.deleteReceipt": "Delete",
         "qa.payWallet": "Payment wallet",
         "qa.receiveWallet": "Receiving Wallet",
+        "qa.hasBankStatement": "Have a bank statement file (Excel / CSV)?",
+        "qa.uploadStatementBtn": "Upload statement ➜",
+        "qa.customCategory": "Custom Category...",
+        "qa.enterCustomCategory": "Enter custom category name...",
+        "qa.addCustomTagPlaceholder": "Enter custom tag and press Add (+)...",
+        "qa.addTagBtn": "Add tag",
         "qa.pureDebtNotice": "This is a pure debt balance (no credit limit to spend). To pay down this debt, please use the Transfer function from a cash or bank account.",
         "wallets.assetGroup": "Cash & Bank Accounts (Available Funds)",
         "wallets.creditGroupLabel": "Credit Cards & Liabilities (Debt)",
         "wallets.pureDebtLabel": "Debt liability, cannot spend directly",
+        "wallets.cashAndBankGroup": "Cash & Bank Accounts",
+        "wallets.creditDebtGroup": "Credit Cards & Liabilities",
+        "wallets.balance": "Balance",
+        "wallets.debtBalance": "Debt balance",
+        "wallets.availableLimit": "Available limit",
+        "wallets.cannotSpendDebt": "Debt liability, cannot spend",
         "qa.availableBalance": "Available",
         "qa.transferFeeHint": "Transfer fee (if any)",
         "qa.exceedBalance": "Amount exceeds available balance!",
@@ -1771,6 +1994,24 @@ export const TRANSLATIONS = {
         "Vui lòng nhập số tiền chuyển hợp lệ (> 0)": "Please enter a valid transfer amount (> 0)",
         "Ví nhận phải khác ví chuyển": "Destination wallet must be different from source wallet",
         "Lỗi: File JSON không đúng định dạng sao lưu của ứng dụng": "Error: JSON file does not match the app backup format",
+        "bs.changeBankWallet": "Change bank wallet to debit:",
+        "bs.detectedStatement": "Detected Statement",
+        "bs.noWalletForBank": "No wallet for this bank yet",
+        "bs.statementAccNum": "Statement Acc No",
+        "bs.accHolder": "Acc Holder",
+        "bs.customWalletPrompt": "Customize wallet name & initial balance...",
+        "bs.orUseExisting": "Or use existing wallet:",
+        "bs.selectOtherWallet": "-- Select other wallet --",
+        "bs.manualWalletPrompt": "Could not identify specific bank from file. Please select transaction wallet:",
+        "bs.autoDetectInfo": "System automatically identifies banks (Techcombank, Vietcombank, MB Bank, VPBank...) and auto-matches the corresponding wallet.",
+        "qa.transferSource": "Source Wallet",
+        "qa.transferDest": "Destination Wallet",
+        "qa.transferFee": "Transfer Fee (VND)",
+        "qa.payDebtNotice": "Debt Repayment - Current Debt:",
+        "qa.cannotSpendDebt": "Loan debt, cannot spend",
+        "wallets.creditAvailShort": "Avail Limit:",
+        "wallets.debtShort": "Debt:",
+        "insufficientFunds": "Insufficient funds in source wallet!",
     },
 };
 export function translate(lang, key, fallback) {

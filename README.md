@@ -84,4 +84,5 @@ APP_PASSWORD='mat-khau-manh' APP_USER='admin' ./start.sh   # build + chạy + m�
 NO_TUNNEL=1 ./start.sh                                     # chỉ chạy local
 ./stop.sh
 ```
-`start.sh` sẽ **không** mở tunnel nếu chưa đặt `APP_PASSWORD`. Tuỳ chọn: `NGROK_DOMAIN`, `NGROK_BIN`, `CLOUDFLARED_BIN`, `PORT`.
+Ngoài ra có thể khoá dữ liệu bằng mã PIN 4-8 số: bật trong **Cài đặt → Bảo mật** (PIN được lưu dạng băm scrypt, nhập sai 5 lần/IP bị khoá 15 phút), hoặc đặt cố định bằng biến môi trường `APP_PIN='123456' ./start.sh`.
+`start.sh` sẽ **không** mở tunnel nếu chưa đặt `APP_PASSWORD` hoặc `APP_PIN`. Tuỳ chọn: `NGROK_DOMAIN`, `NGROK_BIN`, `CLOUDFLARED_BIN`, `PORT`.

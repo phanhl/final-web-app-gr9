@@ -7,7 +7,7 @@ import { IconHelper } from './IconHelper';
 import { VIETNAMESE_BANKS } from '@/lib/mock-data';
 import { ReceiptModal } from './ReceiptModal';
 export const WalletsView = () => {
-    const { wallets, transactions, financialSummary, addWallet, editWallet, deleteWallet, deleteTransaction, recalculateWalletBalances, payCreditCard, openQuickAdd, openStatementModal, t, tCategory, tWalletType, language, } = useApp();
+    const { wallets, transactions, financialSummary, addWallet, editWallet, deleteWallet, deleteTransaction, recalculateWalletBalances, payCreditCard, openQuickAdd, openStatementModal, t, tCategory, tWalletType, tTag, tWalletName, language, } = useApp();
     // Selected Wallet for viewing detailed cash flow
     const [selectedWalletId, setSelectedWalletId] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -201,7 +201,7 @@ export const WalletsView = () => {
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-                      {selectedWallet.name}
+                      {tWalletName ? tWalletName(selectedWallet.name) : selectedWallet.name}
                     </h2>
                     <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                       {tWalletType(selectedWallet.type)}
@@ -418,7 +418,7 @@ export const WalletsView = () => {
                           </div>
 
                           <div className="flex flex-wrap items-center gap-2 mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                            <span>{formatDate(tx.date, 'full')}</span>
+                            <span>{formatDate(tx.date, 'full', language)}</span>
                             {tx.note && (<>
                                 <span>•</span>
                                 <span className="truncate max-w-xs text-slate-600 dark:text-slate-300">
@@ -427,7 +427,7 @@ export const WalletsView = () => {
                               </>)}
                             {tx.tags && tx.tags.length > 0 && (<div className="flex items-center space-x-1">
                                 {tx.tags.map((t) => (<span key={t} className="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-[10px] text-slate-500">
-                                    #{t}
+                                    #{tTag ? tTag(t) : t}
                                   </span>))}
                               </div>)}
                           </div>
@@ -741,7 +741,7 @@ export const WalletsView = () => {
     </div>);
 };
 const WalletCard = ({ wallet, onEdit, onDelete, onViewDetail }) => {
-    const { t } = useApp();
+    const { t, tWalletName } = useApp();
     return (<div onClick={onViewDetail} className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm relative group hover:border-blue-400 dark:hover:border-blue-600 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between">
       <div>
         <div className="flex items-start justify-between mb-3">
@@ -751,7 +751,7 @@ const WalletCard = ({ wallet, onEdit, onDelete, onViewDetail }) => {
             </div>
             <div>
               <h4 className="text-sm font-bold text-slate-800 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                {wallet.name}
+                {tWalletName ? tWalletName(wallet.name) : wallet.name}
               </h4>
               <p className="text-[11px] text-slate-400">
                 {wallet.bankName ? `${wallet.bankName} • ${wallet.accountNumber || ''}` : t('wallets.cashWallets', 'Tiền mặt')}

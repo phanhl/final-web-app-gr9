@@ -22,7 +22,7 @@ const bottomNavItems = [
     { id: 'settings', key: 'nav.settings', defaultLabel: 'Settings', icon: Settings },
 ];
 export const Navigation = () => {
-    const { activeTab, setActiveTab, openQuickAdd, budgets, transactions, bills, financialSummary, currentMonth, serverSyncStatus, syncDataFromServer, theme, toggleTheme, isDarkMode, userProfile, updateUserProfile, wallets, goals, exportDatabaseJSON, importDatabaseJSON, navigateToCategoryTransactions, navigateToBudget, navigateToBill, language, t, tCategory, tWalletType, dismissedAlertIds, dismissAlert, restoreAlert, dismissAllAlerts, restoreAllAlerts, isAlertDismissed, } = useApp();
+    const { activeTab, setActiveTab, openQuickAdd, budgets, transactions, bills, financialSummary, currentMonth, serverSyncStatus, syncDataFromServer, theme, toggleTheme, isDarkMode, userProfile, updateUserProfile, wallets, goals, exportDatabaseJSON, importDatabaseJSON, navigateToCategoryTransactions, navigateToBudget, navigateToBill, language, t, tCategory, tWalletType, tBillName, dismissedAlertIds, dismissAlert, restoreAlert, dismissAllAlerts, restoreAllAlerts, isAlertDismissed, } = useApp();
     const [showNotificationModal, setShowNotificationModal] = useState(false);
     const [showDismissedSection, setShowDismissedSection] = useState(false);
     const [showProfileModal, setShowProfileModal] = useState(false);
@@ -419,7 +419,7 @@ export const Navigation = () => {
                       </div>
                       <div className="text-xs">
                         <p className="font-bold text-blue-700 dark:text-blue-300 flex items-center gap-1">
-                          <span>{bill.name}</span>
+                          <span>{tBillName ? tBillName(bill.name) : bill.name}</span>
                         </p>
                         <p className="text-blue-600/90 dark:text-blue-400/90 mt-0.5 font-medium">
                           {t('notif.dueDay', 'Hạn ngày')} {bill.dueDay} • {formatCurrency(bill.amount)}
@@ -519,7 +519,7 @@ export const Navigation = () => {
                           <div className="flex items-center gap-2 min-w-0 pr-2">
                             <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0"/>
                             <span className="truncate font-medium text-slate-700 dark:text-slate-300">
-                              {bill.name} ({formatCurrency(bill.amount)})
+                              {tBillName ? tBillName(bill.name) : bill.name} ({formatCurrency(bill.amount, language)})
                             </span>
                           </div>
                           <button type="button" onClick={() => restoreAlert(`bill-${bill.id}`)} className="px-2 py-0.5 bg-white dark:bg-slate-700 text-[10px] font-bold text-blue-600 dark:text-blue-300 rounded shadow-2xs hover:bg-blue-50 dark:hover:bg-slate-600 transition-colors cursor-pointer shrink-0">

@@ -8,7 +8,7 @@ import { ReceiptModal } from './ReceiptModal';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, } from 'recharts';
 const pieChartColors = ['#f97316', '#ec4899', '#8b5cf6', '#0ea5e9', '#eab308', '#10b981', '#64748b', '#ef4444'];
 export const TransactionsView = () => {
-    const { transactions, wallets, categories, budgets, financialSummary, currentMonth, availableMonths, openQuickAdd, openStatementModal, deleteTransaction, navTargetCategoryId, setNavTargetCategoryId, language, t, tCategory, tWalletType, } = useApp();
+    const { transactions, wallets, categories, budgets, financialSummary, currentMonth, availableMonths, openQuickAdd, openStatementModal, deleteTransaction, navTargetCategoryId, setNavTargetCategoryId, language, t, tCategory, tWalletType, tTag, tWalletName, } = useApp();
     const [showCharts, setShowCharts] = useState(true);
     // Search & Filters State
     const [searchTerm, setSearchTerm] = useState('');
@@ -84,8 +84,15 @@ export const TransactionsView = () => {
             if (selectedCategory !== 'ALL' && tx.categoryId !== selectedCategory)
                 return false;
             // Tag
-            if (selectedTag !== 'ALL' && (!tx.tags || !tx.tags.includes(selectedTag)))
-                return false;
+            if (selectedTag !== 'ALL') {
+                const targetDisplay = (tTag ? tTag(selectedTag) : selectedTag).toLowerCase();
+                const hasTag = (tx.tags || []).some((t) => {
+                    if (t === selectedTag) return true;
+                    const d = (tTag ? tTag(t) : t).toLowerCase();
+                    return d === targetDisplay;
+                });
+                if (!hasTag) return false;
+            }
             // Date Range
             if (startDate) {
                 const txDate = toLocalDateKey(tx.date);
@@ -277,10 +284,17 @@ export const TransactionsView = () => {
         });
     }, [visibleTransactions]);
     const allTags = useMemo(() => {
-        const set = new Set();
-        transactions.forEach((t) => (t.tags || []).forEach((tag) => set.add(tag)));
-        return Array.from(set);
-    }, [transactions]);
+        const map = new Map();
+        transactions.forEach((t) => {
+            (t.tags || []).forEach((tag) => {
+                const display = (tTag ? tTag(tag) : tag) || tag;
+                if (!map.has(display)) {
+                    map.set(display, tag);
+                }
+            });
+        });
+        return Array.from(map.entries()).map(([display, raw]) => ({ display, raw }));
+    }, [transactions, tTag, language]);
     const clearFilters = () => {
         setSearchTerm('');
         setSelectedType('ALL');
@@ -449,7 +463,7 @@ export const TransactionsView = () => {
                 const data = payload[0].payload;
                 return (<div className="bg-slate-900/95 dark:bg-slate-800/95 backdrop-blur-md text-white text-xs px-3.5 py-2.5 rounded-xl shadow-xl border border-slate-700/60 pointer-events-none z-50 min-w-[150px]">
                           <p className="font-bold text-slate-200 mb-1.5 border-b border-slate-700/60 pb-1">
-                            {data.rawMonth ? formatDate(data.rawMonth, 'short') : data.month}
+                            {data.rawMonth ? formatDate(data.rawMonth, 'short', language) : data.month}
                           </p>
                           <div className="space-y-1">
                             {(barMode === 'BOTH' || barMode === 'INCOME') && (<div className="flex items-center justify-between gap-3 text-emerald-400">
@@ -732,7 +746,7 @@ export const TransactionsView = () => {
             <select value={selectedWallet} onChange={(e) => setSelectedWallet(e.target.value)} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500">
               <option value="ALL">{t('tx.allWallets', 'Tất cả ví & tài khoản')}</option>
               {wallets.map((w) => (<option key={w.id} value={w.id}>
-                  {w.name} ({tWalletType(w.type)})
+                  {tWalletName ? tWalletName(w.name) : w.name} ({tWalletType(w.type)})
                 </option>))}
             </select>
           </div>
@@ -766,11 +780,22 @@ export const TransactionsView = () => {
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
               {t('common.all', 'Tất cả')}
             </button>
-            {allTags.map((tag) => (<button key={tag} onClick={() => setSelectedTag(tag)} className={`px-2.5 py-0.5 rounded text-[11px] font-medium shrink-0 transition-colors ${selectedTag === tag
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'}`}>
-                #{tag}
-              </button>))}
+            {allTags.map(({ display, raw }) => {
+                const isSelected = selectedTag !== 'ALL' && (
+                    selectedTag === raw || (tTag && tTag(selectedTag) === display)
+                );
+                return (
+                    <button
+                        key={display}
+                        onClick={() => setSelectedTag(raw)}
+                        className={`px-2.5 py-0.5 rounded text-[11px] font-medium shrink-0 transition-colors ${isSelected
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'}`}
+                    >
+                        #{display}
+                    </button>
+                );
+            })}
           </div>)}
       </div>
 
@@ -808,7 +833,7 @@ export const TransactionsView = () => {
               <div className="px-5 py-3.5 bg-slate-50/80 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <span className="font-extrabold text-sm text-slate-800 dark:text-white">
-                    {formatDate(group.dateKey, 'dateOnly')}
+                    {formatDate(group.dateKey, 'dateWithDay', language)}
                   </span>
                   <span className="text-xs text-slate-400 font-medium">
                     ({group.transactions.length} {t('nav.transactionsCount', 'giao dịch')})
@@ -841,7 +866,7 @@ export const TransactionsView = () => {
                         <div className="flex flex-wrap items-center gap-1.5">
                           <span className="font-bold text-sm text-slate-900 dark:text-white truncate">
                             {tx.type === 'TRANSFER'
-                    ? `${t('tx.transferTo', 'Chuyển sang:')} ${tx.toWalletName || t('nav.wallets', 'Ví')}`
+                    ? `${t('tx.transferTo', 'Chuyển sang:')} ${tx.toWalletName ? (tWalletName ? tWalletName(tx.toWalletName) : tx.toWalletName) : t('nav.wallets', 'Ví')}`
                     : tCategory(tx.categoryName || 'Khác')}
                           </span>
 
@@ -860,10 +885,10 @@ export const TransactionsView = () => {
                         </div>
 
                         <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                          <span>{formatDate(tx.date, 'time')}</span>
+                          <span>{formatDate(tx.date, 'time', language)}</span>
                           <span>•</span>
                           <span className="font-medium text-slate-700 dark:text-slate-300">
-                            {tx.walletName}
+                            {tWalletName ? tWalletName(tx.walletName) : tx.walletName}
                           </span>
                           {tx.note && (<>
                               <span>•</span>
@@ -876,7 +901,7 @@ export const TransactionsView = () => {
                         {/* Tags */}
                         {tx.tags && tx.tags.length > 0 && (<div className="flex items-center space-x-1 mt-1">
                             {tx.tags.map((tag) => (<span key={tag} className="px-2 py-0.2 text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-md">
-                                #{tag}
+                                #{tTag ? tTag(tag) : tag}
                               </span>))}
                           </div>)}
                       </div>
@@ -958,7 +983,7 @@ export const TransactionsView = () => {
     </div>);
 };
 const EditTransactionModal = ({ isOpen, onClose, transaction, }) => {
-    const { wallets, categories, editTransaction, deleteTransaction, t, tCategory, tWalletType } = useApp();
+    const { wallets, categories, editTransaction, deleteTransaction, language, t, tCategory, tWalletType, tTag, tWalletName } = useApp();
     const [type, setType] = useState('EXPENSE');
     const [amount, setAmount] = useState(0);
     const [categoryId, setCategoryId] = useState('');
@@ -987,7 +1012,7 @@ const EditTransactionModal = ({ isOpen, onClose, transaction, }) => {
     }, [transaction?.id, isOpen]);
     if (!isOpen || !transaction)
         return null;
-    const handleImageUpload = (e) => {
+    const handleImageUpload = async (e) => {
         const file = e.target.files?.[0];
         if (file) {
             compressImageFile(file)
@@ -1009,7 +1034,7 @@ const EditTransactionModal = ({ isOpen, onClose, transaction, }) => {
             return;
         }
         if (type === 'TRANSFER' && walletId === toWalletId) {
-            alert('Ví nhận phải khác ví chuyển!');
+            alert(t('Ví nhận phải khác ví chuyển', 'Ví nhận phải khác ví chuyển!'));
             return;
         }
         const selectedWallet = wallets.find((w) => w.id === walletId);
@@ -1111,29 +1136,29 @@ const EditTransactionModal = ({ isOpen, onClose, transaction, }) => {
           {type === 'TRANSFER' ? (<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                  Ví chuyển (Nguồn)
+                  {t('qa.transferSource', 'Ví chuyển (Nguồn)')}
                 </label>
                 <select value={walletId} onChange={(e) => setWalletId(e.target.value)} className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm">
                   {wallets.filter((w) => w.type !== 'CREDIT').map((w) => (<option key={w.id} value={w.id}>
-                      {w.name} ({formatCurrency(w.balance)})
+                      {tWalletName ? tWalletName(w.name) : w.name} ({formatCurrency(w.balance, language)})
                     </option>))}
                 </select>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                  Ví nhận (Đích)
+                  {t('qa.transferDest', 'Ví nhận (Đích)')}
                 </label>
                 <select value={toWalletId} onChange={(e) => setToWalletId(e.target.value)} className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm">
                   {wallets.map((w) => (<option key={w.id} value={w.id}>
-                      {w.name} {w.type === 'CREDIT' ? `[Thanh toán trả nợ - Dư nợ: ${formatCurrency(w.balance)}]` : `(${formatCurrency(w.balance)})`}
+                      {tWalletName ? tWalletName(w.name) : w.name} {w.type === 'CREDIT' ? `[${t('qa.payDebtNotice', 'Thanh toán trả nợ - Dư nợ:')} ${formatCurrency(w.balance, language)}]` : `(${formatCurrency(w.balance, language)})`}
                     </option>))}
                 </select>
               </div>
 
               <div className="sm:col-span-2">
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                  Phí chuyển khoản (VNĐ)
+                  {t('qa.transferFee', 'Phí chuyển khoản (VNĐ)')}
                 </label>
                 <input type="text" inputMode="numeric" value={fee ? formatNumberWithDots(fee) : ''} onChange={(e) => {
                 const cleaned = e.target.value.replace(/\D/g, '');
@@ -1149,7 +1174,7 @@ const EditTransactionModal = ({ isOpen, onClose, transaction, }) => {
                   {type === 'INCOME' ? (
                     wallets.filter((w) => w.type !== 'CREDIT').map((w) => (
                       <option key={w.id} value={w.id}>
-                        {w.name} ({formatCurrency(w.balance)})
+                        {tWalletName ? tWalletName(w.name) : w.name} ({formatCurrency(w.balance, language)})
                       </option>
                     ))
                   ) : (
@@ -1159,11 +1184,11 @@ const EditTransactionModal = ({ isOpen, onClose, transaction, }) => {
                       const avail = isCredit ? Math.max(0, (w.creditLimit || 0) - w.balance) : w.balance;
                       return (
                         <option key={w.id} value={w.id} disabled={isCredit && !hasLimit}>
-                          {w.name} {isCredit
+                          {tWalletName ? tWalletName(w.name) : w.name} {isCredit
                             ? (hasLimit
-                                ? `[Hạn mức còn: ${formatCurrency(avail)} • Dư nợ: ${formatCurrency(w.balance)}]`
-                                : `[Dư nợ: ${formatCurrency(w.balance)} - Khoản nợ, không thể chi tiêu]`)
-                            : `(${formatCurrency(w.balance)})`}
+                                ? `[${t('wallets.creditAvailShort', 'Hạn mức còn:')} ${formatCurrency(avail, language)} • ${t('wallets.debtShort', 'Dư nợ:')} ${formatCurrency(w.balance, language)}]`
+                                : `[${t('wallets.debtShort', 'Dư nợ:')} ${formatCurrency(w.balance, language)} - ${t('qa.cannotSpendDebt', 'Khoản nợ, không thể chi tiêu')}]`)
+                            : `(${formatCurrency(w.balance, language)})`}
                         </option>
                       );
                     })
@@ -1209,7 +1234,7 @@ const EditTransactionModal = ({ isOpen, onClose, transaction, }) => {
               {POPULAR_TAGS.map((tag) => (<button key={tag} type="button" onClick={() => handleTagToggle(tag)} className={`px-3 py-1 rounded-full text-xs font-medium transition-all cursor-pointer ${tags.includes(tag)
                 ? 'bg-blue-600 text-white'
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'}`}>
-                  #{tag}
+                  #{tTag ? tTag(tag) : tag}
                 </button>))}
             </div>
           </div>

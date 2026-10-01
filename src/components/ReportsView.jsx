@@ -274,7 +274,7 @@ export const ReportsView = () => {
                 : selectedPeriod === 'CUSTOM'
                     ? `${customStart || '...'} -> ${customEnd || '...'}`
                     : formatMonthLabel(selectedPeriod, language)}{' '}
-            • {t('rep.createdAt', 'Tạo ngày:')} {formatDate(new Date().toISOString(), 'full')}
+            • {t('rep.createdAt', 'Tạo ngày:')} {formatDate(new Date().toISOString(), 'full', language)}
           </p>
         </div>
 
@@ -515,7 +515,7 @@ export const ReportsView = () => {
             const data = payload[0].payload;
             return (<div className="bg-slate-900/95 dark:bg-slate-800/95 backdrop-blur-md text-white text-xs px-3.5 py-2.5 rounded-xl shadow-xl border border-slate-700/60 pointer-events-none z-50 min-w-[150px]">
                         <p className="font-bold text-slate-200 mb-1.5 border-b border-slate-700/60 pb-1">
-                          {data.rawMonth ? formatDate(data.rawMonth, 'short') : data.month}
+                          {data.rawMonth ? formatDate(data.rawMonth, 'short', language) : data.month}
                         </p>
                         <div className="space-y-1">
                           {(barMode === 'BOTH' || barMode === 'INCOME') && (<div className="flex items-center justify-between gap-3 text-emerald-400">

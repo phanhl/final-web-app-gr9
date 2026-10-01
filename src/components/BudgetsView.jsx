@@ -6,7 +6,7 @@ import { formatCurrency, calculateBudgetStatuses, formatNumberWithDots, formatMo
 import { IconHelper } from './IconHelper';
 import confetti from 'canvas-confetti';
 export const BudgetsView = () => {
-    const { budgets, transactions, categories, goals, wallets, bills, planner, currentMonth, addBudget, editBudget, deleteBudget, updatePlanner, addGoal, editGoal, deleteGoal, depositToGoal, withdrawFromGoal, navTargetBudgetId, setNavTargetBudgetId, navigateToCategoryTransactions, saveDataNow, serverSyncStatus, t, tCategory, tWalletType, language, isAlertDismissed, dismissAlert, restoreAlert, } = useApp();
+    const { budgets, transactions, categories, goals, wallets, bills, planner, currentMonth, addBudget, editBudget, deleteBudget, updatePlanner, addGoal, editGoal, deleteGoal, depositToGoal, withdrawFromGoal, navTargetBudgetId, setNavTargetBudgetId, navigateToCategoryTransactions, saveDataNow, serverSyncStatus, t, tCategory, tWalletType, tWalletName, language, isAlertDismissed, dismissAlert, restoreAlert, } = useApp();
     const [activeSubTab, setActiveSubTab] = useState('CATEGORY_BUDGETS');
     const [isSavingPlanner, setIsSavingPlanner] = useState(false);
     const [plannerSavedToast, setPlannerSavedToast] = useState(false);
@@ -481,7 +481,7 @@ export const BudgetsView = () => {
 
                 <div>
                   <div className="flex justify-between text-xs font-semibold mb-1">
-                    <span className="text-blue-600 dark:text-blue-400">1. {t('budget.needs', 'Thiết yếu')} (Needs)</span>
+                    <span className="text-blue-600 dark:text-blue-400">1. {t('budget.needs', 'Thiết yếu')}</span>
                     <span className="font-bold text-slate-800 dark:text-white">{planner.needsPercent}%</span>
                   </div>
                   <input type="range" min="30" max="70" value={planner.needsPercent} onChange={(e) => updatePlanner({ ...planner, needsPercent: Number(e.target.value) })} className="w-full accent-blue-600"/>
@@ -490,7 +490,7 @@ export const BudgetsView = () => {
 
                 <div>
                   <div className="flex justify-between text-xs font-semibold mb-1">
-                    <span className="text-purple-600 dark:text-purple-400">2. {t('budget.wants', 'Mong muốn')} (Wants)</span>
+                    <span className="text-purple-600 dark:text-purple-400">2. {t('budget.wants', 'Mong muốn')}</span>
                     <span className="font-bold text-slate-800 dark:text-white">{planner.wantsPercent}%</span>
                   </div>
                   <input type="range" min="10" max="50" value={planner.wantsPercent} onChange={(e) => updatePlanner({ ...planner, wantsPercent: Number(e.target.value) })} className="w-full accent-purple-600"/>
@@ -499,7 +499,7 @@ export const BudgetsView = () => {
 
                 <div>
                   <div className="flex justify-between text-xs font-semibold mb-1">
-                    <span className="text-emerald-600 dark:text-emerald-400">3. {t('budget.savingsPillar', 'Tích lũy')} (Savings)</span>
+                    <span className="text-emerald-600 dark:text-emerald-400">3. {t('budget.savingsPillar', 'Tích lũy')}</span>
                     <span className="font-bold text-slate-800 dark:text-white">{planner.savingsPercent}%</span>
                   </div>
                   <input type="range" min="5" max="40" value={planner.savingsPercent} onChange={(e) => updatePlanner({ ...planner, savingsPercent: Number(e.target.value) })} className="w-full accent-emerald-600"/>
@@ -511,7 +511,7 @@ export const BudgetsView = () => {
                   <div className="flex justify-between text-xs font-semibold mb-1">
                     <span className="text-amber-600 dark:text-amber-400 font-bold flex items-center space-x-1">
                       <ShieldAlert className="w-3.5 h-3.5 text-amber-500 inline mr-0.5"/>
-                      <span>4. {t('budget.emergency', 'Dự phòng')} (Emergency)</span>
+                      <span>4. {t('budget.emergency', 'Dự phòng')}</span>
                     </span>
                     <span className="font-bold text-slate-800 dark:text-white">{emergencyPercent}%</span>
                   </div>
@@ -926,7 +926,7 @@ export const BudgetsView = () => {
                 </label>
                 <select value={depositWalletId} onChange={(e) => setDepositWalletId(e.target.value)} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm dark:text-white">
                   {wallets.filter((w) => w.type !== 'CREDIT').map((w) => (<option key={w.id} value={w.id}>
-                      {w.name} ({formatCurrency(w.balance)})
+                      {tWalletName ? tWalletName(w.name) : w.name} ({formatCurrency(w.balance, language)})
                     </option>))}
                 </select>
               </div>

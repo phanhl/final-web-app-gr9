@@ -1,10 +1,106 @@
 'use client';
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
-import { KeyRound, Sun, Moon, Monitor, Check, Palette, Globe, } from 'lucide-react';
+import { KeyRound, Sun, Moon, Monitor, Check, Palette, Globe, ShieldCheck, ShieldAlert, Lock, Unlock, Download, Upload, Database, Server, CheckCircle2, AlertCircle } from 'lucide-react';
 import { LANGUAGES } from '@/lib/i18n';
+
 export const SettingsView = () => {
-    const { theme, setTheme, language, setLanguage, t, } = useApp();
+    const { 
+        theme, setTheme, language, setLanguage, t, 
+        security, updateSecuritySettings,
+        userProfile, updateUserProfile,
+        exportDatabaseJSON, importDatabaseJSON
+    } = useApp();
+
+    const [pinCodeInput, setPinCodeInput] = useState('');
+    const [pinMessage, setPinMessage] = useState({ text: '', type: '' });
+    const [isSavingPin, setIsSavingPin] = useState(false);
+
+    const [profileName, setProfileName] = useState(userProfile?.name || 'Admin');
+    const [profileEmail, setProfileEmail] = useState(userProfile?.email || 'admin@fintrack.vn');
+    const [profileSaved, setProfileSaved] = useState(false);
+
+    const handleSaveProfile = (e) => {
+        e.preventDefault();
+        updateUserProfile({ name: profileName, email: profileEmail });
+        setProfileSaved(true);
+        setTimeout(() => setProfileSaved(false), 2500);
+    };
+
+    const handleTogglePin = async () => {
+        setIsSavingPin(true);
+        const nextState = !security?.pinEnabled;
+        if (nextState && !security?.hasPin && !pinCodeInput.trim()) {
+            setPinMessage({
+                text: language === 'en' ? 'Please enter a 4-8 digit PIN code below before enabling!' : 'Vui lòng nhập mã PIN từ 4-8 chữ số bên dưới trước khi kích hoạt!',
+                type: 'error'
+            });
+            setIsSavingPin(false);
+            return;
+        }
+        const res = await updateSecuritySettings({
+            pinEnabled: nextState,
+            pinCode: pinCodeInput.trim() || undefined,
+        });
+        setIsSavingPin(false);
+        if (res.success) {
+            setPinMessage({
+                text: nextState 
+                    ? (language === 'en' ? 'PIN Protection activated! API storage is now guarded against unauthorized access.' : 'Đã bật bảo vệ PIN! API /api/storage đã được khóa an toàn chống truy cập trái phép qua Ngrok.') 
+                    : (language === 'en' ? 'PIN Protection disabled.' : 'Đã tắt bảo vệ PIN.'),
+                type: 'success'
+            });
+            setPinCodeInput('');
+        } else {
+            setPinMessage({ text: res.error || 'Thao tác thất bại', type: 'error' });
+        }
+    };
+
+    const handleUpdatePin = async (e) => {
+        e.preventDefault();
+        const cleanPin = pinCodeInput.trim();
+        if (!/^\d{4,8}$/.test(cleanPin)) {
+            setPinMessage({
+                text: language === 'en' ? 'PIN must be 4-8 digits!' : 'Mã PIN phải gồm 4-8 chữ số!',
+                type: 'error'
+            });
+            return;
+        }
+        setIsSavingPin(true);
+        const res = await updateSecuritySettings({
+            pinEnabled: true,
+            pinCode: cleanPin,
+        });
+        setIsSavingPin(false);
+        if (res.success) {
+            setPinMessage({
+                text: language === 'en' ? 'Security PIN successfully updated!' : 'Đã cập nhật mã PIN bảo mật thành công!',
+                type: 'success'
+            });
+            setPinCodeInput('');
+        } else {
+            setPinMessage({ text: res.error || 'Cập nhật thất bại', type: 'error' });
+        }
+    };
+
+    const handleFileImport = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            const content = event.target?.result;
+            if (typeof content === 'string') {
+                const ok = await importDatabaseJSON(content);
+                if (ok) {
+                    alert(language === 'en' ? 'Data imported successfully!' : 'Đã nhập dữ liệu thành công!');
+                } else {
+                    alert(language === 'en' ? 'Failed to import data: invalid JSON format!' : 'Lỗi khi nhập dữ liệu: định dạng tệp JSON không hợp lệ!');
+                }
+            }
+        };
+        reader.readAsText(file);
+    };
+
     return (<div className="space-y-6 pb-12">
       {/* 1. HEADER */}
       <div>
@@ -147,41 +243,200 @@ export const SettingsView = () => {
         </div>
       </div>
 
-      {/* 4. USER & AUTHENTICATION SPEC */}
+      {/* 4. SECURITY & API GUARD (FIX ISSUES 1, 2 & 11) */}
+      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center space-x-2">
+            <KeyRound className="w-5 h-5 text-rose-500"/>
+            <h3 className="text-base font-bold text-slate-800 dark:text-white">
+              {language === 'en' ? 'Security & API Guard (App PIN & Ngrok Protection)' : 'Bảo Mật & Khóa Ứng Dụng (Mã PIN & API Guard)'}
+            </h3>
+          </div>
+          <span className={`text-xs px-2.5 py-1 rounded-full font-bold flex items-center gap-1.5 self-start sm:self-auto ${
+            security?.pinEnabled 
+              ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300' 
+              : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+          }`}>
+            {security?.pinEnabled ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+            <span>{security?.pinEnabled 
+              ? (language === 'en' ? 'PIN Protection Active' : 'Đang Bật Khóa PIN') 
+              : (language === 'en' ? 'Unprotected (Local Mode)' : 'Chưa Khóa PIN (Chế độ nội bộ)')}
+            </span>
+          </span>
+        </div>
+
+        <div className={`p-4 rounded-2xl border transition-all ${
+          security?.pinEnabled
+            ? 'bg-gradient-to-r from-rose-500/10 to-amber-500/10 border-rose-200 dark:border-rose-800/40'
+            : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700'
+        }`}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h4 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                {security?.pinEnabled ? <ShieldCheck className="w-5 h-5 text-emerald-500" /> : <ShieldAlert className="w-5 h-5 text-amber-500" />}
+                <span>{security?.pinEnabled 
+                  ? (language === 'en' ? 'Storage API & Interface are Protected' : 'Dữ Liệu & API /api/storage Đang Được Khóa Bảo Mật')
+                  : (language === 'en' ? 'Public Ngrok Access Warning' : 'Cảnh Báo Khi Mở Đường Dẫn Ngrok')}
+                </span>
+              </h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xl">
+                {security?.pinEnabled
+                  ? (language === 'en'
+                      ? 'Anyone accessing via Ngrok or a new device must supply the correct PIN code to read or write database records.'
+                      : 'Mọi thiết bị hoặc người truy cập qua đường dẫn Ngrok bắt buộc phải nhập đúng mã PIN trước khi đọc hoặc ghi vào cơ sở dữ liệu.')
+                  : (language === 'en'
+                      ? 'Anyone with your Ngrok public link can read and write to your database. Enable PIN protection to prevent unauthorized access!'
+                      : 'Nếu bạn đang chia sẻ link Ngrok ra ngoài, bất kỳ ai có link đều có thể đọc/ghi database. Hãy bật mã PIN để khóa bảo vệ dữ liệu!')}
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={isSavingPin}
+              onClick={handleTogglePin}
+              className={`px-4 py-2.5 rounded-xl font-bold text-xs transition-all shadow-sm shrink-0 cursor-pointer ${
+                security?.pinEnabled
+                  ? 'bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-white'
+                  : 'bg-rose-600 hover:bg-rose-700 text-white'
+              }`}
+            >
+              {security?.pinEnabled 
+                ? (language === 'en' ? 'Disable PIN Protection' : 'Tắt Khóa PIN') 
+                : (language === 'en' ? 'Enable PIN Protection' : 'Bật Bảo Vệ Mã PIN')}
+            </button>
+          </div>
+
+          {/* Set / Change PIN Form */}
+          <form onSubmit={handleUpdatePin} className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <div className="flex-1">
+              <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                {language === 'en' ? 'Set or Change PIN Code (4-8 digits):' : 'Thiết lập hoặc đổi mã PIN mới (4-8 chữ số):'}
+              </label>
+              <input
+                type="password"
+                maxLength={8}
+                value={pinCodeInput}
+                onChange={(e) => setPinCodeInput(e.target.value.replace(/\D/g, ''))}
+                placeholder="Ví dụ: 1234 hoặc 2026"
+                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-bold dark:text-white"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={isSavingPin || !pinCodeInput.trim()}
+              className="mt-auto py-2.5 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-all shadow-sm"
+            >
+              {language === 'en' ? 'Save PIN Code' : 'Lưu Mã PIN'}
+            </button>
+          </form>
+
+          {pinMessage.text && (
+            <p className={`text-xs mt-3 font-semibold ${pinMessage.type === 'error' ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+              {pinMessage.text}
+            </p>
+          )}
+        </div>
+
+        {/* User profile section */}
+        <form onSubmit={handleSaveProfile} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-3">
+          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+            {language === 'en' ? 'User Profile Information' : 'Thông Tin Hồ Sơ Người Dùng'}
+          </h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                {language === 'en' ? 'Display Name:' : 'Họ và Tên:'}
+              </label>
+              <input
+                type="text"
+                value={profileName}
+                onChange={(e) => setProfileName(e.target.value)}
+                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold dark:text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                {language === 'en' ? 'Email Address:' : 'Địa Chỉ Email:'}
+              </label>
+              <input
+                type="email"
+                value={profileEmail}
+                onChange={(e) => setProfileEmail(e.target.value)}
+                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold dark:text-white"
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-between pt-1">
+            <span className="text-[11px] text-slate-400">
+              {profileSaved && (language === 'en' ? '✓ Profile saved' : '✓ Đã lưu hồ sơ thành công')}
+            </span>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-slate-800 dark:bg-slate-700 hover:bg-slate-900 text-white text-xs font-bold rounded-xl transition-all shadow-sm"
+            >
+              {language === 'en' ? 'Update Profile' : 'Cập Nhật Hồ Sơ'}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* 5. DATA PERSISTENCE & DEPLOYMENT GUIDE (FIX ISSUE 15) */}
       <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
         <div className="flex items-center space-x-2 pb-3 border-b border-slate-100 dark:border-slate-800">
-          <KeyRound className="w-5 h-5 text-emerald-500"/>
+          <Database className="w-5 h-5 text-blue-500"/>
           <h3 className="text-base font-bold text-slate-800 dark:text-white">
-            {t('settings.authTitle', 'Tài Khoản & Xác Thực (Authentication)')}
+            {language === 'en' ? 'Data Persistence & Backup Architecture' : 'Lưu Trữ Bền Vững & Sao Lưu Dữ Liệu (Data Persistence)'}
           </h3>
         </div>
 
-        <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-200 dark:border-emerald-800/40 flex items-center space-x-4">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-bold text-base shadow-sm">
-            A
-          </div>
-          <div>
-            <h4 className="text-sm font-bold text-slate-800 dark:text-white">Admin</h4>
-            <p className="text-xs text-slate-500">admin@example.com</p>
-            <div className="flex items-center space-x-2 mt-1">
-              <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 rounded text-[10px] font-bold">
-                Clerk / NextAuth Google OAuth
-              </span>
-              <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 rounded text-[10px] font-bold">
-                {t('settings.highSecurity', 'Bảo mật cao')}
-              </span>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-2">
+            <div className="flex items-center space-x-2 text-emerald-600 dark:text-emerald-400 font-bold text-xs">
+              <Server className="w-4 h-4" />
+              <span>{language === 'en' ? 'Local / Self-hosted / VPS / Docker' : 'Chạy Cục Bộ / Máy Chủ VPS / Docker'}</span>
             </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              {language === 'en'
+                ? 'Data is stored permanently on disk at `data/database.json` with atomic file writes to prevent corruption. Your records persist across restarts.'
+                : 'Dữ liệu được lưu trữ vĩnh viễn trên ổ cứng tại thư mục `data/database.json` với cơ chế ghi nguyên tử (atomic write) chống lỗi file. Dữ liệu được bảo toàn trọn vẹn qua các lần khởi động.'}
+            </p>
+          </div>
+
+          <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-2">
+            <div className="flex items-center space-x-2 text-amber-600 dark:text-amber-400 font-bold text-xs">
+              <AlertCircle className="w-4 h-4" />
+              <span>{language === 'en' ? 'Serverless Hosting (e.g. Vercel)' : 'Triển Khai Serverless (Vercel)'}</span>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              {language === 'en'
+                ? 'Serverless containers have ephemeral filesystems (/tmp). FinTrack maintains an offline client cache on LocalStorage and lets you export/import full JSON backups below.'
+                : 'Môi trường Serverless của Vercel có hệ thống tệp tạm thời (/tmp). FinTrack duy trì bộ nhớ đệm an toàn trên trình duyệt (LocalStorage) và hỗ trợ Xuất/Nhập tệp JSON sao lưu dự phòng bên dưới.'}
+            </p>
           </div>
         </div>
 
-        <div className="space-y-2 text-xs text-slate-600 dark:text-slate-400">
-          <p>
-            {t('settings.authStandards', 'Tiêu chuẩn công nghệ: Hỗ trợ tích hợp Clerk Auth, NextAuth.js hoặc Supabase Auth với Single Sign-On (Google OAuth, Apple ID, Email OTP).')}
-          </p>
-          <p>
-            {t('settings.authIsolation', 'Bảo mật dữ liệu: Mỗi người dùng có không gian lưu trữ riêng biệt (Multi-tenancy isolation), mã hóa các giao dịch nhạy cảm.')}
-          </p>
+        {/* Export / Import Buttons */}
+        <div className="pt-2 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={exportDatabaseJSON}
+            className="flex items-center space-x-2 px-4 py-2.5 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 text-blue-700 dark:text-blue-300 rounded-xl text-xs font-bold border border-blue-200 dark:border-blue-800 transition-all cursor-pointer"
+          >
+            <Download className="w-4 h-4" />
+            <span>{language === 'en' ? 'Export Backup Data (JSON)' : 'Xuất Tệp Dữ Liệu Dự Phòng (JSON)'}</span>
+          </button>
+
+          <label className="flex items-center space-x-2 px-4 py-2.5 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 rounded-xl text-xs font-bold border border-emerald-200 dark:border-emerald-800 transition-all cursor-pointer">
+            <Upload className="w-4 h-4" />
+            <span>{language === 'en' ? 'Restore Data from JSON' : 'Khôi Phục Dữ Liệu Từ Tệp JSON'}</span>
+            <input
+              type="file"
+              accept=".json,application/json"
+              onChange={handleFileImport}
+              className="hidden"
+            />
+          </label>
         </div>
       </div>
     </div>);
 };
+

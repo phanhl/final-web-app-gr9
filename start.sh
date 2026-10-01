@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Script khoi chay FinTrack Pro va cac duong truyen co dinh cho dien thoai
 # Bien moi truong:
-#   APP_PASSWORD (bat buoc neu mo tunnel ngrok/cloudflared), APP_USER (mac dinh: admin)
+#   APP_PASSWORD (HTTP Basic Auth, khuyen dung khi mo tunnel), APP_USER (mac dinh: admin)
+#   APP_PIN: ma PIN 4-8 so khoa /api/storage (thay the APP_PASSWORD neu chi muon dung PIN)
+#   Phai dat it nhat 1 trong 2 bien tren thi moi mo tunnel ngrok/cloudflared
 #   NGROK_BIN / CLOUDFLARED_BIN: duong dan tuy chinh (mac dinh tim trong PATH va ~/.local/bin)
 #   NGROK_DOMAIN: domain co dinh cua ngrok (tuy chon)
 #   NO_TUNNEL=1: chi chay local, khong mo tunnel
@@ -35,11 +37,11 @@ if [ "${NO_TUNNEL:-0}" = "1" ]; then
   exit 0
 fi
 
-if [ -z "$APP_PASSWORD" ]; then
+if [ -z "$APP_PASSWORD" ] && [ -z "$APP_PIN" ]; then
   echo "=================================================================="
-  echo "CANH BAO: chua dat APP_PASSWORD -> KHONG mo tunnel ra Internet."
+  echo "CANH BAO: chua dat APP_PASSWORD hoac APP_PIN -> KHONG mo tunnel ra Internet."
   echo "Toan bo du lieu tai chinh se bi lo neu public ma khong co mat khau."
-  echo "Chay lai: APP_PASSWORD='mat-khau-manh' ./start.sh"
+  echo "Chay lai: APP_PASSWORD='mat-khau-manh' ./start.sh  (hoac APP_PIN='123456' ./start.sh)"
   echo "May tinh: http://localhost:$PORT"
   echo "=================================================================="
   exit 0
@@ -71,5 +73,6 @@ echo "FinTrack Pro da duoc khoi chay thanh cong!"
 echo "1. May tinh:      http://localhost:$PORT"
 [ -n "$NGROK_URL" ] && echo "2. Ngrok:         $NGROK_URL"
 [ -n "$CF_URL" ] && echo "3. Cloudflare:    $CF_URL"
-echo "Dang nhap bang user: ${APP_USER:-admin} va APP_PASSWORD da dat."
+[ -n "$APP_PASSWORD" ] && echo "Dang nhap bang user: ${APP_USER:-admin} va APP_PASSWORD da dat."
+[ -n "$APP_PIN" ] && echo "Ung dung yeu cau nhap APP_PIN de mo khoa du lieu."
 echo "=================================================================="
