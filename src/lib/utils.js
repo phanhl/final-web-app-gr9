@@ -103,6 +103,56 @@ export function numberToVietnameseWords(value) {
     finalStr = finalStr.charAt(0).toUpperCase() + finalStr.slice(1) + ' đồng';
     return finalStr;
 }
+
+const EN_ONES = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
+    'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+const EN_TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+
+function readThreeDigitsEn(num) {
+    let str = '';
+    const h = Math.floor(num / 100);
+    const rest = num % 100;
+    if (h > 0) {
+        str += EN_ONES[h] + ' hundred';
+        if (rest > 0) str += ' and ';
+    }
+    if (rest > 0) {
+        if (rest < 20) {
+            str += EN_ONES[rest];
+        } else {
+            const t = Math.floor(rest / 10);
+            const u = rest % 10;
+            str += EN_TENS[t] + (u > 0 ? '-' + EN_ONES[u] : '');
+        }
+    }
+    return str.trim();
+}
+
+export function numberToEnglishWords(value) {
+    if (value === null || value === undefined || value === '') return '';
+    const num = Math.floor(Number(value));
+    if (isNaN(num) || num <= 0) return 'Zero VND';
+    const scales = ['', 'thousand', 'million', 'billion', 'trillion'];
+    let n = num;
+    const parts = [];
+    let scaleIndex = 0;
+    while (n > 0 && scaleIndex < scales.length) {
+        const chunk = n % 1000;
+        if (chunk > 0) {
+            const chunkWords = readThreeDigitsEn(chunk);
+            const scale = scales[scaleIndex];
+            parts.unshift(scale ? `${chunkWords} ${scale}` : chunkWords);
+        }
+        n = Math.floor(n / 1000);
+        scaleIndex++;
+    }
+    const res = parts.join(', ').trim();
+    return res ? res.charAt(0).toUpperCase() + res.slice(1) + ' VND' : 'Zero VND';
+}
+
+export function formatAmountInWords(amount, language = 'vi') {
+    return language === 'en' ? numberToEnglishWords(amount) : numberToVietnameseWords(amount);
+}
 export function getLocalDateString(d = new Date()) {
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -193,28 +243,47 @@ export function normalizeSaveDate(dateInput) {
     }
     return toLocalDateTimeInput(dateInput) + ':00';
 }
-export function formatDisplayDate(dateStr) {
+export function formatDisplayDate(dateStr, lang = 'vi') {
     if (!dateStr)
         return '';
     if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
         const [y, m, d] = dateStr.split('-');
+        if (lang === 'en') {
+            return `${m}/${d}/${y}`;
+        }
         return `${d}/${m}/${y}`;
     }
-    return formatDate(dateStr, 'dateOnly');
+    return formatDate(dateStr, 'dateOnly', lang);
 }
-export function formatDate(dateString, type = 'short') {
+export function formatDate(dateString, type = 'short', lang = 'vi') {
     try {
-        const date = new Date(dateString);
+        if (!dateString) return '';
+        let date;
+        if (typeof dateString === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+            const [y, m, d] = dateString.split('-').map(Number);
+            date = new Date(y, m - 1, d, 12, 0, 0);
+        } else {
+            date = new Date(dateString);
+        }
         if (isNaN(date.getTime()))
             return dateString;
+        const locale = lang === 'en' ? 'en-US' : 'vi-VN';
         if (type === 'time') {
-            return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+            return date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
         }
         if (type === 'dateOnly') {
-            return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            return date.toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+        if (type === 'dateWithDay') {
+            return date.toLocaleDateString(locale, {
+                weekday: 'short',
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
         }
         if (type === 'full') {
-            return date.toLocaleDateString('vi-VN', {
+            return date.toLocaleDateString(locale, {
                 weekday: 'short',
                 day: '2-digit',
                 month: '2-digit',
@@ -223,7 +292,7 @@ export function formatDate(dateString, type = 'short') {
                 minute: '2-digit',
             });
         }
-        return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        return date.toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' });
     }
     catch {
         return dateString;
@@ -387,14 +456,14 @@ export function getWalletAvailableBalance(wallet) {
     }
     return Math.max(0, wallet.balance);
 }
-export function checkWalletSufficientFunds(wallet, amount, fee = 0) {
+export function checkWalletSufficientFunds(wallet, amount, fee = 0, lang = 'vi') {
     if (!wallet) {
         return {
             isValid: false,
             availableBalance: 0,
             requiredAmount: amount + fee,
             shortfall: amount + fee,
-            errorMessage: 'Vui lòng chọn ví hợp lệ',
+            errorMessage: lang === 'en' ? 'Please select a valid wallet' : 'Vui lòng chọn ví hợp lệ',
         };
     }
     const numAmount = Number(amount) || 0;
@@ -406,15 +475,22 @@ export function checkWalletSufficientFunds(wallet, amount, fee = 0) {
             availableBalance: getWalletAvailableBalance(wallet),
             requiredAmount: 0,
             shortfall: 0,
-            errorMessage: 'Số tiền giao dịch phải lớn hơn 0',
+            errorMessage: lang === 'en' ? 'Transaction amount must be greater than 0' : 'Số tiền giao dịch phải lớn hơn 0',
         };
     }
     const availableBalance = getWalletAvailableBalance(wallet);
     if (requiredAmount > availableBalance) {
         const shortfall = requiredAmount - availableBalance;
-        const errorMsg = wallet.type === 'CREDIT'
-            ? `Số tiền (${formatCurrency(requiredAmount)}) vượt quá hạn mức còn lại của thẻ ${wallet.name} (còn ${formatCurrency(availableBalance)}).`
-            : `Số tiền (${formatCurrency(requiredAmount)}) vượt quá số dư hiện có của ví ${wallet.name} (hiện có ${formatCurrency(availableBalance)}). Không thể giao dịch làm âm quỹ!`;
+        let errorMsg;
+        if (lang === 'en') {
+            errorMsg = wallet.type === 'CREDIT'
+                ? `Amount (${formatCurrency(requiredAmount, 'en')}) exceeds remaining limit of card ${wallet.name} (${formatCurrency(availableBalance, 'en')} remaining).`
+                : `Amount (${formatCurrency(requiredAmount, 'en')}) exceeds available balance of wallet ${wallet.name} (${formatCurrency(availableBalance, 'en')} available). Overdrawing is not allowed!`;
+        } else {
+            errorMsg = wallet.type === 'CREDIT'
+                ? `Số tiền (${formatCurrency(requiredAmount)}) vượt quá hạn mức còn lại của thẻ ${wallet.name} (còn ${formatCurrency(availableBalance)}).`
+                : `Số tiền (${formatCurrency(requiredAmount)}) vượt quá số dư hiện có của ví ${wallet.name} (hiện có ${formatCurrency(availableBalance)}). Không thể giao dịch làm âm quỹ!`;
+        }
         return {
             isValid: false,
             availableBalance,

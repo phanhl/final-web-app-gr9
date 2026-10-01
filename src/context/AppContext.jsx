@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { INITIAL_WALLETS, INITIAL_TRANSACTIONS, INITIAL_BUDGETS, INITIAL_BILLS, INITIAL_GOALS, INITIAL_PLANNER, DEFAULT_CATEGORIES, INITIAL_SIMULATOR_CONFIG, } from '@/lib/mock-data';
 import { calculateFinancialSummary, checkWalletSufficientFunds, formatCurrency, getLocalDateString, toLocalDateKey, normalizeSaveDate } from '@/lib/utils';
-import { translate, translateCategory, translateWalletType } from '@/lib/i18n';
+import { translate, translateCategory, translateWalletType, translateTag, translateBillName, translateBillNote, translateWalletName } from '@/lib/i18n';
 const AppContext = createContext(undefined);
 const STORAGE_KEY = 'quan_ly_chi_tieu_data_v2';
 export const AppProvider = ({ children }) => {
@@ -202,6 +202,18 @@ export const AppProvider = ({ children }) => {
     };
     const tWalletType = (type) => {
         return translateWalletType(type || '', language);
+    };
+    const tTag = (tag) => {
+        return translateTag(tag || '', language);
+    };
+    const tBillName = (name) => {
+        return translateBillName(name || '', language);
+    };
+    const tBillNote = (note) => {
+        return translateBillNote(note || '', language);
+    };
+    const tWalletName = (name) => {
+        return translateWalletName(name || '', language);
     };
     // Real-time multi-device sync refs
     const lastServerUpdatedAtRef = useRef(null);
@@ -581,9 +593,9 @@ export const AppProvider = ({ children }) => {
         if (tx.type === 'EXPENSE' || tx.type === 'TRANSFER') {
             const sourceWallet = wallets.find((w) => w.id === tx.walletId);
             const fee = tx.type === 'TRANSFER' ? (tx.fee || 0) : 0;
-            const validation = checkWalletSufficientFunds(sourceWallet, tx.amount, fee);
+            const validation = checkWalletSufficientFunds(sourceWallet, tx.amount, fee, language);
             if (!validation.isValid) {
-                alert(validation.errorMessage || 'Số dư ví không đủ để thực hiện giao dịch này!');
+                alert(validation.errorMessage || (language === 'en' ? 'Insufficient wallet balance for this transaction!' : 'Số dư ví không đủ để thực hiện giao dịch này!'));
                 return false;
             }
         }
@@ -729,7 +741,7 @@ export const AppProvider = ({ children }) => {
         }
         if (newTx.type === 'TRANSFER') {
             if (newTx.walletId === newTx.toWalletId) {
-                alert('Ví nhận phải khác ví chuyển!');
+                alert(t('Ví nhận phải khác ví chuyển', 'Ví nhận phải khác ví chuyển!'));
                 return false;
             }
             const destW = wallets.find((w) => w.id === newTx.toWalletId);
@@ -777,9 +789,9 @@ export const AppProvider = ({ children }) => {
         if (newEffective && (newTx.type === 'EXPENSE' || newTx.type === 'TRANSFER')) {
             const sourceW = adjustedWallets.find((w) => w.id === newTx.walletId);
             const fee = newTx.type === 'TRANSFER' ? (newTx.fee || 0) : 0;
-            const validation = checkWalletSufficientFunds(sourceW, newTx.amount, fee);
+            const validation = checkWalletSufficientFunds(sourceW, newTx.amount, fee, language);
             if (!validation.isValid) {
-                alert(validation.errorMessage || 'Số dư ví không đủ sau khi điều chỉnh!');
+                alert(validation.errorMessage || (language === 'en' ? 'Insufficient wallet balance after adjustment!' : 'Số dư ví không đủ sau khi điều chỉnh!'));
                 return false;
             }
         }
@@ -874,14 +886,14 @@ export const AppProvider = ({ children }) => {
     };
     const transferFunds = (fromWalletId, toWalletId, amount, fee, note) => {
         if (fromWalletId === toWalletId) {
-            alert('Ví nhận phải khác ví chuyển!');
+            alert(t('Ví nhận phải khác ví chuyển', 'Ví nhận phải khác ví chuyển!'));
             return false;
         }
         const fromW = wallets.find((w) => w.id === fromWalletId);
         const toW = wallets.find((w) => w.id === toWalletId);
-        const validation = checkWalletSufficientFunds(fromW, amount, fee);
+        const validation = checkWalletSufficientFunds(fromW, amount, fee, language);
         if (!validation.isValid) {
-            alert(validation.errorMessage || 'Số dư ví chuyển không đủ!');
+            alert(validation.errorMessage || t('insufficientFunds', 'Số dư ví chuyển không đủ!'));
             return false;
         }
         return addTransaction({
@@ -984,9 +996,9 @@ export const AppProvider = ({ children }) => {
         if (!bill)
             return;
         const targetWallet = wallets.find((w) => w.id === walletId) || wallets[0];
-        const validation = checkWalletSufficientFunds(targetWallet, bill.amount);
+        const validation = checkWalletSufficientFunds(targetWallet, bill.amount, 0, language);
         if (!validation.isValid) {
-            alert(validation.errorMessage || `Số dư ví ${targetWallet?.name} không đủ để thanh toán hóa đơn này!`);
+            alert(validation.errorMessage || (language === 'en' ? `Insufficient balance in wallet ${targetWallet?.name} to pay this bill!` : `Số dư ví ${targetWallet?.name} không đủ để thanh toán hóa đơn này!`));
             return;
         }
         const billCategory = categories.find((c) => c.id === bill.categoryId);
@@ -1038,9 +1050,9 @@ export const AppProvider = ({ children }) => {
         if (!goal || !wallet)
             return;
         // Check if wallet has sufficient funds
-        const validation = checkWalletSufficientFunds(wallet, amount);
+        const validation = checkWalletSufficientFunds(wallet, amount, 0, language);
         if (!validation.isValid) {
-            alert(validation.errorMessage || `Số dư ví ${wallet.name} không đủ để tích lũy vào mục tiêu!`);
+            alert(validation.errorMessage || (language === 'en' ? `Insufficient balance in wallet ${wallet.name} for this goal!` : `Số dư ví ${wallet.name} không đủ để tích lũy vào mục tiêu!`));
             return;
         }
         // Add to goal
@@ -1259,6 +1271,10 @@ export const AppProvider = ({ children }) => {
             t,
             tCategory,
             tWalletType,
+            tTag,
+            tBillName,
+            tBillNote,
+            tWalletName,
             addTransaction,
             editTransaction,
             deleteTransaction,

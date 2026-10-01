@@ -4,6 +4,84 @@
 
 ---
 
+## [LẦN CHỈNH SỬA 14] - Khắc phục triệt để hiển thị Nhãn (Tags) & Rà soát toàn diện ngôn ngữ trên toàn bộ ứng dụng
+
+* **Thời gian thực hiện:** 01/10/2026
+* **Mức độ ảnh hưởng:** Module Giao dịch, Nhãn (Tags), Sao kê & Đa ngôn ngữ (`i18n.js`, `TransactionsView.jsx`, `BankStatementModal.jsx`, `BudgetsView.jsx`, `QuickAddModal.jsx`, `Navigation.jsx`, `utils.js`, `start.sh`)
+* **Trạng thái:** ✅ Đã hoàn thành, xác minh qua unit test và build production thành công 100%
+
+### 1. Vấn Đề & Phản Hồi Từ Người Dùng
+- **Phản hồi:** "cái tag này vẫn ko chuyển đúng ngôn ngữ, check lại hết xem có chưa chuyển chỗ nào theo đúng ngôn ngữ chưa".
+- **Hình ảnh đính kèm từ người dùng:** Tại thanh lọc giao dịch của `TransactionsView`, khi chuyển sang Tiếng Anh, giao diện hiển thị: `Tags: All #Sao kê #Lãi #Thưởng #Giáo dục #Shopping #Hóa đơn #Ăn uống`. Toàn bộ các tag (trừ Shopping) đều bị giữ nguyên tiếng Việt.
+- **Nguyên nhân kỹ thuật:**
+  1. Các nhãn thực tế lưu trong cơ sở dữ liệu (`database.json`) gồm `['Giáo dục', 'Hóa đơn', 'Lãi', 'Mua sắm', 'Sao kê', 'Thưởng', 'Ăn uống']`. Trong khi đó, `TAG_TRANSLATIONS` trong `i18n.js` chỉ chứa các nhãn mẫu gợi ý cơ bản (`Ăn trưa`, `Cafe`, `Grab/Be`...) mà thiếu các nhãn tài chính ngân hàng như `Sao kê`, `Lãi`, `Thưởng`, `Hóa đơn`, `Ăn uống`...
+  2. `translateTag` chưa có cơ chế fallback sang `translateCategory` đối với các tag trùng tên danh mục.
+  3. Cơ chế tạo danh sách nhãn `allTags` trong `TransactionsView.jsx` gom trực tiếp chuỗi raw của tag mà không khử trùng lặp theo tên hiển thị sau khi dịch (dẫn đến nguy cơ trùng lặp nếu dữ liệu có cả `Mua sắm` và `Shopping`).
+  4. Trong `start.sh`, đoạn kiểm tra `if [ ! -d ".next" ]` đã bỏ qua lệnh `npm run build` khi thư mục `.next` đã có sẵn, dẫn đến server Next.js chạy bản build cũ thay vì bundle mới nhất.
+
+### 2. Các Thay Đổi & Nâng Cấp Chi Tiết Đã Thực Hiện
+1. **Nâng cấp từ điển `TAG_TRANSLATIONS` & Hàm `translateTag`:**
+   - Bổ sung toàn bộ nhãn cơ sở dữ liệu và nhãn ngân hàng:
+     * `Sao kê` ↔ `Statement`
+     * `Lãi` ↔ `Interest`
+     * `Thưởng` ↔ `Bonus`
+     * `Giáo dục` ↔ `Education`
+     * `Hóa đơn` ↔ `Bills`
+     * `Ăn uống` ↔ `Food & Dining`
+     * `Mua sắm` ↔ `Shopping`
+     * `Lương` ↔ `Salary`, `Tiết kiệm` ↔ `Savings`, `Chuyển khoản` ↔ `Transfer`, `Nợ` ↔ `Debt`, `Trả nợ` ↔ `Debt Payment`, `Bảo hiểm` ↔ `Insurance`...
+   - Thêm cơ chế fallback thông minh: nếu nhãn không nằm trong `TAG_TRANSLATIONS`, tự động tra cứu trong `CATEGORY_TRANSLATIONS` để chuyển đổi danh mục tương ứng.
+2. **Khử trùng lặp & Bản địa hóa nút lọc Tag trong `TransactionsView.jsx`:**
+   - Dùng `Map` nhóm các nhãn theo tên hiển thị đã dịch (`display`) để khử trùng lặp hoàn toàn giữa tiếng Việt và tiếng Anh.
+   - Khi lọc theo nhãn, hệ thống so khớp cả mã nhãn gốc lẫn tên dịch chuẩn hóa, đảm bảo click lọc chính xác 100%.
+   - Chuyển ngữ dropdown Ví trong thanh lọc giao dịch (`tWalletName(w.name)`).
+   - Chuyển ngữ toàn bộ form chỉnh sửa giao dịch (Edit Transaction): ví nguồn/đích, dư nợ thẻ, phí chuyển khoản, cảnh báo ví trùng nhau...
+3. **Rà soát & Bản địa hóa toàn diện `BankStatementModal.jsx`:**
+   - Thêm `tWalletName`, `tTag`, `language` vào context hook.
+   - Chuyển ngữ toàn bộ các dropdown chọn ví (`tWalletName`), danh mục (`tCategory`), ngày giờ sao kê (`formatDate(item.date, 'short', language)`).
+   - Chuyển ngữ các tab lọc bảng sao kê (`All`, `Income`, `Expense`, `Duplicates`) và các nhãn cảnh báo tài khoản.
+4. **Bản địa hóa thông báo kiểm tra số dư ví (`checkWalletSufficientFunds`):**
+   - Hỗ trợ tham số `lang` để xuất cảnh báo lỗi chính xác bằng tiếng Anh hoặc tiếng Việt khi số dư ví không đủ hoặc vi phạm hạn mức tín dụng.
+5. **Cải tiến quy trình khởi động (`start.sh`):**
+   - Luôn chạy `npm run build` mỗi khi gọi `./start.sh` để đảm bảo bundle production luôn mang mã nguồn mới nhất.
+
+---
+
+## [LẦN CHỈNH SỬA 13] - Chuyển đổi ngôn ngữ đồng bộ 100% (Category, Tags, Thứ Ngày Tháng & Tự điền danh mục/nhãn)
+
+* **Thời gian thực hiện:** 01/10/2026
+* **Mức độ ảnh hưởng:** Đa ngôn ngữ & Toàn bộ giao diện (`i18n.js`, `utils.js`, `AppContext.jsx`, `QuickAddModal.jsx`, `BudgetsView.jsx`, `BillsView.jsx`, `TransactionsView.jsx`, `WalletsView.jsx`, `DashboardView.jsx`, `ReportsView.jsx`)
+* **Trạng thái:** ✅ Đã hoàn thành và xác minh (Build thành công 100%)
+
+### 1. Vấn Đề & Phản Hồi Từ Người Dùng
+- **Phản hồi:** "Nếu chuyển thì chuyển hoàn toàn sang 1 ngôn ngữ chứ ko nửa nọ nửa kia thế này ko thì xóa cái danh mục đi để người dùng tự điền danh mục. Kể cả cái category hay tags cũng phải chuyển theo ngôn ngữ, thứ ngày tháng cũng phải chuyển theo đúng ngôn ngữ".
+- **Các điểm lỗi cụ thể được người dùng gửi ảnh:**
+  1. *Budgets View*: Tiêu đề 4 quỹ hiển thị nửa Việt nửa Anh: `1. Thiết yếu (Needs)`, `2. Mong muốn (Wants)`, `3. Tích lũy (Savings)`, `4. Dự phòng (Emergency)`.
+  2. *QuickAddModal (Tiếng Anh)*: Tiêu đề tiếng Anh nhưng banner sao kê ngân hàng là tiếng Việt (`Có file sao kê Excel / CSV từ ngân hàng?...`), dropdown danh mục là tiếng Việt (`Ăn uống`), nút chọn nhanh danh mục tiếng Việt, số tiền bằng chữ bằng tiếng Việt, toàn bộ Tags là tiếng Việt (`#Ăn trưa`, `#Xăng xe`...).
+  3. *QuickAddModal (Tab Thu nhập)*: Khi chuyển sang Thu nhập, nhãn danh mục vẫn ghi sai thành `EXPENSE CATEGORY *` thay vì `Income Category` / `Danh mục thu nhập`, và danh mục hiển thị `Lương chính` (tiếng Việt).
+  4. *Bills View*: Tiêu đề lịch hóa đơn ghi `Today is 01/10/2026` (định dạng ngày tiếng Việt thay vì locale), tên hóa đơn và ghi chú từ dữ liệu mẫu chưa được chuyển ngữ theo giao diện.
+
+### 2. Các Thay Đổi & Nâng Cấp Chi Tiết
+1. **Bản địa hóa 100% danh mục (Category) & Cho phép người dùng tự điền danh mục tùy chỉnh:**
+   - Cập nhật hàm `translateCategory` hoạt động 2 chiều (`vi` ↔ `en`), tự động chuyển ngữ danh mục trong tất cả `<select>`, badge chọn nhanh, bảng giao dịch, biểu đồ báo cáo và hóa đơn.
+   - Thêm tính năng **"✨ + Tự nhập danh mục khác..." (Custom Category)** ngay trong modal Nhập nhanh `QuickAddModal`: Nếu người dùng không muốn dùng danh mục mẫu, chỉ cần 1 click là có thể tự gõ bất kỳ tên danh mục nào theo ý muốn.
+2. **Bản địa hóa 100% Nhãn (Tags) & Cho phép tự gõ nhãn tùy chỉnh:**
+   - Xây dựng từ điển `TAG_TRANSLATIONS` và hàm `translateTag(tag, lang)` / `tTag(tag)`. Khi ở chế độ tiếng Anh, toàn bộ tag đổi thành `#Lunch`, `#Coffee`, `#Gas & Fuel`, `#Supermarket`, `#Travel`, `#Emergency`...; khi về tiếng Việt đổi thành `#Ăn trưa`, `#Xăng xe`, `#Siêu thị`...
+   - Bổ sung ô nhập nhãn trực tiếp ngay dưới danh sách tags trong `QuickAddModal`: Người dùng có thể gõ bất kỳ nhãn nào và bấm `+ Thêm tag` (hoặc nhấn phím Enter).
+3. **Bản địa hóa Thứ Ngày Tháng (Date & Time) theo Locale:**
+   - Nâng cấp `formatDate(date, type, lang)` và `formatDisplayDate(date, lang)`:
+     * Tiếng Việt: Định dạng `DD/MM/YYYY`, thứ hiển thị `Th 5, 01/10/2026`.
+     * Tiếng Anh: Định dạng `MM/DD/YYYY`, thứ hiển thị `Thu, 10/01/2026`.
+   - Áp dụng đồng bộ cho `BillsView` (`Today is Thu, 10/01/2026`), `TransactionsView`, `WalletsView`, `ReportsView` và `DashboardView`.
+4. **Xóa bỏ hoàn toàn tình trạng "Nửa nọ nửa kia" (Mixed languages):**
+   - Loại bỏ các từ tiếng Anh mở ngoặc cứng `(Needs)`, `(Wants)`, `(Savings)`, `(Emergency)` trong `BudgetsView`: Tiếng Việt hiển thị thuần Việt `1. Thiết yếu`, `2. Mong muốn`, `3. Tích lũy`, `4. Dự phòng khẩn cấp`; Tiếng Anh hiển thị thuần Anh `1. Essential Needs`, `2. Wants & Lifestyle`, `3. Savings & Investments`, `4. Emergency Reserve`.
+   - Chuyển ngữ toàn bộ Banner sao kê ngân hàng (`qa.hasBankStatement`, `qa.uploadStatementBtn`).
+   - Sửa lỗi nhãn danh mục ở tab Thu nhập thành `Income Category` (EN) / `Danh mục thu nhập` (VI).
+   - Thêm bộ chuyển số tiền bằng chữ tiếng Anh `numberToEnglishWords` (ví dụ: `Thirty-two million VND`) khi ở chế độ tiếng Anh.
+   - Chuyển ngữ tên ví và tên hóa đơn mặc định (`Cash in Hand`, `Techcombank Spending`, `Apartment Rent (Sep)`, `EVN Electricity Bill`...).
+
+---
+
 ## [LẦN CHỈNH SỬA 12] - Tách bạch Dư nợ / Thẻ tín dụng khỏi Ví thanh toán tiền thật, chống hiểu nhầm tài sản
 
 * **Thời gian thực hiện:** 01/10/2026

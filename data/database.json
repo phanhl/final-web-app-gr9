@@ -2255,11 +2255,11 @@
   ],
   "planner": {
     "monthlyIncome": 32000000,
-    "needsPercent": 50,
-    "wantsPercent": 24,
-    "savingsPercent": 14,
+    "needsPercent": 53,
+    "wantsPercent": 27,
+    "savingsPercent": 15,
     "notes": "Áp dụng quy tắc 50/30/20: 50% thiết yếu, 30% sở thích cá nhân, 20% tích lũy & quỹ khẩn cấp",
-    "emergencyPercent": 12
+    "emergencyPercent": 5
   },
   "currentMonth": "2026-10",
   "userProfile": {
@@ -2341,5 +2341,5 @@
       }
     ]
   },
-  "updatedAt": "2026-10-01T02:59:03.086Z"
+  "updatedAt": "2026-10-01T03:18:54.868Z"
 }

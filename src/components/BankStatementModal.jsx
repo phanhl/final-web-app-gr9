@@ -88,6 +88,9 @@ export const BankStatementModal = () => {
         importBankStatementTransactions,
         t,
         tCategory,
+        tWalletName,
+        tTag,
+        language,
     } = useApp();
 
     const [selectedWalletId, setSelectedWalletId] = useState('');
@@ -478,7 +481,7 @@ export const BankStatementModal = () => {
                                                 {/* Dropdown đổi ví nếu người dùng có nhiều tài khoản cùng ngân hàng */}
                                                 <div className="sm:w-60 shrink-0">
                                                     <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">
-                                                        Đổi ví ngân hàng trừ tiền:
+                                                        {t('bs.changeBankWallet', 'Đổi ví ngân hàng trừ tiền:')}
                                                     </label>
                                                     <select
                                                         value={selectedWalletId}
@@ -487,7 +490,7 @@ export const BankStatementModal = () => {
                                                     >
                                                         {wallets.map((w) => (
                                                             <option key={w.id} value={w.id}>
-                                                                {w.name} ({formatCurrency(w.balance)})
+                                                                {tWalletName ? tWalletName(w.name) : w.name} ({formatCurrency(w.balance, language)})
                                                             </option>
                                                         ))}
                                                     </select>
@@ -510,20 +513,22 @@ export const BankStatementModal = () => {
                                                     <div>
                                                         <div className="flex items-center gap-2 flex-wrap">
                                                             <h4 className="text-sm font-black text-amber-950 dark:text-amber-100 uppercase tracking-wide">
-                                                                Phát hiện sao kê: {detectedBank.name}
+                                                                {t('bs.detectedStatement', 'Phát hiện sao kê')}: {detectedBank.name}
                                                             </h4>
                                                             <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100 flex items-center gap-1 border border-amber-300 dark:border-amber-700">
                                                                 <AlertTriangle className="w-3 h-3 text-amber-600 dark:text-amber-400" />
-                                                                Chưa có ví ngân hàng này
+                                                                {t('bs.noWalletForBank', 'Chưa có ví ngân hàng này')}
                                                             </span>
                                                         </div>
                                                         <p className="text-xs text-amber-900 dark:text-amber-200 mt-1 leading-relaxed max-w-xl">
-                                                            Hệ thống xác định đây là bản sao kê của <strong>{detectedBank.fullName || detectedBank.name}</strong>. Để các khoản chi/thu được <strong>trừ đúng vào ngân hàng {detectedBank.name}</strong> và không làm sai lệch số dư các ví khác, bạn cần tạo ví mới cho ngân hàng này trước khi nạp.
+                                                            {language === 'en'
+                                                                ? `System detected this statement is from ${detectedBank.fullName || detectedBank.name}. To debit transactions properly from ${detectedBank.name}, please create a wallet for this bank first.`
+                                                                : `Hệ thống xác định đây là bản sao kê của ${detectedBank.fullName || detectedBank.name}. Để các khoản chi/thu được trừ đúng vào ngân hàng ${detectedBank.name} và không làm sai lệch số dư các ví khác, bạn cần tạo ví mới cho ngân hàng này trước khi nạp.`}
                                                         </p>
                                                         {detectedAccountNumber && (
                                                             <div className="mt-2 inline-flex items-center gap-3 text-[11px] font-semibold text-amber-900 dark:text-amber-200 bg-amber-100/70 dark:bg-amber-900/40 px-2.5 py-1 rounded-lg">
-                                                                <span>Số TK sao kê: <strong>{detectedAccountNumber}</strong></span>
-                                                                {detectedAccountHolder && <span>Chủ TK: <strong>{detectedAccountHolder}</strong></span>}
+                                                                <span>{t('bs.statementAccNum', 'Số TK sao kê')}: <strong>{detectedAccountNumber}</strong></span>
+                                                                {detectedAccountHolder && <span>{t('bs.accHolder', 'Chủ TK')}: <strong>{detectedAccountHolder}</strong></span>}
                                                             </div>
                                                         )}
                                                     </div>
@@ -537,23 +542,23 @@ export const BankStatementModal = () => {
                                                         className="px-4 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer hover:shadow-lg active:scale-95"
                                                     >
                                                         <Plus className="w-4 h-4" />
-                                                        <span>Tạo ví {detectedBank.name} ngay (1-Click)</span>
+                                                        <span>{language === 'en' ? `Create ${detectedBank.name} Wallet (1-Click)` : `Tạo ví ${detectedBank.name} ngay (1-Click)`}</span>
                                                     </button>
                                                     <button
                                                         type="button"
                                                         onClick={() => setShowCreateWalletModal(true)}
                                                         className="text-[11px] font-bold text-amber-700 dark:text-amber-300 hover:underline text-center cursor-pointer"
                                                     >
-                                                        Tùy chỉnh tên ví & số dư ban đầu...
+                                                        {t('bs.customWalletPrompt', 'Tùy chỉnh tên ví & số dư ban đầu...')}
                                                     </button>
                                                 </div>
                                             </div>
 
                                             {/* Lựa chọn gộp ví khác nếu người dùng muốn */}
                                             <div className="pt-2 border-t border-amber-200/60 dark:border-amber-800/40 flex items-center justify-between flex-wrap gap-2 text-[11px] text-amber-800 dark:text-amber-300">
-                                                <span>* Yêu cầu tạo ví {detectedBank.name} hoặc chỉ định một ví sẵn có để tiếp tục nạp.</span>
+                                                <span>{language === 'en' ? `* Create ${detectedBank.name} wallet or choose an existing wallet to proceed.` : `* Yêu cầu tạo ví ${detectedBank.name} hoặc chỉ định một ví sẵn có để tiếp tục nạp.`}</span>
                                                 <div className="flex items-center gap-1.5">
-                                                    <span>Hoặc dùng ví sẵn có:</span>
+                                                    <span>{t('bs.orUseExisting', 'Hoặc dùng ví sẵn có:')}</span>
                                                     <select
                                                         value={selectedWalletId}
                                                         onChange={(e) => {
@@ -562,10 +567,10 @@ export const BankStatementModal = () => {
                                                         }}
                                                         className="px-2 py-0.5 bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-700 rounded-lg text-xs font-semibold text-slate-800 dark:text-white"
                                                     >
-                                                        <option value="">-- Chọn ví khác --</option>
+                                                        <option value="">{t('bs.selectOtherWallet', '-- Chọn ví khác --')}</option>
                                                         {wallets.map((w) => (
                                                             <option key={w.id} value={w.id}>
-                                                                {w.name} ({formatCurrency(w.balance)})
+                                                                {tWalletName ? tWalletName(w.name) : w.name} ({formatCurrency(w.balance, language)})
                                                             </option>
                                                         ))}
                                                     </select>
@@ -578,9 +583,9 @@ export const BankStatementModal = () => {
                                     {walletMatchStatus === 'MANUAL' && (
                                         <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                                             <div className="flex items-center gap-2.5">
-                                                <Info className="w-4 h-4 text-blue-500 shrink-0" />
+                                                 <Info className="w-4 h-4 text-blue-500 shrink-0" />
                                                 <span className="text-slate-600 dark:text-slate-300">
-                                                    Chưa nhận diện được ngân hàng cụ thể từ file. Vui lòng chọn ví nhận giao dịch:
+                                                    {t('bs.manualWalletPrompt', 'Chưa nhận diện được ngân hàng cụ thể từ file. Vui lòng chọn ví nhận giao dịch:')}
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-2">
@@ -591,7 +596,7 @@ export const BankStatementModal = () => {
                                                 >
                                                     {wallets.map((w) => (
                                                         <option key={w.id} value={w.id}>
-                                                            {w.name} ({formatCurrency(w.balance)})
+                                                            {tWalletName ? tWalletName(w.name) : w.name} ({formatCurrency(w.balance, language)})
                                                         </option>
                                                     ))}
                                                 </select>
@@ -607,7 +612,7 @@ export const BankStatementModal = () => {
                                     <div className="flex items-center gap-2 text-blue-900 dark:text-blue-300">
                                         <Info className="w-4 h-4 text-blue-500 shrink-0" />
                                         <span>
-                                            Hệ thống <strong>tự động nhận diện ngân hàng</strong> (Techcombank, Vietcombank, MB Bank, VPBank...) và <strong>tự động khớp ví tương ứng</strong> để trừ tiền.
+                                            {t('bs.autoDetectInfo', 'Hệ thống tự động nhận diện ngân hàng (Techcombank, Vietcombank, MB Bank, VPBank...) và tự động khớp ví tương ứng để trừ tiền.')}
                                         </span>
                                     </div>
                                     <button
@@ -810,7 +815,7 @@ export const BankStatementModal = () => {
                                                         : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
                                                 }`}
                                             >
-                                                Tất cả ({parsedItems.length})
+                                                {t('common.all', 'Tất cả')} ({parsedItems.length})
                                             </button>
                                             <button
                                                 type="button"
@@ -821,7 +826,7 @@ export const BankStatementModal = () => {
                                                         : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100'
                                                 }`}
                                             >
-                                                Tiền vào ({incomeCount})
+                                                {language === 'en' ? 'Income' : 'Tiền vào'} ({incomeCount})
                                             </button>
                                             <button
                                                 type="button"
@@ -832,7 +837,7 @@ export const BankStatementModal = () => {
                                                         : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 hover:bg-rose-100'
                                                 }`}
                                             >
-                                                Tiền ra ({expenseCount})
+                                                {language === 'en' ? 'Expense' : 'Tiền ra'} ({expenseCount})
                                             </button>
                                             {duplicateCount > 0 && (
                                                 <button
@@ -844,7 +849,7 @@ export const BankStatementModal = () => {
                                                             : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 hover:bg-amber-100'
                                                     }`}
                                                 >
-                                                    Trùng lặp ({duplicateCount})
+                                                    {language === 'en' ? 'Duplicates' : 'Trùng lặp'} ({duplicateCount})
                                                 </button>
                                             )}
                                         </div>
@@ -917,7 +922,7 @@ export const BankStatementModal = () => {
 
                                                                 {/* Ngày */}
                                                                 <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 font-medium">
-                                                                    {formatDate(item.date)}
+                                                                    {formatDate(item.date, 'short', language)}
                                                                 </td>
 
                                                                 {/* Loại GD */}
@@ -934,7 +939,7 @@ export const BankStatementModal = () => {
                                                                         ) : (
                                                                             <ArrowUpRight className="w-3 h-3" />
                                                                         )}
-                                                                        {item.type === 'INCOME' ? 'Tiền vào' : 'Tiền ra'}
+                                                                        {item.type === 'INCOME' ? (language === 'en' ? 'Income' : 'Tiền vào') : (language === 'en' ? 'Expense' : 'Tiền ra')}
                                                                     </span>
                                                                 </td>
 
@@ -946,7 +951,7 @@ export const BankStatementModal = () => {
                                                                             : 'text-rose-600 dark:text-rose-400'
                                                                     }`}
                                                                 >
-                                                                    {item.type === 'INCOME' ? '+' : '-'}{formatCurrency(item.amount)}
+                                                                    {item.type === 'INCOME' ? '+' : '-'}{formatCurrency(item.amount, language)}
                                                                 </td>
 
                                                                 {/* Danh mục */}
@@ -960,7 +965,7 @@ export const BankStatementModal = () => {
                                                                             .filter((c) => c.type === item.type)
                                                                             .map((cat) => (
                                                                                 <option key={cat.id} value={cat.id}>
-                                                                                    {cat.name}
+                                                                                    {tCategory(cat.name)}
                                                                                 </option>
                                                                             ))}
                                                                     </select>
@@ -1003,10 +1008,10 @@ export const BankStatementModal = () => {
                         <div className="text-xs text-slate-500 dark:text-slate-400">
                             {parsedItems.length > 0 ? (
                                 <span>
-                                    Đã chọn: <strong className="text-slate-800 dark:text-white">{selectedItems.length}</strong> / {parsedItems.length} giao dịch
+                                    {language === 'en' ? 'Selected: ' : 'Đã chọn: '}<strong className="text-slate-800 dark:text-white">{selectedItems.length}</strong> / {parsedItems.length} {language === 'en' ? 'transactions' : 'giao dịch'}
                                 </span>
                             ) : (
-                                <span>Chọn file Excel hoặc CSV để bắt đầu</span>
+                                <span>{language === 'en' ? 'Select an Excel or CSV file to start' : 'Chọn file Excel hoặc CSV để bắt đầu'}</span>
                             )}
                         </div>
 
@@ -1016,7 +1021,7 @@ export const BankStatementModal = () => {
                                 onClick={closeStatementModal}
                                 className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
                             >
-                                Hủy bỏ
+                                {t('common.cancel', 'Hủy bỏ')}
                             </button>
 
                             {parsedItems.length > 0 && (
@@ -1033,8 +1038,12 @@ export const BankStatementModal = () => {
                                     <CheckCircle2 className="w-4 h-4" />
                                     <span>
                                         {selectedWalletId
-                                            ? `Xác nhận nạp ${selectedItems.length} giao dịch vào ví ${currentWallet?.name || ''}`
-                                            : `Yêu cầu tạo hoặc chọn ví ${detectedBank?.name || 'ngân hàng'} để nạp`}
+                                            ? (language === 'en'
+                                                ? `Confirm import ${selectedItems.length} transactions into ${currentWallet ? (tWalletName ? tWalletName(currentWallet.name) : currentWallet.name) : 'wallet'}`
+                                                : `Xác nhận nạp ${selectedItems.length} giao dịch vào ví ${currentWallet ? (tWalletName ? tWalletName(currentWallet.name) : currentWallet.name) : ''}`)
+                                            : (language === 'en'
+                                                ? `Create or select wallet for ${detectedBank?.name || 'bank'} to import`
+                                                : `Yêu cầu tạo hoặc chọn ví ${detectedBank?.name || 'ngân hàng'} để nạp`)}
                                     </span>
                                 </button>
                             )}

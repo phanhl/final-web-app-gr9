@@ -10,11 +10,9 @@ pkill -9 -f "ngrok" 2>/dev/null
 pkill -9 -f "cloudflared" 2>/dev/null
 sleep 1
 
-# Kiem tra ban build production
-if [ ! -d ".next" ] || [ ! -f ".next/required-server-files.json" ]; then
-  echo "Dang build ung dung cho production..."
-  npm run build
-fi
+# Build ung dung cho production
+echo "Dang build ung dung cho production..."
+npm run build
 
 # 1. Khoi chay Next.js Production Server ngam doc lap
 python3 -c "import subprocess, os; subprocess.Popen(['npx', 'next', 'start', '-H', '0.0.0.0', '-p', '3000'], cwd='$DIR', start_new_session=True, stdout=open('logs_prod.log', 'w'), stderr=subprocess.STDOUT)"

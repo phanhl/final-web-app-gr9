@@ -4,7 +4,7 @@ import { useApp } from '@/context/AppContext';
 import { CalendarCheck, Plus, CheckCircle2, Edit2, Trash2, Check, RotateCcw, X, Bell, } from 'lucide-react';
 import { formatCurrency, formatNumberWithDots, getLocalDateString, formatDisplayDate } from '@/lib/utils';
 export const BillsView = () => {
-    const { bills, wallets, categories, addBill, editBill, deleteBill, payBill, navTargetBillId, setNavTargetBillId, billToAutoPayId, setBillToAutoPayId, t, tCategory, tWalletType, language, } = useApp();
+    const { bills, wallets, categories, addBill, editBill, deleteBill, payBill, navTargetBillId, setNavTargetBillId, billToAutoPayId, setBillToAutoPayId, t, tCategory, tWalletType, tBillName, tBillNote, tWalletName, language, } = useApp();
     const [billModalOpen, setBillModalOpen] = useState(false);
     const [editingBill, setEditingBill] = useState(null);
     // Form State
@@ -197,7 +197,8 @@ export const BillsView = () => {
                     : diff < 0
                         ? t('bill.daysOverdue', 'Quá hạn {days} ngày!').replace('{days}', String(Math.abs(diff)))
                         : t('bill.dueInDays', 'Cần đóng trong {days} ngày').replace('{days}', String(diff));
-                return `${b.name} (${formatCurrency(b.amount)} - ${diffLabel})`;
+                const bName = tBillName ? tBillName(b.name) : b.name;
+                return `${bName} (${formatCurrency(b.amount)} - ${diffLabel})`;
             })
                 .join(' • ')}
               </p>
@@ -212,7 +213,7 @@ export const BillsView = () => {
             <CalendarCheck className="w-5 h-5 text-blue-500"/>
             <span>{t('bill.scheduleTitle', 'Lịch nhắc thanh toán trong tháng')}</span>
           </h3>
-          <span className="text-xs text-slate-400">{t('bill.todayIs', 'Hôm nay là')} {formattedToday}</span>
+          <span className="text-xs text-slate-400">{t('bill.todayIs', 'Hôm nay là')} {formatDisplayDate(getLocalDateString(), language)}</span>
         </div>
 
         <div className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -237,12 +238,12 @@ export const BillsView = () => {
 
                   <div>
                     <div className="flex items-center space-x-2 flex-wrap gap-y-1">
-                      <h4 className="text-sm font-bold text-slate-900 dark:text-white">{bill.name}</h4>
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white">{tBillName ? tBillName(bill.name) : bill.name}</h4>
                       {isHighlighted && (<span className="px-1.5 py-0.5 rounded-full text-[9px] font-black bg-blue-600 text-white animate-pulse">
                           {t('notif.activeAlert', 'Đang xem từ cảnh báo')}
                         </span>)}
                       {isPaid ? (<span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
-                          {t('bill.paidDate', 'Đã trả ngày')} {formatDisplayDate(bill.lastPaidDate)}
+                          {t('bill.paidDate', 'Đã trả ngày')} {formatDisplayDate(bill.lastPaidDate, language)}
                         </span>) : daysLeft < 0 ? (<span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300">
                           {t('bill.daysOverdue', 'Quá hạn {days} ngày!').replace('{days}', String(Math.abs(daysLeft)))}
                         </span>) : daysLeft === 0 ? (<span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 animate-pulse">
@@ -262,7 +263,7 @@ export const BillsView = () => {
                       <span>{tCategory(bill.categoryName || 'Khác')}</span>
                       {bill.note && (<>
                           <span>•</span>
-                          <span className="italic">{bill.note}</span>
+                          <span className="italic">{tBillNote ? tBillNote(bill.note) : bill.note}</span>
                         </>)}
                     </div>
                   </div>
@@ -475,7 +476,7 @@ export const BillsView = () => {
               <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-800">
                 <p className="text-xs text-slate-500">{t('bill.paymentItem', 'Khoản thanh toán:')}</p>
                 <h4 className="text-base font-bold text-slate-800 dark:text-white mt-0.5">
-                  {billToPay.name}
+                  {tBillName ? tBillName(billToPay.name) : billToPay.name}
                 </h4>
                 <p className="text-2xl font-black text-rose-600 dark:text-rose-400 mt-2">
                   {formatCurrency(billToPay.amount)}
@@ -491,13 +492,14 @@ export const BillsView = () => {
                     const isCredit = w.type === 'CREDIT';
                     const hasLimit = isCredit && w.creditLimit && w.creditLimit > 0;
                     const avail = isCredit ? Math.max(0, (w.creditLimit || 0) - w.balance) : w.balance;
+                    const walletDisplayName = tWalletName ? tWalletName(w.name) : w.name;
                     return (
                       <option key={w.id} value={w.id} disabled={isCredit && !hasLimit}>
-                        {w.name} {isCredit 
+                        {walletDisplayName} {isCredit 
                           ? (hasLimit 
-                              ? `[${t('wallets.remainingCreditLimit', 'Hạn mức còn')}: ${formatCurrency(avail)} • Dư nợ: ${formatCurrency(w.balance)}]`
-                              : `[Dư nợ: ${formatCurrency(w.balance)} - Khoản nợ, không thể chi tiêu]`)
-                          : `(Khả dụng: ${formatCurrency(avail)})`
+                              ? `[${t('wallets.availableLimit', 'Hạn mức khả dụng')}: ${formatCurrency(avail)} • ${t('wallets.debtBalance', 'Dư nợ')}: ${formatCurrency(w.balance)}]`
+                              : `[${t('wallets.debtBalance', 'Dư nợ')}: ${formatCurrency(w.balance)} - ${t('wallets.cannotSpendDebt', 'Khoản nợ, không thể chi tiêu')}]`)
+                          : `(${t('wallets.balance', 'Số dư')}: ${formatCurrency(avail)})`
                         }
                       </option>
                     );
