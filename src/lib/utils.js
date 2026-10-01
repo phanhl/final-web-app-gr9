@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx';
+import { translateCategory, translateWalletName, translateTag, translateNote } from './i18n';
 export function formatCurrency(amount) {
     if (typeof amount !== 'number' || isNaN(amount) || !isFinite(amount)) {
         return '0 ₫';
@@ -367,17 +368,19 @@ export function calculateBudgetStatuses(budgets, transactions, monthStr = '2026-
         };
     });
 }
-export function exportToCSV(transactions, filename = 'bao-cao-giao-dich.csv') {
-    const headers = ['Mã GD', 'Thời gian', 'Loại GD', 'Danh mục', 'Số tiền (VND)', 'Ví nguồn', 'Ví đích/Ghi chú', 'Nhãn'];
+export function exportToCSV(transactions, filename = 'bao-cao-giao-dich.csv', lang = 'vi') {
+    const L = (vi, en) => (lang === 'en' ? en : vi);
+    const tr = (fn, v) => (v ? fn(v, lang) : v);
+    const headers = [L('Mã GD', 'Tx ID'), L('Thời gian', 'Time'), L('Loại GD', 'Type'), L('Danh mục', 'Category'), L('Số tiền (VND)', 'Amount (VND)'), L('Ví nguồn', 'Source wallet'), L('Ví đích/Ghi chú', 'Destination wallet/Note'), L('Nhãn', 'Tags')];
     const rows = transactions.map((t) => [
         t.id,
-        formatDate(t.date, 'full'),
-        t.type === 'EXPENSE' ? 'Chi tiêu' : t.type === 'INCOME' ? 'Thu nhập' : 'Chuyển khoản',
-        t.categoryName || 'Không có',
+        formatDate(t.date, 'full', lang),
+        t.type === 'EXPENSE' ? L('Chi tiêu', 'Expense') : t.type === 'INCOME' ? L('Thu nhập', 'Income') : L('Chuyển khoản', 'Transfer'),
+        tr(translateCategory, t.categoryName) || L('Không có', 'None'),
         t.amount,
-        t.walletName || t.walletId,
-        t.type === 'TRANSFER' ? (t.toWalletName || t.toWalletId || '') : (t.note || ''),
-        (t.tags || []).join('; '),
+        tr(translateWalletName, t.walletName) || t.walletId,
+        t.type === 'TRANSFER' ? (tr(translateWalletName, t.toWalletName) || t.toWalletId || '') : translateNote(t.note || '', lang),
+        (t.tags || []).map((tag) => translateTag(tag, lang)).join('; '),
     ]);
     const csvContent = '\uFEFF' +
         [headers, ...rows]
@@ -393,59 +396,63 @@ export function exportToCSV(transactions, filename = 'bao-cao-giao-dich.csv') {
     document.body.removeChild(link);
     setTimeout(() => URL.revokeObjectURL(url), 0);
 }
-export function exportToExcel(transactions, budgets, wallets, summary, filename = 'Bao-Cao-Tai-Chinh-Chi-Tieu.xlsx', monthStr = getLocalDateString().slice(0, 7)) {
+export function exportToExcel(transactions, budgets, wallets, summary, filename = 'Bao-Cao-Tai-Chinh-Chi-Tieu.xlsx', monthStr = getLocalDateString().slice(0, 7), lang = 'vi') {
+    const L = (vi, en) => (lang === 'en' ? en : vi);
+    const tr = (fn, v) => (v ? fn(v, lang) : v);
     const wb = XLSX.utils.book_new();
     // Sheet 1: Danh sách giao dịch
     const txData = transactions.map((t, idx) => ({
-        'STT': idx + 1,
-        'Mã GD': t.id,
-        'Thời gian': formatDate(t.date, 'full'),
-        'Loại giao dịch': t.type === 'EXPENSE' ? 'Khoản chi' : t.type === 'INCOME' ? 'Khoản thu' : 'Chuyển khoản nội bộ',
-        'Danh mục': t.categoryName || 'Khác',
-        'Số tiền (₫)': t.amount,
-        'Tài khoản / Ví': t.walletName || t.walletId,
-        'Ví đích (nếu chuyển)': t.toWalletName || '',
-        'Ghi chú': t.note,
-        'Nhãn phân loại': (t.tags || []).join(', '),
+        [L('STT', 'No.')]: idx + 1,
+        [L('Mã GD', 'Tx ID')]: t.id,
+        [L('Thời gian', 'Time')]: formatDate(t.date, 'full', lang),
+        [L('Loại giao dịch', 'Type')]: t.type === 'EXPENSE' ? L('Khoản chi', 'Expense') : t.type === 'INCOME' ? L('Khoản thu', 'Income') : L('Chuyển khoản nội bộ', 'Internal transfer'),
+        [L('Danh mục', 'Category')]: tr(translateCategory, t.categoryName) || L('Khác', 'Other'),
+        [L('Số tiền (₫)', 'Amount (₫)')]: t.amount,
+        [L('Tài khoản / Ví', 'Account / Wallet')]: tr(translateWalletName, t.walletName) || t.walletId,
+        [L('Ví đích (nếu chuyển)', 'Destination wallet (transfers)')]: tr(translateWalletName, t.toWalletName) || '',
+        [L('Ghi chú', 'Note')]: translateNote(t.note || '', lang),
+        [L('Nhãn phân loại', 'Tags')]: (t.tags || []).map((tag) => translateTag(tag, lang)).join(', '),
     }));
     const wsTx = XLSX.utils.json_to_sheet(txData);
-    XLSX.utils.book_append_sheet(wb, wsTx, 'Sổ Giao Dịch');
+    XLSX.utils.book_append_sheet(wb, wsTx, L('Sổ Giao Dịch', 'Transactions'));
     // Sheet 2: Tổng hợp tài sản & Ví
     const walletData = wallets.map((w) => ({
-        'Tên Ví / Tài khoản': w.name,
-        'Loại ví': w.type === 'CASH' ? 'Tiền mặt' : w.type === 'BANK' ? 'Ngân hàng' : w.type === 'CREDIT' ? 'Thẻ tín dụng' : 'Sổ tiết kiệm',
-        'Số dư hiện tại (₫)': w.balance,
-        'Hạn mức (Thẻ tín dụng)': w.creditLimit || '-',
-        'Lãi suất (%/năm)': w.interestRate ? `${w.interestRate}%` : '-',
-        'Số tài khoản / Thẻ': w.accountNumber || '-',
+        [L('Tên Ví / Tài khoản', 'Wallet / Account')]: tr(translateWalletName, w.name),
+        [L('Loại ví', 'Wallet type')]: w.type === 'CASH' ? L('Tiền mặt', 'Cash') : w.type === 'BANK' ? L('Ngân hàng', 'Bank') : w.type === 'CREDIT' ? L('Thẻ tín dụng', 'Credit card') : L('Sổ tiết kiệm', 'Savings'),
+        [L('Số dư hiện tại (₫)', 'Current balance (₫)')]: w.balance,
+        [L('Hạn mức (Thẻ tín dụng)', 'Credit limit')]: w.creditLimit || '-',
+        [L('Lãi suất (%/năm)', 'Interest rate (%/yr)')]: w.interestRate ? `${w.interestRate}%` : '-',
+        [L('Số tài khoản / Thẻ', 'Account / Card number')]: w.accountNumber || '-',
     }));
     const wsWallets = XLSX.utils.json_to_sheet(walletData);
-    XLSX.utils.book_append_sheet(wb, wsWallets, 'Tài Khoản & Ví');
+    XLSX.utils.book_append_sheet(wb, wsWallets, L('Tài Khoản & Ví', 'Accounts & Wallets'));
     // Sheet 3: Báo cáo ngân sách
     const budgetStatuses = calculateBudgetStatuses(budgets, transactions, monthStr);
     const budgetData = budgetStatuses.map((bs) => ({
-        'Danh mục': bs.budget.categoryName,
-        'Hạn mức tháng (₫)': bs.budget.amount,
-        'Đã chi tiêu (₫)': bs.spent,
-        'Còn lại (₫)': bs.remaining,
-        'Tỷ lệ đã dùng (%)': `${bs.percentage}%`,
-        'Tình trạng cảnh báo': bs.status === 'EXCEEDED' ? 'VƯỢT 100% NGÂN SÁCH' : bs.status === 'WARNING' ? 'CẢNH BÁO (>80%)' : 'An toàn',
+        [L('Danh mục', 'Category')]: tr(translateCategory, bs.budget.categoryName),
+        [L('Hạn mức tháng (₫)', 'Monthly limit (₫)')]: bs.budget.amount,
+        [L('Đã chi tiêu (₫)', 'Spent (₫)')]: bs.spent,
+        [L('Còn lại (₫)', 'Remaining (₫)')]: bs.remaining,
+        [L('Tỷ lệ đã dùng (%)', 'Used (%)')]: `${bs.percentage}%`,
+        [L('Tình trạng cảnh báo', 'Status')]: bs.status === 'EXCEEDED' ? L('VƯỢT 100% NGÂN SÁCH', 'OVER 100% OF BUDGET') : bs.status === 'WARNING' ? L('CẢNH BÁO (>80%)', 'WARNING (>80%)') : L('An toàn', 'Safe'),
     }));
     const wsBudgets = XLSX.utils.json_to_sheet(budgetData);
-    XLSX.utils.book_append_sheet(wb, wsBudgets, 'Theo Dõi Ngân Sách');
+    XLSX.utils.book_append_sheet(wb, wsBudgets, L('Theo Dõi Ngân Sách', 'Budget Tracking'));
     // Sheet 4: Chỉ số tài chính tổng quan
+    const metric = L('Chỉ tiêu', 'Metric');
+    const value = L('Giá trị (₫)', 'Value (₫)');
     const kpiData = [
-        { 'Chỉ tiêu': 'Tổng tài sản ròng', 'Giá trị (₫)': summary.totalAssets },
-        { 'Chỉ tiêu': 'Số dư khả dụng (Tiền mặt + Ngân hàng)', 'Giá trị (₫)': summary.availableBalance },
-        { 'Chỉ tiêu': 'Dư nợ thẻ tín dụng', 'Giá trị (₫)': summary.totalCreditDebt },
-        { 'Chỉ tiêu': 'Tổng tiền gửi tiết kiệm', 'Giá trị (₫)': summary.totalSavings },
-        { 'Chỉ tiêu': 'Tổng thu nhập tháng này', 'Giá trị (₫)': summary.monthlyIncome },
-        { 'Chỉ tiêu': 'Tổng chi tiêu tháng này', 'Giá trị (₫)': summary.monthlyExpense },
-        { 'Chỉ tiêu': 'Tích lũy ròng trong tháng', 'Giá trị (₫)': summary.netSavingsThisMonth },
-        { 'Chỉ tiêu': 'Tỷ lệ tiết kiệm', 'Giá trị (₫)': `${summary.savingsRate}%` },
-    ];
+        [L('Tổng tài sản ròng', 'Total net worth'), summary.totalAssets],
+        [L('Số dư khả dụng (Tiền mặt + Ngân hàng)', 'Available balance (Cash + Bank)'), summary.availableBalance],
+        [L('Dư nợ thẻ tín dụng', 'Credit card debt'), summary.totalCreditDebt],
+        [L('Tổng tiền gửi tiết kiệm', 'Total savings deposits'), summary.totalSavings],
+        [L('Tổng thu nhập tháng này', 'Total income this month'), summary.monthlyIncome],
+        [L('Tổng chi tiêu tháng này', 'Total spending this month'), summary.monthlyExpense],
+        [L('Tích lũy ròng trong tháng', 'Net savings this month'), summary.netSavingsThisMonth],
+        [L('Tỷ lệ tiết kiệm', 'Savings rate'), `${summary.savingsRate}%`],
+    ].map(([k, v]) => ({ [metric]: k, [value]: v }));
     const wsKPI = XLSX.utils.json_to_sheet(kpiData);
-    XLSX.utils.book_append_sheet(wb, wsKPI, 'Tổng Hợp Tài Chính');
+    XLSX.utils.book_append_sheet(wb, wsKPI, L('Tổng Hợp Tài Chính', 'Financial Summary'));
     XLSX.writeFile(wb, filename);
 }
 export function getWalletAvailableBalance(wallet) {
@@ -507,18 +514,18 @@ export function checkWalletSufficientFunds(wallet, amount, fee = 0, lang = 'vi')
         shortfall: 0,
     };
 }
-export function formatCompactNumber(val) {
+export function formatCompactNumber(val, lang = 'vi') {
     if (!val || val === 0)
         return '0';
     const abs = Math.abs(val);
     const sign = val < 0 ? '-' : '';
     if (abs >= 1_000_000_000) {
         const num = abs / 1_000_000_000;
-        return `${sign}${num % 1 === 0 ? num.toFixed(0) : num.toFixed(1)}Tỷ`;
+        return `${sign}${num % 1 === 0 ? num.toFixed(0) : num.toFixed(1)}${lang === 'en' ? 'B' : 'Tỷ'}`;
     }
     if (abs >= 1_000_000) {
         const num = abs / 1_000_000;
-        return `${sign}${num % 1 === 0 ? num.toFixed(0) : num.toFixed(1)}Tr`;
+        return `${sign}${num % 1 === 0 ? num.toFixed(0) : num.toFixed(1)}${lang === 'en' ? 'M' : 'Tr'}`;
     }
     if (abs >= 1_000) {
         return `${sign}${(abs / 1_000).toFixed(0)}k`;
@@ -676,10 +683,10 @@ export function mergeSnapshots(base, local, remote) {
 export function compressImageFile(file, maxSize = 1024, quality = 0.7) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onerror = () => reject(new Error('Không đọc được ảnh'));
+        reader.onerror = () => reject(new Error('Could not read image'));
         reader.onload = () => {
             const img = new Image();
-            img.onerror = () => reject(new Error('Ảnh không hợp lệ'));
+            img.onerror = () => reject(new Error('Invalid image'));
             img.onload = () => {
                 const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
                 const canvas = document.createElement('canvas');

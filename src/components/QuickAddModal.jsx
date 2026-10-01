@@ -278,7 +278,7 @@ export const QuickAddModal = () => {
           {/* Amount input */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-              {t('qa.amount', 'Số tiền')} (VNĐ) <span className="text-rose-500">*</span>
+              {t('qa.amount', 'Số tiền')} ({t('common.currencyUnit', 'VNĐ')}) <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
               <input

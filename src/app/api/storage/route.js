@@ -212,7 +212,7 @@ function checkAuth(req, currentData) {
         return null;
     const ip = getClientIp(req);
     if (isRateLimited(ip)) {
-        return NextResponse.json({ success: false, requiresPin: true, error: 'Nhập sai PIN quá nhiều lần, vui lòng thử lại sau 15 phút' }, { status: 429, headers: NO_CACHE_HEADERS });
+        return NextResponse.json({ success: false, requiresPin: true, code: 'RATE_LIMITED', error: 'Nhập sai PIN quá nhiều lần, vui lòng thử lại sau 15 phút' }, { status: 429, headers: NO_CACHE_HEADERS });
     }
     const provided = req.headers.get('x-app-pin');
     if (provided) {
@@ -223,7 +223,7 @@ function checkAuth(req, currentData) {
         }
         recordFailure(ip);
     }
-    return NextResponse.json({ success: false, requiresPin: true, error: 'Yêu cầu mã PIN bảo mật chính xác để truy cập dữ liệu FinTrack' }, { status: 401, headers: NO_CACHE_HEADERS });
+    return NextResponse.json({ success: false, requiresPin: true, code: 'PIN_REQUIRED', error: 'Yêu cầu mã PIN bảo mật chính xác để truy cập dữ liệu FinTrack' }, { status: 401, headers: NO_CACHE_HEADERS });
 }
 function toClientData(data) {
     const { security, ...rest } = data;
@@ -255,11 +255,11 @@ async function handleUpdateSecurity(req, payload) {
     if (authError)
         return authError;
     if (process.env.APP_PIN) {
-        return NextResponse.json({ success: false, error: 'PIN đang được quản lý bằng biến môi trường APP_PIN trên server' }, { status: 400 });
+        return NextResponse.json({ success: false, code: 'PIN_ENV_MANAGED', error: 'PIN đang được quản lý bằng biến môi trường APP_PIN trên server' }, { status: 400 });
     }
     const pinCode = payload.pinCode !== undefined && payload.pinCode !== null ? String(payload.pinCode).trim() : '';
     if (pinCode && !PIN_PATTERN.test(pinCode)) {
-        return NextResponse.json({ success: false, error: 'Mã PIN phải gồm 4-8 chữ số' }, { status: 400 });
+        return NextResponse.json({ success: false, code: 'PIN_FORMAT', error: 'Mã PIN phải gồm 4-8 chữ số' }, { status: 400 });
     }
     const sec = normalizeSecurity(current?.security);
     const next = { ...sec, pinEnabled: Boolean(payload.pinEnabled) };
@@ -269,7 +269,7 @@ async function handleUpdateSecurity(req, payload) {
         next.pinHash = hash;
     }
     if (next.pinEnabled && !next.pinHash) {
-        return NextResponse.json({ success: false, error: 'Cần đặt mã PIN trước khi bật khóa' }, { status: 400 });
+        return NextResponse.json({ success: false, code: 'PIN_NOT_SET', error: 'Cần đặt mã PIN trước khi bật khóa' }, { status: 400 });
     }
     // Không đổi updatedAt: thay đổi bảo mật không phải thay đổi dữ liệu nên không gây xung đột đồng bộ
     const dataToSave = { ...(current || getDefaultData()), security: next };

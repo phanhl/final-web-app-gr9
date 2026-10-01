@@ -5,7 +5,7 @@ import { Sparkles, TrendingUp, Sliders, Zap, CheckCircle2, AlertTriangle, Plus, 
 import { formatCurrency, formatNumberWithDots } from '@/lib/utils';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, } from 'recharts';
 import * as XLSX from 'xlsx';
-import { IconHelper } from './IconHelper';
+import { IconHelper, getIconLabel } from './IconHelper';
 import { DEFAULT_SPENDING_ITEMS } from '@/lib/mock-data';
 export const WhatIfSimulatorView = () => {
     const { transactions, financialSummary, categories, planner, simulatorConfig, updateSimulatorConfig, t, tCategory, tWalletType, language, } = useApp();
@@ -283,6 +283,8 @@ export const WhatIfSimulatorView = () => {
     };
 
     // Lưu khoản chi tiêu (thêm mới hoặc chỉnh sửa, có kiểm tra trùng lặp và hỗ trợ cộng dồn)
+    // Icon đang được trỏ chuột / focus trong bộ chọn biểu tượng (hiển thị tên để hỗ trợ người dùng)
+    const [hoveredIcon, setHoveredIcon] = useState(null);
     const handleSaveExpense = (e) => {
         e.preventDefault();
         const amt = Number(expenseAmount) || 0;
@@ -300,14 +302,14 @@ export const WhatIfSimulatorView = () => {
                 finalCatId = cat.id;
             }
             else {
-                finalName = customExpenseName.trim() || 'Khoản chi tiêu';
+                finalName = customExpenseName.trim() || t('whatif.defaultExpenseName', 'Khoản chi tiêu');
                 finalIcon = customExpenseIcon;
                 finalColor = customExpenseColor;
                 finalCatId = 'custom';
             }
         }
         else {
-            finalName = customExpenseName.trim() || 'Khoản chi tiêu mới';
+            finalName = customExpenseName.trim() || t('whatif.defaultNewExpenseName', 'Khoản chi tiêu mới');
             finalIcon = customExpenseIcon;
             finalColor = customExpenseColor;
             finalCatId = `cat-custom-${Date.now()}`;
@@ -390,7 +392,7 @@ export const WhatIfSimulatorView = () => {
     const handleAddLoan = (e) => {
         e.preventDefault();
         if (!newLoanName.trim() || !Number(newLoanDebt) || !Number(newLoanPayment)) {
-            alert('Vui lòng nhập đầy đủ tên khoản nợ, dư nợ gốc và số tiền trả mỗi tháng');
+            alert(t('whatif.loanRequiredFields', 'Vui lòng nhập đầy đủ tên khoản nợ, dư nợ gốc và số tiền trả mỗi tháng'));
             return;
         }
         const newLoan = {
@@ -631,7 +633,7 @@ export const WhatIfSimulatorView = () => {
                           <IconHelper name={item.icon} size={16}/>
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h4 className="text-xs font-bold text-slate-800 dark:text-white truncate" title={item.categoryName}>
+                          <h4 className="text-xs font-bold text-slate-800 dark:text-white truncate" title={tCategory(item.categoryName)}>
                             {tCategory(item.categoryName)}
                           </h4>
                           <span className="text-[10px] text-slate-400 block">
@@ -937,7 +939,7 @@ export const WhatIfSimulatorView = () => {
                   {investmentRateScenario < 0 && (<p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 mt-2 flex items-center space-x-1">
                       <AlertTriangle className="w-3.5 h-3.5"/>
                       <span>
-                        {t('whatif.crashAlert', 'Đang mô phỏng thị trường sập: Vốn đầu tư bị lỗ')} {Math.abs(investmentRateScenario)}%/năm!
+                        {t('whatif.crashAlert', 'Đang mô phỏng thị trường sập: Vốn đầu tư bị lỗ')} {Math.abs(investmentRateScenario)}{t('common.perYear', '%/năm')}!
                       </span>
                     </p>)}
                 </div>
@@ -973,10 +975,10 @@ export const WhatIfSimulatorView = () => {
                       <div className="flex justify-between items-start">
                         <div>
                           <h4 className="text-xs font-bold text-amber-900 dark:text-amber-100">
-                            {loan.name}
+                            {tCategory(loan.name)}
                           </h4>
                           <span className="text-[11px] text-amber-700 dark:text-amber-300">
-                            {t('whatif.remainingPrincipal', 'Gốc còn lại:')} {formatCurrency(loan.originalDebt)} • {t('whatif.interestPerYr', 'Lãi:')} {loan.annualInterestRate}%/năm
+                            {t('whatif.remainingPrincipal', 'Gốc còn lại:')} {formatCurrency(loan.originalDebt)} • {t('whatif.interestPerYr', 'Lãi:')} {loan.annualInterestRate}{t('common.perYear', '%/năm')}
                           </span>
                         </div>
                         <button onClick={() => setExternalLoans(externalLoans.filter((l) => l.id !== loan.id))} className="p-1 text-slate-400 hover:text-rose-600 rounded-lg transition-colors">
@@ -1264,7 +1266,7 @@ export const WhatIfSimulatorView = () => {
                       <IconHelper name={customExpenseIcon} size={15}/>
                     </div>
                     <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
-                      {customExpenseName}
+                      {tCategory(customExpenseName)}
                     </span>
                   </div>
                 </div>
@@ -1287,28 +1289,57 @@ export const WhatIfSimulatorView = () => {
 
                   {/* Icon Selector */}
                   <div>
-                    <label className="block text-xs font-semibold text-slate-500 mb-1">
+                    <label id="whatif-icon-label" className="block text-xs font-semibold text-slate-500 mb-1">
                       {t('whatif.chooseIcon', 'Chọn biểu tượng đại diện')}
                     </label>
-                    <div className="grid grid-cols-8 gap-1.5 p-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 max-h-32 overflow-y-auto">
+                    <div role="radiogroup" aria-labelledby="whatif-icon-label" className="grid grid-cols-8 gap-1.5 p-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 max-h-32 overflow-y-auto">
                       {[
                         'Utensils', 'ShoppingBag', 'Home', 'Car', 'Gamepad2', 'HeartPulse',
                         'GraduationCap', 'Gift', 'Plane', 'Laptop', 'Flame', 'Wallet',
                         'Receipt', 'Coins', 'Store', 'MoreHorizontal'
-                      ].map((iconName) => (
-                        <button
-                          key={iconName}
-                          type="button"
-                          onClick={() => setCustomExpenseIcon(iconName)}
-                          className={`p-2 rounded-lg flex items-center justify-center transition-all ${
-                            customExpenseIcon === iconName
-                              ? 'bg-blue-600 text-white shadow-xs scale-105'
-                              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                          }`}
+                      ].map((iconName) => {
+                        const iconLabel = getIconLabel(iconName, language);
+                        const isSelected = customExpenseIcon === iconName;
+                        return (
+                          <button
+                            key={iconName}
+                            type="button"
+                            role="radio"
+                            aria-checked={isSelected}
+                            aria-label={iconLabel}
+                            title={iconLabel}
+                            onClick={() => setCustomExpenseIcon(iconName)}
+                            onMouseEnter={() => setHoveredIcon(iconName)}
+                            onMouseLeave={() => setHoveredIcon(null)}
+                            onFocus={() => setHoveredIcon(iconName)}
+                            onBlur={() => setHoveredIcon(null)}
+                            className={`p-2 rounded-lg flex items-center justify-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                              isSelected
+                                ? 'bg-blue-600 text-white shadow-xs scale-105'
+                                : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                            }`}
+                          >
+                            <IconHelper name={iconName} size={16}/>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {/* Gợi ý: tên biểu tượng đang chọn + hướng dẫn */}
+                    <div className="mt-1.5 flex items-center justify-between gap-2 text-[11px] min-h-5">
+                      <span className="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-200" aria-live="polite">
+                        <span
+                          className="w-5 h-5 rounded-md flex items-center justify-center text-white shrink-0"
+                          style={{ backgroundColor: hoveredIcon && hoveredIcon !== customExpenseIcon ? '#94a3b8' : customExpenseColor }}
                         >
-                          <IconHelper name={iconName} size={16}/>
-                        </button>
-                      ))}
+                          <IconHelper name={hoveredIcon || customExpenseIcon} size={12}/>
+                        </span>
+                        {hoveredIcon && hoveredIcon !== customExpenseIcon
+                          ? getIconLabel(hoveredIcon, language)
+                          : `${t('whatif.selectedIcon', 'Đang chọn:')} ${getIconLabel(customExpenseIcon, language)}`}
+                      </span>
+                      <span className="text-slate-400 text-right">
+                        {t('whatif.iconHint', 'Di chuột hoặc chạm vào biểu tượng để xem tên')}
+                      </span>
                     </div>
                   </div>
 
@@ -1363,7 +1394,7 @@ export const WhatIfSimulatorView = () => {
                     className="w-full text-xl font-black px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                   <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
-                    VNĐ / Tháng
+                    {t('whatif.perMonthUnit', 'VNĐ / Tháng')}
                   </span>
                 </div>
 
@@ -1376,7 +1407,7 @@ export const WhatIfSimulatorView = () => {
                       onClick={() => setExpenseAmount(String(preset))}
                       className="px-2 py-0.5 text-[11px] font-bold rounded-lg bg-slate-100 hover:bg-blue-50 dark:bg-slate-800 dark:hover:bg-blue-950 text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400 transition-colors"
                     >
-                      {preset >= 1000000 ? `${preset / 1000000}Tr` : `${preset / 1000}k`}
+                      {preset >= 1000000 ? `${preset / 1000000}${language === 'en' ? 'M' : 'Tr'}` : `${preset / 1000}k`}
                     </button>
                   ))}
                 </div>

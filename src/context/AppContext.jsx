@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { INITIAL_WALLETS, INITIAL_TRANSACTIONS, INITIAL_BUDGETS, INITIAL_BILLS, INITIAL_GOALS, INITIAL_PLANNER, DEFAULT_CATEGORIES, INITIAL_SIMULATOR_CONFIG, } from '@/lib/mock-data';
 import { calculateFinancialSummary, checkWalletSufficientFunds, formatCurrency, getLocalDateString, toLocalDateKey, normalizeSaveDate, applyTxToWallets, recomputeWalletBalances, sumWalletTxEffect, mergeSnapshots, generateId, MAX_TX_AMOUNT } from '@/lib/utils';
-import { translate, translateCategory, translateWalletType, translateTag, translateBillName, translateBillNote, translateWalletName } from '@/lib/i18n';
+import { translate, translateCategory, translateWalletType, translateTag, translateBillName, translateBillNote, translateWalletName, translateNote } from '@/lib/i18n';
 import { KeyRound } from 'lucide-react';
 const AppContext = createContext(undefined);
 const STORAGE_KEY = 'quan_ly_chi_tieu_data_v2';
@@ -186,6 +186,11 @@ export const AppProvider = ({ children }) => {
             // ignore
         }
     }, []);
+    // Đồng bộ thuộc tính lang của trang (trình đọc màn hình, dịch tự động của trình duyệt)
+    useEffect(() => {
+        if (typeof document !== 'undefined')
+            document.documentElement.lang = language === 'en' ? 'en' : 'vi';
+    }, [language]);
     const setLanguage = (lang) => {
         setLanguageState(lang);
         try {
@@ -215,6 +220,9 @@ export const AppProvider = ({ children }) => {
     };
     const tWalletName = (name) => {
         return translateWalletName(name || '', language);
+    };
+    const tNote = (note) => {
+        return translateNote(note || '', language);
     };
     // Real-time multi-device sync refs
     const lastServerUpdatedAtRef = useRef(null);
@@ -415,7 +423,7 @@ export const AppProvider = ({ children }) => {
             let message = language === 'en' ? 'Incorrect PIN code!' : 'Mã PIN bảo mật không chính xác!';
             if (res.status === 429) {
                 const body = await res.json().catch(() => ({}));
-                message = body.error || (language === 'en' ? 'Too many attempts, please try again later.' : 'Nhập sai quá nhiều lần, vui lòng thử lại sau.');
+                message = t('err.RATE_LIMITED', body.error || 'Nhập sai PIN quá nhiều lần, vui lòng thử lại sau 15 phút');
             }
             setPinUnlockError(message);
             return { success: false, error: message };
@@ -429,7 +437,7 @@ export const AppProvider = ({ children }) => {
     const updateSecuritySettings = async ({ pinEnabled, pinCode }) => {
         const cleanPin = pinCode !== undefined && pinCode !== null ? String(pinCode).trim() : '';
         if (cleanPin && !/^\d{4,8}$/.test(cleanPin)) {
-            return { success: false, error: language === 'en' ? 'PIN must be 4-8 digits' : 'Mã PIN phải gồm 4-8 chữ số' };
+            return { success: false, error: t('err.PIN_FORMAT', 'Mã PIN phải gồm 4-8 chữ số') };
         }
         try {
             const res = await fetch('/api/storage', {
@@ -449,7 +457,7 @@ export const AppProvider = ({ children }) => {
             }
             if (res.status === 401)
                 setIsPinLocked(true);
-            return { success: false, error: result.error || `HTTP ${res.status}` };
+            return { success: false, error: result.code ? t(`err.${result.code}`, result.error) : (result.error || `HTTP ${res.status}`) };
         }
         catch (e) {
             return { success: false, error: e.message };
@@ -728,13 +736,13 @@ export const AppProvider = ({ children }) => {
     const validateTxBasics = (amount, date) => {
         const num = Number(amount);
         if (!Number.isFinite(num) || num <= 0) {
-            return 'Số tiền giao dịch phải lớn hơn 0';
+            return t('err.amountPositive', 'Số tiền giao dịch phải lớn hơn 0');
         }
         if (num > MAX_TX_AMOUNT) {
-            return `Số tiền vượt quá giới hạn cho phép (${formatCurrency(MAX_TX_AMOUNT)})`;
+            return `${t('err.amountTooLarge', 'Số tiền vượt quá giới hạn cho phép')} (${formatCurrency(MAX_TX_AMOUNT)})`;
         }
         if (toLocalDateKey(date) > getLocalDateString()) {
-            return 'Không thể ghi nhận giao dịch cho ngày trong tương lai (chưa đến ngày)!';
+            return t('err.futureDate', 'Không thể ghi nhận giao dịch cho ngày trong tương lai (chưa đến ngày)!');
         }
         return null;
     };
@@ -748,11 +756,11 @@ export const AppProvider = ({ children }) => {
         }
         if (tx.type === 'TRANSFER') {
             if (!tx.toWalletId || tx.toWalletId === tx.walletId) {
-                alert('Ví nhận phải khác ví chuyển!');
+                alert(t('Ví nhận phải khác ví chuyển', 'Ví nhận phải khác ví chuyển!'));
                 return false;
             }
             if (!wallets.some((w) => w.id === tx.toWalletId)) {
-                alert('Không tìm thấy ví nhận');
+                alert(t('err.destWalletNotFound', 'Không tìm thấy ví nhận'));
                 return false;
             }
         }
@@ -762,7 +770,7 @@ export const AppProvider = ({ children }) => {
             const fee = tx.type === 'TRANSFER' ? (tx.fee || 0) : 0;
             const validation = checkWalletSufficientFunds(sourceWallet, tx.amount, fee, language);
             if (!validation.isValid) {
-                alert(validation.errorMessage || 'Số dư ví không đủ để thực hiện giao dịch này!');
+                alert(validation.errorMessage || t('err.insufficientBalance', 'Số dư ví không đủ để thực hiện giao dịch này!'));
                 return false;
             }
         }
@@ -785,11 +793,11 @@ export const AppProvider = ({ children }) => {
         exactClosingBalance = null,
     }) => {
         if (!transactionsToImport || transactionsToImport.length === 0) {
-            return { success: false, message: 'Không có giao dịch nào được chọn để nạp' };
+            return { success: false, message: t('err.noTxSelected', 'Không có giao dịch nào được chọn để nạp') };
         }
         const targetWallet = wallets.find((w) => w.id === walletId);
         if (!targetWallet) {
-            return { success: false, message: 'Không tìm thấy ví tương ứng' };
+            return { success: false, message: t('err.walletNotFound', 'Không tìm thấy ví tương ứng') };
         }
         const defaultIncCat = categories.find((c) => c.type === 'INCOME') || { id: 'cat-other-inc', name: 'Thu nhập khác' };
         const defaultExpCat = categories.find((c) => c.type === 'EXPENSE') || { id: 'cat-other-exp', name: 'Chi phí khác' };
@@ -824,7 +832,7 @@ export const AppProvider = ({ children }) => {
             });
         });
         if (newTxList.length === 0) {
-            return { success: false, message: 'Không có giao dịch hợp lệ (số tiền không hợp lệ hoặc ngày trong tương lai)' };
+            return { success: false, message: t('err.noValidTx', 'Không có giao dịch hợp lệ (số tiền không hợp lệ hoặc ngày trong tương lai)') };
         }
         const totalIncome = newTxList.filter((t) => t.type === 'INCOME').reduce((s, t) => s + t.amount, 0);
         const totalExpense = newTxList.filter((t) => t.type === 'EXPENSE').reduce((s, t) => s + t.amount, 0);
@@ -873,7 +881,7 @@ export const AppProvider = ({ children }) => {
         }
         if (newTx.type === 'TRANSFER') {
             if (!newTx.toWalletId || newTx.walletId === newTx.toWalletId) {
-                alert('Ví nhận phải khác ví chuyển!');
+                alert(t('Ví nhận phải khác ví chuyển', 'Ví nhận phải khác ví chuyển!'));
                 return false;
             }
             const destW = wallets.find((w) => w.id === newTx.toWalletId);
@@ -894,7 +902,7 @@ export const AppProvider = ({ children }) => {
             const fee = newTx.type === 'TRANSFER' ? (newTx.fee || 0) : 0;
             const validation = checkWalletSufficientFunds(rolledSource, newTx.amount, fee, language);
             if (!validation.isValid) {
-                alert(validation.errorMessage || 'Số dư ví không đủ sau khi điều chỉnh!');
+                alert(validation.errorMessage || t('err.insufficientAfterEdit', 'Số dư ví không đủ sau khi điều chỉnh!'));
                 return false;
             }
         }
@@ -1026,11 +1034,11 @@ export const AppProvider = ({ children }) => {
     const payCreditCard = (creditWalletId, fromWalletId, amount, note) => {
         const creditW = wallets.find((w) => w.id === creditWalletId);
         if (!creditW || creditW.type !== 'CREDIT') {
-            alert('Ví nhận phải là thẻ tín dụng');
+            alert(t('err.mustBeCreditCard', 'Ví nhận phải là thẻ tín dụng'));
             return false;
         }
         if (Number(amount) > (Number(creditW.balance) || 0)) {
-            alert(`Số tiền trả vượt quá dư nợ hiện tại (${formatCurrency(creditW.balance)})`);
+            alert(`${t('err.payExceedsDebt', 'Số tiền trả vượt quá dư nợ hiện tại')} (${formatCurrency(creditW.balance)})`);
             return false;
         }
         return transferFunds(fromWalletId, creditWalletId, Number(amount), 0, note || `Thanh toán dư nợ thẻ ${creditW.name}`);
@@ -1079,7 +1087,7 @@ export const AppProvider = ({ children }) => {
         const billId = bill.id;
         const targetWallet = wallets.find((w) => w.id === walletId);
         if (!targetWallet) {
-            alert('Vui lòng chọn ví thanh toán hợp lệ');
+            alert(t('err.selectPayWallet', 'Vui lòng chọn ví thanh toán hợp lệ'));
             return false;
         }
         const billCategory = categories.find((c) => c.id === bill.categoryId);
@@ -1222,7 +1230,7 @@ export const AppProvider = ({ children }) => {
         if (!goal || !wallet)
             return false;
         if (amount > goal.currentAmount) {
-            alert(`Số tiền rút (${formatCurrency(amount)}) vượt quá số dư hiện có trong mục tiêu (${formatCurrency(goal.currentAmount)})!`);
+            alert(`${t('err.withdrawAmount', 'Số tiền rút')} (${formatCurrency(amount)}) ${t('err.withdrawExceedsGoal', 'vượt quá số dư hiện có trong mục tiêu')} (${formatCurrency(goal.currentAmount)})!`);
             return false;
         }
         const createdTx = addTransaction({
@@ -1403,6 +1411,7 @@ export const AppProvider = ({ children }) => {
             tBillName,
             tBillNote,
             tWalletName,
+            tNote,
             addTransaction,
             editTransaction,
             deleteTransaction,

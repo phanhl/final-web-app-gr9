@@ -91,7 +91,7 @@ export const BudgetsView = () => {
         e.preventDefault();
         const targetNum = Number(goalTarget);
         if (!goalName.trim() || !targetNum || targetNum <= 0) {
-            alert('Vui lòng nhập tên mục tiêu và số tiền');
+            alert(t('Vui lòng nhập tên mục tiêu và số tiền', 'Vui lòng nhập tên mục tiêu và số tiền'));
             return;
         }
         if (editingGoal) {
@@ -122,7 +122,7 @@ export const BudgetsView = () => {
             return;
         const amountNum = Number(depositAmount);
         if (!amountNum || amountNum <= 0) {
-            alert('Vui lòng nhập số tiền hợp lệ');
+            alert(t('Vui lòng nhập số tiền hợp lệ', 'Vui lòng nhập số tiền hợp lệ'));
             return;
         }
         if (isDepositMode) {
@@ -648,7 +648,7 @@ export const BudgetsView = () => {
                     </div>
                     <div>
                       <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                        {t('budget.emergencySafeFund', 'Quỹ dự phòng an toàn:')} {formatCurrency(emergencyBudget)}/tháng
+                        {t('budget.emergencySafeFund', 'Quỹ dự phòng an toàn:')} {formatCurrency(emergencyBudget)}{t('common.perMonth', '/tháng')}
                       </p>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400">
                         {t('budget.emergencyAdvice')}

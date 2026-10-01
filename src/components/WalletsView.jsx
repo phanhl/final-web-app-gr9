@@ -7,7 +7,7 @@ import { IconHelper } from './IconHelper';
 import { VIETNAMESE_BANKS } from '@/lib/mock-data';
 import { ReceiptModal } from './ReceiptModal';
 export const WalletsView = () => {
-    const { wallets, transactions, financialSummary, addWallet, editWallet, deleteWallet, deleteTransaction, recalculateWalletBalances, payCreditCard, openQuickAdd, openStatementModal, t, tCategory, tWalletType, tTag, tWalletName, language, } = useApp();
+    const { wallets, transactions, financialSummary, addWallet, editWallet, deleteWallet, deleteTransaction, recalculateWalletBalances, payCreditCard, openQuickAdd, openStatementModal, t, tCategory, tWalletType, tTag, tWalletName, tNote, language, } = useApp();
     // Selected Wallet for viewing detailed cash flow
     const [selectedWalletId, setSelectedWalletId] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -79,7 +79,7 @@ export const WalletsView = () => {
     const handleSaveWallet = (e) => {
         e.preventDefault();
         if (!walletName.trim()) {
-            alert('Vui lòng nhập tên ví');
+            alert(t('Vui lòng nhập tên ví', 'Vui lòng nhập tên ví'));
             return;
         }
         const bal = Number(walletBalance) || 0;
@@ -127,7 +127,7 @@ export const WalletsView = () => {
     };
     const handleDeleteWalletWithConfirm = (w) => {
         if (!w) return;
-        if (confirm(`${t('wallets.deleteWalletConfirm', 'Bạn có chắc muốn xóa ví')} "${w.name}"? Toàn bộ giao dịch của ví này sẽ bị xóa; các giao dịch chuyển khoản với ví khác được giữ lại dưới dạng thu/chi của ví đó để số dư không bị sai lệch.`)) {
+        if (confirm(`${t('wallets.deleteWalletConfirm', 'Bạn có chắc muốn xóa ví')} "${w.name}"? ${t('wallets.deleteWalletConsequence', 'Toàn bộ giao dịch của ví này sẽ bị xóa; các giao dịch chuyển khoản với ví khác được giữ lại dưới dạng thu/chi của ví đó để số dư không bị sai lệch.')}`)) {
             deleteWallet(w.id);
             if (selectedWalletId === w.id) {
                 setSelectedWalletId(null);
@@ -233,16 +233,16 @@ export const WalletsView = () => {
 
                 {selectedWallet.type === 'CREDIT' && selectedWallet.balance > 0 && (<button onClick={() => handleOpenPayCard(selectedWallet)} className="flex items-center space-x-1.5 px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors cursor-pointer">
                   <ArrowRightLeft className="w-4 h-4"/>
-                  <span>Thanh toán dư nợ thẻ</span>
+                  <span>{t('wallets.payCardDebt', 'Thanh toán dư nợ thẻ')}</span>
                 </button>)}
 
                 <button onClick={() => {
-                    if (confirm('Tính lại số dư mọi ví từ số dư ban đầu + toàn bộ lịch sử giao dịch?')) {
+                    if (confirm(t('wallets.recalcConfirm', 'Tính lại số dư mọi ví từ số dư ban đầu + toàn bộ lịch sử giao dịch?'))) {
                         recalculateWalletBalances();
                     }
-                }} className="flex items-center space-x-1.5 px-3.5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold transition-colors cursor-pointer" title="Đối soát số dư với lịch sử giao dịch">
+                }} className="flex items-center space-x-1.5 px-3.5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold transition-colors cursor-pointer" title={t('wallets.recalcTitle', 'Đối soát số dư với lịch sử giao dịch')}>
                   <RefreshCw className="w-4 h-4"/>
-                  <span>Tính lại số dư</span>
+                  <span>{t('wallets.recalcBalances', 'Tính lại số dư')}</span>
                 </button>
 
                 <button onClick={(e) => handleStartEditWallet(selectedWallet, e)} className="flex items-center space-x-1.5 px-3.5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold transition-colors cursor-pointer">
@@ -250,12 +250,12 @@ export const WalletsView = () => {
                   <span>{t('wallets.editBtn', 'Sửa ví')}</span>
                 </button>
 
-                <button onClick={() => openStatementModal(selectedWallet.id)} className="flex items-center space-x-1.5 px-3.5 py-2 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-200 dark:border-blue-800/60 text-blue-700 dark:text-blue-300 rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer" title="Tải sao kê ngân hàng cho ví này">
+                <button onClick={() => openStatementModal(selectedWallet.id)} className="flex items-center space-x-1.5 px-3.5 py-2 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-200 dark:border-blue-800/60 text-blue-700 dark:text-blue-300 rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer" title={t('wallets.uploadStatementTitle', 'Tải sao kê ngân hàng cho ví này')}>
                   <FileSpreadsheet className="w-4 h-4 text-blue-600 dark:text-blue-400"/>
-                  <span>Tải sao kê</span>
+                  <span>{t('wallets.uploadStatement', 'Tải sao kê')}</span>
                 </button>
 
-                <button onClick={() => handleDeleteWalletWithConfirm(selectedWallet)} className="flex items-center space-x-1.5 px-3.5 py-2 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold transition-colors cursor-pointer" title="Xóa ví và toàn bộ giao dịch liên quan">
+                <button onClick={() => handleDeleteWalletWithConfirm(selectedWallet)} className="flex items-center space-x-1.5 px-3.5 py-2 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold transition-colors cursor-pointer" title={t('wallets.deleteTitle', 'Xóa ví và toàn bộ giao dịch liên quan')}>
                   <Trash2 className="w-4 h-4"/>
                   <span>{t('wallets.deleteBtn', 'Xóa ví')}</span>
                 </button>
@@ -398,7 +398,7 @@ export const WalletsView = () => {
                             <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
                               {isTransfer
                             ? isOutgoingTransfer
-                                ? `${t('tx.transferTo', 'Chuyển sang:')} ${tx.toWalletName || t('wallets.transferToOther', 'Ví khác')}`
+                                ? `${t('tx.transferTo', 'Chuyển sang:')} ${tWalletName(tx.toWalletName) || t('wallets.transferToOther', 'Ví khác')}`
                                 : `${t('wallets.receivedFrom', 'Nhận từ:')} ${tx.walletName || t('wallets.transferToOther', 'Ví khác')}`
                             : tCategory(tx.categoryName || 'Khác')}
                             </h4>
@@ -422,7 +422,7 @@ export const WalletsView = () => {
                             {tx.note && (<>
                                 <span>•</span>
                                 <span className="truncate max-w-xs text-slate-600 dark:text-slate-300">
-                                  {tx.note}
+                                  {tNote(tx.note)}
                                 </span>
                               </>)}
                             {tx.tags && tx.tags.length > 0 && (<div className="flex items-center space-x-1">
@@ -493,7 +493,7 @@ export const WalletsView = () => {
           {/* 2. NET WORTH & ASSETS KPI */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="p-5 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-white shadow-lg">
-              <span className="text-xs font-bold text-slate-400 uppercase">TỔNG TÀI SẢN RÒNG</span>
+              <span className="text-xs font-bold text-slate-400 uppercase">{t('wallets.netWorthUpper', 'TỔNG TÀI SẢN RÒNG')}</span>
               <p className="text-2xl font-black mt-1 text-white">
                 {formatCurrency(financialSummary.totalAssets)}
               </p>
@@ -707,23 +707,23 @@ export const WalletsView = () => {
       {payCardOpen && selectedWallet && (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <form onSubmit={handleConfirmPayCard} className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-slate-800 dark:text-white">Thanh toán dư nợ: {selectedWallet.name}</h3>
-              <button type="button" onClick={() => setPayCardOpen(false)} className="p-1 text-slate-400 hover:text-slate-600 cursor-pointer" aria-label="Đóng">
+              <h3 className="text-base font-bold text-slate-800 dark:text-white">{t('wallets.payDebtTitle', 'Thanh toán dư nợ:')} {tWalletName(selectedWallet.name)}</h3>
+              <button type="button" onClick={() => setPayCardOpen(false)} className="p-1 text-slate-400 hover:text-slate-600 cursor-pointer" aria-label={t('common.close', 'Đóng')}>
                 <X className="w-4 h-4"/>
               </button>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Dư nợ hiện tại: <strong className="text-rose-600">{formatCurrency(selectedWallet.balance)}</strong>. Khoản trả được ghi là chuyển khoản nội bộ (không tính vào chi tiêu).
+              {t('wallets.currentDebt', 'Dư nợ hiện tại:')} <strong className="text-rose-600">{formatCurrency(selectedWallet.balance)}</strong>. {t('wallets.payDebtNote', 'Khoản trả được ghi là chuyển khoản nội bộ (không tính vào chi tiêu).')}
             </p>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Trả từ ví</label>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">{t('wallets.payFromWallet', 'Trả từ ví')}</label>
               <select required value={payCardFromId} onChange={(e) => setPayCardFromId(e.target.value)} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-800 dark:text-white">
-                {assetWalletsForPay.length === 0 && <option value="">Chưa có ví tiền mặt / ngân hàng</option>}
-                {assetWalletsForPay.map((w) => (<option key={w.id} value={w.id}>{w.name} ({formatCurrency(w.balance)})</option>))}
+                {assetWalletsForPay.length === 0 && <option value="">{t('wallets.noAssetWallet', 'Chưa có ví tiền mặt / ngân hàng')}</option>}
+                {assetWalletsForPay.map((w) => (<option key={w.id} value={w.id}>{tWalletName(w.name)} ({formatCurrency(w.balance)})</option>))}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Số tiền trả (VNĐ)</label>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">{t('wallets.payAmount', 'Số tiền trả (VNĐ)')}</label>
               <input type="text" inputMode="numeric" required value={formatNumberWithDots(payCardAmount)} onChange={(e) => {
                 const cleaned = e.target.value.replace(/\D/g, '');
                 if (cleaned.length <= 12)
@@ -731,8 +731,8 @@ export const WalletsView = () => {
             }} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-800 dark:text-white"/>
             </div>
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setPayCardOpen(false)} className="px-3.5 py-2 text-xs text-slate-600 dark:text-slate-300 rounded-xl cursor-pointer">Hủy</button>
-              <button type="submit" disabled={!payCardFromId} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold cursor-pointer">Xác nhận trả nợ</button>
+              <button type="button" onClick={() => setPayCardOpen(false)} className="px-3.5 py-2 text-xs text-slate-600 dark:text-slate-300 rounded-xl cursor-pointer">{t('common.cancel', 'Hủy')}</button>
+              <button type="submit" disabled={!payCardFromId} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold cursor-pointer">{t('wallets.confirmPayDebt', 'Xác nhận trả nợ')}</button>
             </div>
           </form>
         </div>)}

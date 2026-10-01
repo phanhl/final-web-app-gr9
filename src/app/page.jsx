@@ -13,7 +13,7 @@ import { SettingsView } from '@/components/SettingsView';
 import { QuickAddModal } from '@/components/QuickAddModal';
 import { BankStatementModal } from '@/components/BankStatementModal';
 function MainContent() {
-    const { activeTab } = useApp();
+    const { activeTab, t } = useApp();
     return (<div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col">
       <Navigation />
 
@@ -34,7 +34,7 @@ function MainContent() {
       {/* Footer chỉ hiện trên desktop */}
       <footer className="hidden lg:block border-t border-slate-100 dark:border-slate-800/80 bg-white/50 dark:bg-slate-900/50 py-6 text-center text-xs text-slate-500 dark:text-slate-400 print:hidden">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p>© 2026 FinTrack Pro • Hệ thống Quản lý Chi tiêu Cá nhân & Ngân sách Thông minh</p>
+          <p>© 2026 FinTrack Pro • {t('footer.tagline', 'Hệ thống Quản lý Chi tiêu Cá nhân & Ngân sách Thông minh')}</p>
           <p className="font-semibold text-slate-700 dark:text-slate-300">
             Next.js 15 • Tailwind CSS • Recharts
           </p>

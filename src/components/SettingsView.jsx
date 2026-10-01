@@ -52,7 +52,7 @@ export const SettingsView = () => {
             });
             setPinCodeInput('');
         } else {
-            setPinMessage({ text: res.error || 'Thao tác thất bại', type: 'error' });
+            setPinMessage({ text: res.error || t('common.actionFailed', 'Thao tác thất bại'), type: 'error' });
         }
     };
 
@@ -79,7 +79,7 @@ export const SettingsView = () => {
             });
             setPinCodeInput('');
         } else {
-            setPinMessage({ text: res.error || 'Cập nhật thất bại', type: 'error' });
+            setPinMessage({ text: res.error || t('common.updateFailed', 'Cập nhật thất bại'), type: 'error' });
         }
     };
 
@@ -316,7 +316,7 @@ export const SettingsView = () => {
                 maxLength={8}
                 value={pinCodeInput}
                 onChange={(e) => setPinCodeInput(e.target.value.replace(/\D/g, ''))}
-                placeholder="Ví dụ: 1234 hoặc 2026"
+                placeholder={t('settings.pinPlaceholder', 'Ví dụ: 1234 hoặc 2026')}
                 className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-bold dark:text-white"
               />
             </div>

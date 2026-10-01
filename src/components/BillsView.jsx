@@ -85,7 +85,7 @@ export const BillsView = () => {
         const amountNum = Number(billAmount);
         const dueDayNum = Number(billDueDay);
         if (!billName.trim() || !amountNum || amountNum <= 0) {
-            alert('Vui lòng nhập đầy đủ tên và số tiền hóa đơn');
+            alert(t('Vui lòng nhập đầy đủ tên và số tiền hóa đơn', 'Vui lòng nhập đầy đủ tên và số tiền hóa đơn'));
             return;
         }
         const cat = categories.find((c) => c.id === billCategory);

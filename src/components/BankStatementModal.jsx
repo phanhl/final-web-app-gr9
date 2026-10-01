@@ -195,7 +195,7 @@ export const BankStatementModal = () => {
                     // Chưa có ví ngân hàng này -> YÊU CẦU TẠO VÍ!
                     setSelectedWalletId('');
                     setWalletMatchStatus('NOT_FOUND');
-                    setCustomWalletName(`${result.detectedBank.name} Chi tiêu`);
+                    setCustomWalletName(`${result.detectedBank.name} ${t('bs.spendingSuffix', 'Chi tiêu')}`);
                     setCustomWalletBalance(String(Math.max(0, computeOpeningBalance(result.detectedClosingBalance, result.transactions))));
                     setCustomWalletAccNum(result.detectedAccountNumber || '');
                     setParsedItems(checkDuplicates(result.transactions, transactions, ''));
@@ -211,7 +211,7 @@ export const BankStatementModal = () => {
             }
         } catch (err) {
             console.error('Error parsing bank statement:', err);
-            setParseError(err.message || 'Không thể đọc nội dung file sao kê. Vui lòng kiểm tra lại định dạng tệp.');
+            setParseError(err.message || t('bs.cannotReadFile', 'Không thể đọc nội dung file sao kê. Vui lòng kiểm tra lại định dạng tệp.'));
             setParsedItems([]);
         } finally {
             setIsParsing(false);
@@ -227,7 +227,7 @@ export const BankStatementModal = () => {
             ? (Number(customData.balance) || 0)
             : Math.max(0, computeOpeningBalance(detectedClosingBalance, parsedItems));
         const accNum = customData?.accountNumber || detectedAccountNumber || '';
-        const wName = customData?.name?.trim() || `${detectedBank.name} Chi tiêu`;
+        const wName = customData?.name?.trim() || `${detectedBank.name} ${t('bs.spendingSuffix', 'Chi tiêu')}`;
 
         const newWalletData = {
             name: wName,
@@ -354,7 +354,7 @@ export const BankStatementModal = () => {
     // Thực hiện Import
     const handleExecuteImport = () => {
         if (selectedItems.length === 0) {
-            alert('Vui lòng chọn ít nhất 1 giao dịch để nạp vào hệ thống.');
+            alert(t('bs.selectAtLeastOne', 'Vui lòng chọn ít nhất 1 giao dịch để nạp vào hệ thống.'));
             return;
         }
 
@@ -373,7 +373,7 @@ export const BankStatementModal = () => {
             });
             setImportSuccessResult(result);
         } else {
-            alert(result.message || 'Có lỗi xảy ra khi nạp giao dịch');
+            alert(result.message || t('bs.importError', 'Có lỗi xảy ra khi nạp giao dịch'));
         }
     };
 
@@ -391,13 +391,13 @@ export const BankStatementModal = () => {
                         </div>
                         <div>
                             <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                <span>Tải Sao Kê Ngân Hàng Tự Động</span>
+                                <span>{t('bs.modalTitle', 'Tải Sao Kê Ngân Hàng Tự Động')}</span>
                                 <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
                                     Excel / CSV
                                 </span>
                             </h2>
                             <p className="text-xs text-slate-500 dark:text-slate-400">
-                                Nhận diện dòng tiền vào/ra, cộng trừ minh bạch và kiểm tra chống trùng lặp.
+                                {t('bs.modalSubtitle', 'Nhận diện dòng tiền vào/ra, cộng trừ minh bạch và kiểm tra chống trùng lặp.')}
                             </p>
                         </div>
                     </div>
@@ -420,12 +420,12 @@ export const BankStatementModal = () => {
                             </div>
                             <div>
                                 <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                                    Nạp Sao Kê Thành Công!
+                                    {t('bs.importSuccessTitle', 'Nạp Sao Kê Thành Công!')}
                                 </h3>
                                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                    Đã ghi nhận an toàn <strong>{importSuccessResult.count} giao dịch</strong> vào ví <strong>{importSuccessResult.walletName}</strong>.
+                                    {t('bs.importedPrefix', 'Đã ghi nhận an toàn')} <strong>{importSuccessResult.count} {t('bs.transactionsUnit', 'giao dịch')}</strong> {t('bs.intoWallet', 'vào ví')} <strong>{tWalletName(importSuccessResult.walletName)}</strong>.
                                     {importSuccessResult.skipped > 0 && (
-                                        <> Bỏ qua <strong>{importSuccessResult.skipped}</strong> giao dịch không hợp lệ (ngày trong tương lai hoặc số tiền sai).</>
+                                        <> {t('bs.skippedPrefix', 'Bỏ qua')} <strong>{importSuccessResult.skipped}</strong> {t('bs.skippedSuffix', 'giao dịch không hợp lệ (ngày trong tương lai hoặc số tiền sai).')}</>
                                     )}
                                 </p>
                             </div>
@@ -433,25 +433,25 @@ export const BankStatementModal = () => {
                             {/* Bảng tổng kết số dư sau nạp */}
                             <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700 text-left space-y-2.5 text-xs">
                                 <div className="flex justify-between items-center text-slate-600 dark:text-slate-300">
-                                    <span>Tổng tiền vào (+):</span>
+                                    <span>{t('bs.totalInLabel', 'Tổng tiền vào (+):')}</span>
                                     <span className="font-bold text-emerald-600 dark:text-emerald-400">
                                         +{formatCurrency(importSuccessResult.totalIncome)}
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center text-slate-600 dark:text-slate-300">
-                                    <span>Tổng tiền ra (-):</span>
+                                    <span>{t('bs.totalOutLabel', 'Tổng tiền ra (-):')}</span>
                                     <span className="font-bold text-rose-600 dark:text-rose-400">
                                         -{formatCurrency(importSuccessResult.totalExpense)}
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center text-slate-700 dark:text-slate-200 pt-2 border-t border-slate-200 dark:border-slate-700">
-                                    <span>Biến động số dư ròng:</span>
+                                    <span>{t('bs.netChangeLabel', 'Biến động số dư ròng:')}</span>
                                     <span className={`font-bold ${importSuccessResult.netChange >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                                         {importSuccessResult.netChange >= 0 ? '+' : ''}{formatCurrency(importSuccessResult.netChange)}
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center text-slate-800 dark:text-white pt-2 border-t border-slate-200 dark:border-slate-700 font-semibold">
-                                    <span>Số dư ví hiện tại:</span>
+                                    <span>{t('bs.currentWalletBalance', 'Số dư ví hiện tại:')}</span>
                                     <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
                                         {formatCurrency(importSuccessResult.newBalance)}
                                     </span>
@@ -462,7 +462,7 @@ export const BankStatementModal = () => {
                                 onClick={closeStatementModal}
                                 className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm transition-colors cursor-pointer"
                             >
-                                Hoàn tất & Xem Sổ Giao Dịch
+                                {t('bs.finishAndView', 'Hoàn tất & Xem Sổ Giao Dịch')}
                             </button>
                         </div>
                     ) : (
@@ -484,16 +484,16 @@ export const BankStatementModal = () => {
                                                     <div className="min-w-0">
                                                         <div className="flex items-center gap-2 flex-wrap">
                                                             <span className="text-xs font-black text-emerald-900 dark:text-emerald-200 uppercase tracking-wide">
-                                                                Sao kê ngân hàng: {detectedBank.name}
+                                                                {t('bs.bankStatementOf', 'Sao kê ngân hàng:')} {detectedBank.name}
                                                             </span>
                                                             <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-200 dark:bg-emerald-800 text-emerald-800 dark:text-emerald-100 flex items-center gap-1 shadow-2xs">
                                                                 <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-300" />
-                                                                Đã khớp ví ngân hàng
+                                                                {t('bs.walletMatched', 'Đã khớp ví ngân hàng')}
                                                             </span>
                                                         </div>
                                                         <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-1">
-                                                            Khoản chi/thu sẽ được <strong>trừ/cộng trực tiếp vào ví:</strong> <strong className="underline decoration-emerald-500 font-bold">{currentWallet?.name}</strong> (Số dư hiện tại: {formatCurrency(currentWallet?.balance || 0)})
-                                                            {detectedAccountNumber ? ` • Số TK: ${detectedAccountNumber}` : ''}
+                                                            {t('bs.willApplyTo', 'Khoản chi/thu sẽ được')} <strong>{t('bs.applyDirectly', 'trừ/cộng trực tiếp vào ví:')}</strong> <strong className="underline decoration-emerald-500 font-bold">{tWalletName(currentWallet?.name)}</strong> ({t('bs.currentBalanceShort', 'Số dư hiện tại:')} {formatCurrency(currentWallet?.balance || 0)})
+                                                            {detectedAccountNumber ? ` • ${t('bs.accNumShort', 'Số TK:')} ${detectedAccountNumber}` : ''}
                                                         </p>
                                                     </div>
                                                 </div>
@@ -641,7 +641,7 @@ export const BankStatementModal = () => {
                                         className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer shrink-0"
                                     >
                                         <Download className="w-3.5 h-3.5" />
-                                        <span>Tải file mẫu Techcombank (.xlsx)</span>
+                                        <span>{t('bs.downloadSample', 'Tải file mẫu Techcombank (.xlsx)')}</span>
                                     </button>
                                 </div>
                             )}
@@ -677,10 +677,10 @@ export const BankStatementModal = () => {
                                     </div>
                                     <div>
                                         <p className="text-sm font-bold text-slate-800 dark:text-white">
-                                            {isParsing ? 'Đang phân tích bảng sao kê...' : 'Kéo thả file sao kê vào đây hoặc bấm để chọn'}
+                                            {isParsing ? t('bs.parsing', 'Đang phân tích bảng sao kê...') : t('bs.dropHere', 'Kéo thả file sao kê vào đây hoặc bấm để chọn')}
                                         </p>
                                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                            Hỗ trợ định dạng Excel (.xlsx, .xls) và CSV (.csv) từ Vietcombank, Techcombank, MB, VPBank, ACB...
+                                            {t('bs.supportedFormats', 'Hỗ trợ định dạng Excel (.xlsx, .xls) và CSV (.csv) từ Vietcombank, Techcombank, MB, VPBank, ACB...')}
                                         </p>
                                     </div>
                                 </div>
@@ -691,13 +691,13 @@ export const BankStatementModal = () => {
                                 <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 flex items-start gap-3 text-xs text-rose-800 dark:text-rose-300">
                                     <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
                                     <div>
-                                        <p className="font-bold">Lỗi đọc file sao kê</p>
+                                        <p className="font-bold">{t('bs.readErrorTitle', 'Lỗi đọc file sao kê')}</p>
                                         <p className="mt-0.5">{parseError}</p>
                                         <button
                                             onClick={() => fileInputRef.current?.click()}
                                             className="mt-2 text-rose-700 dark:text-rose-200 underline font-semibold cursor-pointer"
                                         >
-                                            Thử tải lại file khác
+                                            {t('bs.tryAnotherFile', 'Thử tải lại file khác')}
                                         </button>
                                     </div>
                                 </div>
@@ -711,35 +711,35 @@ export const BankStatementModal = () => {
                                         {/* Tiền vào */}
                                         <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40">
                                             <div className="flex items-center justify-between text-emerald-700 dark:text-emerald-400 mb-1">
-                                                <span className="text-[11px] font-bold">Tổng Tiền Vào (+)</span>
+                                                <span className="text-[11px] font-bold">{t('bs.totalInTitle', 'Tổng Tiền Vào (+)')}</span>
                                                 <ArrowDownLeft className="w-4 h-4" />
                                             </div>
                                             <div className="text-base font-bold text-emerald-700 dark:text-emerald-300">
                                                 +{formatCurrency(totalSelectedIncome)}
                                             </div>
                                             <div className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80 mt-0.5">
-                                                {selectedItems.filter(i => i.type === 'INCOME').length} giao dịch thu
+                                                {selectedItems.filter(i => i.type === 'INCOME').length} {t('bs.incomeTxUnit', 'giao dịch thu')}
                                             </div>
                                         </div>
 
                                         {/* Tiền ra */}
                                         <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/40">
                                             <div className="flex items-center justify-between text-rose-700 dark:text-rose-400 mb-1">
-                                                <span className="text-[11px] font-bold">Tổng Tiền Ra (-)</span>
+                                                <span className="text-[11px] font-bold">{t('bs.totalOutTitle', 'Tổng Tiền Ra (-)')}</span>
                                                 <ArrowUpRight className="w-4 h-4" />
                                             </div>
                                             <div className="text-base font-bold text-rose-700 dark:text-rose-300">
                                                 -{formatCurrency(totalSelectedExpense)}
                                             </div>
                                             <div className="text-[10px] text-rose-600/80 dark:text-rose-400/80 mt-0.5">
-                                                {selectedItems.filter(i => i.type === 'EXPENSE').length} giao dịch chi
+                                                {selectedItems.filter(i => i.type === 'EXPENSE').length} {t('bs.expenseTxUnit', 'giao dịch chi')}
                                             </div>
                                         </div>
 
                                         {/* Biến động ròng */}
                                         <div className="p-3.5 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/40">
                                             <div className="flex items-center justify-between text-blue-700 dark:text-blue-400 mb-1">
-                                                <span className="text-[11px] font-bold">Biến Động Ròng</span>
+                                                <span className="text-[11px] font-bold">{t('bs.netChangeTitle', 'Biến Động Ròng')}</span>
                                                 <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
                                                     Thu - Chi
                                                 </span>
@@ -748,21 +748,21 @@ export const BankStatementModal = () => {
                                                 {netSelectedChange >= 0 ? '+' : ''}{formatCurrency(netSelectedChange)}
                                             </div>
                                             <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-                                                {netSelectedChange >= 0 ? 'Tăng số dư' : 'Giảm số dư'}
+                                                {netSelectedChange >= 0 ? t('bs.balanceUp', 'Tăng số dư') : t('bs.balanceDown', 'Giảm số dư')}
                                             </div>
                                         </div>
 
                                         {/* Số dư ví sau nạp */}
                                         <div className="p-3.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
                                             <div className="flex items-center justify-between text-slate-700 dark:text-slate-300 mb-1">
-                                                <span className="text-[11px] font-bold">Số Dư Sau Nạp</span>
+                                                <span className="text-[11px] font-bold">{t('bs.balanceAfterImport', 'Số Dư Sau Nạp')}</span>
                                                 <Wallet className="w-4 h-4 text-indigo-500" />
                                             </div>
                                             <div className="text-base font-bold text-indigo-600 dark:text-indigo-400">
                                                 {formatCurrency(projectedBalance)}
                                             </div>
                                             <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                                                Ví: {currentWallet?.name}
+                                                {t('bs.walletLabel', 'Ví:')} {tWalletName(currentWallet?.name)}
                                             </div>
                                         </div>
                                     </div>
@@ -773,7 +773,7 @@ export const BankStatementModal = () => {
                                             <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300">
                                                 <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
                                                 <span>
-                                                    Phát hiện <strong>{duplicateCount} giao dịch trùng lặp</strong> đã có trong hệ thống (đã tự động bỏ chọn để tránh cộng trừ 2 lần).
+                                                    {t('bs.detected', 'Phát hiện')} <strong>{duplicateCount} {t('bs.duplicateTx', 'giao dịch trùng lặp')}</strong> {t('bs.duplicateExplain', 'đã có trong hệ thống (đã tự động bỏ chọn để tránh cộng trừ 2 lần).')}
                                                 </span>
                                             </div>
                                             <button
@@ -781,7 +781,7 @@ export const BankStatementModal = () => {
                                                 onClick={deselectAllDuplicates}
                                                 className="px-2.5 py-1 bg-amber-200 dark:bg-amber-900 hover:bg-amber-300 text-amber-900 dark:text-amber-100 font-bold rounded-lg text-[11px] transition-colors cursor-pointer"
                                             >
-                                                Bỏ chọn tất cả trùng lặp
+                                                {t('bs.unselectDuplicates', 'Bỏ chọn tất cả trùng lặp')}
                                             </button>
                                         </div>
                                     )}
@@ -792,7 +792,7 @@ export const BankStatementModal = () => {
                                             <div className="flex items-center gap-2">
                                                 <Info className="w-4 h-4 text-blue-500" />
                                                 <span>
-                                                    Phát hiện số dư cuối trên sao kê: <strong>{formatCurrency(detectedClosingBalance)}</strong>
+                                                    {t('bs.closingBalanceDetected', 'Phát hiện số dư cuối trên sao kê:')} <strong>{formatCurrency(detectedClosingBalance)}</strong>
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-2">
@@ -804,7 +804,7 @@ export const BankStatementModal = () => {
                                                         onChange={() => setBalanceAdjustmentMode('NET_CHANGE')}
                                                         className="text-emerald-600 focus:ring-emerald-500"
                                                     />
-                                                    <span>Cộng trừ theo biến động ròng</span>
+                                                    <span>{t('bs.modeNetChange', 'Cộng trừ theo biến động ròng')}</span>
                                                 </label>
                                                 <label className="flex items-center gap-1.5 cursor-pointer">
                                                     <input
@@ -815,7 +815,7 @@ export const BankStatementModal = () => {
                                                         className="text-emerald-600 focus:ring-emerald-500"
                                                     />
                                                     <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                                                        Khớp chuẩn số dư ngân hàng
+                                                        {t('bs.modeExact', 'Khớp chuẩn số dư ngân hàng')}
                                                     </span>
                                                 </label>
                                             </div>
@@ -878,7 +878,7 @@ export const BankStatementModal = () => {
                                         <div className="flex items-center gap-2">
                                             <input
                                                 type="text"
-                                                placeholder="Lọc nội dung hoặc số tiền..."
+                                                placeholder={t('bs.filterPlaceholder', 'Lọc nội dung hoặc số tiền...')}
                                                 value={searchFilter}
                                                 onChange={(e) => setSearchFilter(e.target.value)}
                                                 className="px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 w-full sm:w-48"
@@ -887,9 +887,9 @@ export const BankStatementModal = () => {
                                                 type="button"
                                                 onClick={() => fileInputRef.current?.click()}
                                                 className="px-2.5 py-1.5 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 cursor-pointer shrink-0"
-                                                title="Đổi file khác"
+                                                title={t('bs.changeFileTitle', 'Đổi file khác')}
                                             >
-                                                Đổi file
+                                                {t('bs.changeFile', 'Đổi file')}
                                             </button>
                                         </div>
                                     </div>
@@ -908,18 +908,18 @@ export const BankStatementModal = () => {
                                                                 className="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                                                             />
                                                         </th>
-                                                        <th className="p-3 w-28">Ngày</th>
-                                                        <th className="p-3 w-28">Loại</th>
-                                                        <th className="p-3 w-32 text-right">Số tiền</th>
-                                                        <th className="p-3 w-40">Danh mục</th>
-                                                        <th className="p-3">Nội dung chi tiết</th>
+                                                        <th className="p-3 w-28">{t('bs.colDate', 'Ngày')}</th>
+                                                        <th className="p-3 w-28">{t('bs.colType', 'Loại')}</th>
+                                                        <th className="p-3 w-32 text-right">{t('bs.colAmount', 'Số tiền')}</th>
+                                                        <th className="p-3 w-40">{t('bs.colCategory', 'Danh mục')}</th>
+                                                        <th className="p-3">{t('bs.colDescription', 'Nội dung chi tiết')}</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 bg-white dark:bg-slate-900">
                                                     {displayedItems.length === 0 ? (
                                                         <tr>
                                                             <td colSpan={6} className="p-8 text-center text-slate-400">
-                                                                Không có giao dịch nào khớp với bộ lọc
+                                                                {t('bs.noMatch', 'Không có giao dịch nào khớp với bộ lọc')}
                                                             </td>
                                                         </tr>
                                                     ) : (
@@ -1003,7 +1003,7 @@ export const BankStatementModal = () => {
                                                                                 title={item.duplicateReason}
                                                                             >
                                                                                 <AlertTriangle className="w-2.5 h-2.5" />
-                                                                                Trùng
+                                                                                {t('bs.duplicateBadge', 'Trùng')}
                                                                             </span>
                                                                         )}
                                                                     </div>
@@ -1085,10 +1085,10 @@ export const BankStatementModal = () => {
                                     </div>
                                     <div>
                                         <h4 className="text-sm font-bold text-slate-800 dark:text-white">
-                                            Tạo Ví Ngân Hàng {detectedBank.name}
+                                            {t('bs.createBankWallet', 'Tạo Ví Ngân Hàng')} {detectedBank.name}
                                         </h4>
                                         <span className="text-[10px] text-slate-400">
-                                            Liên kết trừ tiền sao kê tự động
+                                            {t('bs.autoLink', 'Liên kết trừ tiền sao kê tự động')}
                                         </span>
                                     </div>
                                 </div>
@@ -1113,34 +1113,34 @@ export const BankStatementModal = () => {
                             >
                                 <div>
                                     <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
-                                        Tên ví ngân hàng
+                                        {t('bs.bankWalletName', 'Tên ví ngân hàng')}
                                     </label>
                                     <input
                                         type="text"
                                         required
                                         value={customWalletName}
                                         onChange={(e) => setCustomWalletName(e.target.value)}
-                                        placeholder={`Ví dụ: ${detectedBank.name} Chi tiêu`}
+                                        placeholder={`${t('bs.examplePrefix', 'Ví dụ:')} ${detectedBank.name} ${t('bs.spendingSuffix', 'Chi tiêu')}`}
                                         className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-amber-500"
                                     />
                                 </div>
 
                                 <div>
                                     <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
-                                        Số tài khoản ngân hàng
+                                        {t('bs.bankAccNum', 'Số tài khoản ngân hàng')}
                                     </label>
                                     <input
                                         type="text"
                                         value={customWalletAccNum}
                                         onChange={(e) => setCustomWalletAccNum(e.target.value)}
-                                        placeholder="Số TK ngân hàng (nếu có)"
+                                        placeholder={t('bs.bankAccNumPlaceholder', 'Số TK ngân hàng (nếu có)')}
                                         className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-amber-500"
                                     />
                                 </div>
 
                                 <div>
                                     <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
-                                        Số dư đầu kỳ (trước các giao dịch trong sao kê, VNĐ)
+                                        {t('bs.openingBalanceLabel', 'Số dư đầu kỳ (trước các giao dịch trong sao kê, VNĐ)')}
                                     </label>
                                     <input
                                         type="text"
@@ -1160,13 +1160,13 @@ export const BankStatementModal = () => {
                                         onClick={() => setShowCreateWalletModal(false)}
                                         className="px-3.5 py-1.5 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl font-medium cursor-pointer"
                                     >
-                                        Hủy
+                                        {t('common.cancel', 'Hủy')}
                                     </button>
                                     <button
                                         type="submit"
                                         className="px-4 py-1.5 text-xs bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white rounded-xl font-bold shadow-sm cursor-pointer"
                                     >
-                                        Tạo và liên kết ví ngay
+                                        {t('bs.createAndLink', 'Tạo và liên kết ví ngay')}
                                     </button>
                                 </div>
                             </form>

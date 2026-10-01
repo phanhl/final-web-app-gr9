@@ -205,12 +205,12 @@ export const ReportsView = () => {
 
         {/* Action buttons: Excel, CSV */}
         <div className="flex flex-wrap items-center gap-2">
-          <button onClick={() => exportToCSV(filteredTxs)} className="flex items-center space-x-1.5 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer">
+          <button onClick={() => exportToCSV(filteredTxs, undefined, language)} className="flex items-center space-x-1.5 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer">
             <FileText className="w-4 h-4 text-emerald-600"/>
             <span>{t('rep.exportCSV', 'Xuất CSV')}</span>
           </button>
 
-          <button onClick={() => exportToExcel(filteredTxs, budgets, wallets, financialSummary, undefined, currentMonth)} className="flex items-center space-x-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer">
+          <button onClick={() => exportToExcel(filteredTxs, budgets, wallets, financialSummary, undefined, currentMonth, language)} className="flex items-center space-x-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer">
             <FileSpreadsheet className="w-4 h-4"/>
             <span>{t('rep.exportExcel', 'Xuất Excel (.xlsx)')}</span>
           </button>

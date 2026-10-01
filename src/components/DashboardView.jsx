@@ -265,7 +265,7 @@ export const DashboardView = () => {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                    {tx.type === 'TRANSFER' ? `${t('tx.transferTo', 'Chuyển sang')} ${tx.toWalletName || t('nav.wallets', 'Ví')}` : tCategory(tx.categoryName || 'Khác')}
+                    {tx.type === 'TRANSFER' ? `${t('tx.transferTo', 'Chuyển sang')} ${tWalletName(tx.toWalletName) || t('nav.wallets', 'Ví')}` : tCategory(tx.categoryName || 'Khác')}
                   </p>
                   {tx.receiptImage && (<span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-1.5 py-0.5 rounded">{t('bills.title', 'Hóa đơn')}</span>)}
                 </div>

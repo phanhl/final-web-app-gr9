@@ -8,7 +8,7 @@ import { ReceiptModal } from './ReceiptModal';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, } from 'recharts';
 const pieChartColors = ['#f97316', '#ec4899', '#8b5cf6', '#0ea5e9', '#eab308', '#10b981', '#64748b', '#ef4444'];
 export const TransactionsView = () => {
-    const { transactions, wallets, categories, budgets, financialSummary, currentMonth, availableMonths, openQuickAdd, openStatementModal, deleteTransaction, navTargetCategoryId, setNavTargetCategoryId, language, t, tCategory, tWalletType, tTag, tWalletName, } = useApp();
+    const { transactions, wallets, categories, budgets, financialSummary, currentMonth, availableMonths, openQuickAdd, openStatementModal, deleteTransaction, navTargetCategoryId, setNavTargetCategoryId, language, t, tCategory, tWalletType, tTag, tWalletName, tNote, } = useApp();
     const [showCharts, setShowCharts] = useState(true);
     // Search & Filters State
     const [searchTerm, setSearchTerm] = useState('');
@@ -331,17 +331,17 @@ export const TransactionsView = () => {
             <span>{showCharts ? t('tx.hideCharts', 'Ẩn biểu đồ') : t('tx.showCharts', 'Xem biểu đồ')}</span>
           </button>
 
-          <button onClick={() => exportToCSV(filteredTransactions)} className="flex items-center space-x-1.5 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold shadow-sm transition-colors cursor-pointer" title="CSV">
+          <button onClick={() => exportToCSV(filteredTransactions, undefined, language)} className="flex items-center space-x-1.5 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold shadow-sm transition-colors cursor-pointer" title="CSV">
             <FileSpreadsheet className="w-4 h-4 text-emerald-600"/>
             <span>{t('tx.exportCSV', 'Xuất CSV')}</span>
           </button>
 
-          <button onClick={() => exportToExcel(filteredTransactions, budgets, wallets, financialSummary, undefined, currentMonth)} className="flex items-center space-x-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors cursor-pointer" title="Excel">
+          <button onClick={() => exportToExcel(filteredTransactions, budgets, wallets, financialSummary, undefined, currentMonth, language)} className="flex items-center space-x-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors cursor-pointer" title="Excel">
             <FileSpreadsheet className="w-4 h-4"/>
             <span>{t('tx.exportExcel', 'Xuất Excel (.xlsx)')}</span>
           </button>
 
-          <button onClick={() => openStatementModal()} className="flex items-center space-x-1.5 px-3.5 py-2 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-300 dark:border-emerald-700/60 text-emerald-700 dark:text-emerald-300 rounded-xl text-xs font-bold shadow-sm transition-colors cursor-pointer" title="Tải file sao kê ngân hàng Excel / CSV để cộng trừ tự động">
+          <button onClick={() => openStatementModal()} className="flex items-center space-x-1.5 px-3.5 py-2 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-300 dark:border-emerald-700/60 text-emerald-700 dark:text-emerald-300 rounded-xl text-xs font-bold shadow-sm transition-colors cursor-pointer" title={t('tx.importStatementTitle', 'Tải file sao kê ngân hàng Excel / CSV để cộng trừ tự động')}>
             <Upload className="w-4 h-4 text-emerald-600 dark:text-emerald-400"/>
             <span>{t('tx.importStatement', 'Tải sao kê lên')}</span>
           </button>
@@ -893,7 +893,7 @@ export const TransactionsView = () => {
                           {tx.note && (<>
                               <span>•</span>
                               <span className="text-slate-600 dark:text-slate-400 italic truncate max-w-xs">
-                                &quot;{tx.note}&quot;
+                                &quot;{tNote(tx.note)}&quot;
                               </span>
                             </>)}
                         </div>
@@ -1017,7 +1017,7 @@ const EditTransactionModal = ({ isOpen, onClose, transaction, }) => {
         if (file) {
             compressImageFile(file)
                 .then(setReceiptImage)
-                .catch((err) => alert(err.message || 'Không đọc được ảnh'));
+                .catch(() => alert(t('common.imageReadError', 'Không đọc được ảnh')));
         }
     };
     const handleTagToggle = (tag) => {
@@ -1106,9 +1106,9 @@ const EditTransactionModal = ({ isOpen, onClose, transaction, }) => {
 
           {/* Explanation if TRANSFER */}
           {type === 'TRANSFER' && (<div className="p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/50 rounded-xl text-xs text-blue-700 dark:text-blue-300">
-              <p className="font-semibold">💡 Khoản tiền màu xanh (Chuyển tiền nội bộ):</p>
+              <p className="font-semibold">💡 {t('tx.blueAmountTitle', 'Khoản tiền màu xanh (Chuyển tiền nội bộ):')}</p>
               <p className="mt-0.5">
-                Đây là giao dịch luân chuyển giữa các ví của bạn. Khoản này hiển thị màu xanh dương vì không làm thay đổi tổng tài sản ròng và không tính vào doanh thu / chi phí sinh hoạt.
+                {t('tx.blueAmountDesc', 'Đây là giao dịch luân chuyển giữa các ví của bạn. Khoản này hiển thị màu xanh dương vì không làm thay đổi tổng tài sản ròng và không tính vào doanh thu / chi phí sinh hoạt.')}
               </p>
             </div>)}
 
