@@ -1,4 +1,3 @@
-import * as XLSX from 'xlsx';
 import { translateCategory, translateWalletName, translateTag, translateNote } from './i18n';
 export function formatCurrency(amount) {
     if (typeof amount !== 'number' || isNaN(amount) || !isFinite(amount)) {
@@ -9,6 +8,11 @@ export function formatCurrency(amount) {
         currency: 'VND',
         maximumFractionDigits: 0,
     }).format(amount);
+}
+/** "+1.000 ₫" / "-1.000 ₫", but a plain "0 ₫" instead of "+0 ₫" / "-0 ₫" */
+export function formatSignedCurrency(amount, sign) {
+    const value = Number(amount) || 0;
+    return value ? `${sign}${formatCurrency(Math.abs(value))}` : formatCurrency(0);
 }
 export function formatNumberWithDots(val) {
     if (val === null || val === undefined || val === '')
@@ -368,6 +372,29 @@ export function calculateBudgetStatuses(budgets, transactions, monthStr = '2026-
         };
     });
 }
+/**
+ * Newest first by transaction date/time (stored as local 'YYYY-MM-DDTHH:mm:ss'; legacy values may carry Z),
+ * then by creation time, so back-dated, edited or imported transactions land where their date says.
+ */
+export function sortTransactionsByDateDesc(transactions) {
+    const time = (value) => {
+        const ms = new Date(value || 0).getTime();
+        return Number.isNaN(ms) ? 0 : ms;
+    };
+    return [...transactions].sort((a, b) => (time(b.date) - time(a.date)) || (time(b.createdAt) - time(a.createdAt)));
+}
+/**
+ * Quote one CSV cell. Text starting with = + - @ (or tab / CR) is prefixed with ' so spreadsheet apps show it
+ * as text instead of running it as a formula: notes can come from bank statements, i.e. from whoever sent the money.
+ */
+export function toCsvCell(val) {
+    if (typeof val === 'number')
+        return `"${val}"`;
+    let str = String(val ?? '');
+    if (/^[=+\-@\t\r]/.test(str))
+        str = `'${str}`;
+    return `"${str.replace(/"/g, '""')}"`;
+}
 export function exportToCSV(transactions, filename = 'bao-cao-giao-dich.csv', lang = 'vi') {
     const L = (vi, en) => (lang === 'en' ? en : vi);
     const tr = (fn, v) => (v ? fn(v, lang) : v);
@@ -384,7 +411,7 @@ export function exportToCSV(transactions, filename = 'bao-cao-giao-dich.csv', la
     ]);
     const csvContent = '\uFEFF' +
         [headers, ...rows]
-            .map((e) => e.map((val) => `"${String(val).replace(/"/g, '""')}"`).join(','))
+            .map((e) => e.map(toCsvCell).join(','))
             .join('\r\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -396,7 +423,9 @@ export function exportToCSV(transactions, filename = 'bao-cao-giao-dich.csv', la
     document.body.removeChild(link);
     setTimeout(() => URL.revokeObjectURL(url), 0);
 }
-export function exportToExcel(transactions, budgets, wallets, summary, filename = 'Bao-Cao-Tai-Chinh-Chi-Tieu.xlsx', monthStr = getLocalDateString().slice(0, 7), lang = 'vi') {
+export async function exportToExcel(transactions, budgets, wallets, summary, filename = 'Bao-Cao-Tai-Chinh-Chi-Tieu.xlsx', monthStr = getLocalDateString().slice(0, 7), lang = 'vi') {
+    // Loaded on demand: SheetJS is large and only needed when exporting
+    const XLSX = await import('xlsx');
     const L = (vi, en) => (lang === 'en' ? en : vi);
     const tr = (fn, v) => (v ? fn(v, lang) : v);
     const wb = XLSX.utils.book_new();
@@ -620,10 +649,17 @@ export function sumWalletTxEffect(wallet, transactions) {
 }
 
 /**
- * Recalculate wallet balances = initial balance + cumulative transaction effect
+ * Recalculate wallet balances = initial balance + cumulative transaction effect.
+ * Legacy wallets without initialBalance only know their final balance, so the opening balance is derived
+ * as balance - history (using the final balance as the opening one would count every transaction twice).
  */
 export function recomputeWalletBalances(wallets, transactions) {
-    return wallets.map((w) => ({ ...w, balance: (Number(w.initialBalance) || 0) + sumWalletTxEffect(w, transactions) }));
+    return wallets.map((w) => {
+        const effect = sumWalletTxEffect(w, transactions);
+        const hasInitial = w.initialBalance !== undefined && w.initialBalance !== null && w.initialBalance !== '';
+        const initialBalance = hasInitial ? Number(w.initialBalance) || 0 : (Number(w.balance) || 0) - effect;
+        return { ...w, initialBalance, balance: initialBalance + effect };
+    });
 }
 
 /**

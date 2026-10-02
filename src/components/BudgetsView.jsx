@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Plus, AlertTriangle, ShieldAlert, CheckCircle2, Edit2, Trash2, ArrowUpRight, ArrowDownLeft, Calendar, Sparkles, DollarSign, X, Target, ReceiptText, Save, Check, Bell, BellOff, } from 'lucide-react';
-import { formatCurrency, calculateBudgetStatuses, formatNumberWithDots, formatMonthLabel } from '@/lib/utils';
+import { formatCurrency, formatSignedCurrency, calculateBudgetStatuses, formatNumberWithDots, formatMonthLabel } from '@/lib/utils';
 import { IconHelper } from './IconHelper';
 import confetti from 'canvas-confetti';
 export const BudgetsView = () => {
@@ -91,7 +91,7 @@ export const BudgetsView = () => {
         e.preventDefault();
         const targetNum = Number(goalTarget);
         if (!goalName.trim() || !targetNum || targetNum <= 0) {
-            alert(t('Vui lòng nhập tên mục tiêu và số tiền', 'Vui lòng nhập tên mục tiêu và số tiền'));
+            alert(language === 'en' ? 'Please enter the goal name and amount' : 'Vui lòng nhập tên mục tiêu và số tiền');
             return;
         }
         if (editingGoal) {
@@ -122,7 +122,7 @@ export const BudgetsView = () => {
             return;
         const amountNum = Number(depositAmount);
         if (!amountNum || amountNum <= 0) {
-            alert(t('Vui lòng nhập số tiền hợp lệ', 'Vui lòng nhập số tiền hợp lệ'));
+            alert(language === 'en' ? 'Please enter a valid amount' : 'Vui lòng nhập số tiền hợp lệ');
             return;
         }
         if (isDepositMode) {
@@ -162,7 +162,8 @@ export const BudgetsView = () => {
         <div className="flex items-center space-x-2">
           {activeSubTab === 'CATEGORY_BUDGETS' && (<button onClick={() => {
                 setEditingBudget(null);
-                setBudgetCategoryId(categories[0]?.id || '');
+                // Only expense categories are listed in the form: never default to an income category
+                setBudgetCategoryId(categories.find((c) => c.type === 'EXPENSE')?.id || '');
                 setBudgetAmount('');
                 setBudgetModalOpen(true);
             }} className="flex items-center space-x-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors">
@@ -231,6 +232,12 @@ export const BudgetsView = () => {
               </p>
             </div>
           </div>
+
+          {budgetStatuses.length === 0 && (<div className="p-8 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 text-center text-sm text-slate-500 dark:text-slate-400">
+              {t('budget.emptyBudgets', language === 'en'
+                ? 'No category limits yet. Use "Add category limit" to cap spending for food, shopping...'
+                : 'Chưa có hạn mức nào. Bấm "Thêm hạn mức danh mục" để giới hạn chi tiêu cho ăn uống, mua sắm...')}
+            </div>)}
 
           {/* Category Budgets Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -590,21 +597,21 @@ export const BudgetsView = () => {
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
                     <span className="text-slate-500">{t('budget.totalIncomeMonth', 'Tổng thu nhập tháng:')}</span>
-                    <span className="font-bold text-slate-800 dark:text-white">+{formatCurrency(monthlyIncome)}</span>
+                    <span className="font-bold text-slate-800 dark:text-white">{formatSignedCurrency(monthlyIncome, '+')}</span>
                   </div>
                   <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
                     <span className="text-slate-500">{t('budget.minusBills', 'Trừ Hóa đơn cố định tháng (tiền nhà, điện nước, internet):')}</span>
-                    <span className="font-bold text-rose-600">-{formatCurrency(totalMonthlyBills)}</span>
+                    <span className="font-bold text-rose-600">{formatSignedCurrency(totalMonthlyBills, '-')}</span>
                   </div>
                   <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
                     <span className="text-slate-500">{t('budget.minusSavings', 'Trừ Mục tiêu tích lũy:')} ({planner.savingsPercent}%):</span>
-                    <span className="font-bold text-blue-600">-{formatCurrency(savingsBudget)}</span>
+                    <span className="font-bold text-blue-600">{formatSignedCurrency(savingsBudget, '-')}</span>
                   </div>
                   <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
                     <span className="text-slate-500">
                       {t('budget.minusEmergency', 'Trừ Khoản trích lập dự phòng khẩn cấp & rủi ro:')} ({emergencyPercent}%):
                     </span>
-                    <span className="font-bold text-amber-600">-{formatCurrency(emergencyBudget)}</span>
+                    <span className="font-bold text-amber-600">{formatSignedCurrency(emergencyBudget, '-')}</span>
                   </div>
                 </div>
 
@@ -651,6 +658,11 @@ export const BudgetsView = () => {
       {/* SUB-TAB 3: SAVINGS POTS & ACCUMULATION GOALS (SAVINGS GOALS) */}
       {/* ========================================================================= */}
       {activeSubTab === 'SAVINGS_GOALS' && (<div className="space-y-6">
+          {goals.length === 0 && (<div className="p-8 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 text-center text-sm text-slate-500 dark:text-slate-400">
+              {t('budget.emptyGoals', language === 'en'
+                ? 'No savings goals yet. Create one to set money aside for a laptop, a trip or an emergency fund.'
+                : 'Chưa có mục tiêu tích lũy nào. Tạo mục tiêu để để dành tiền mua laptop, đi du lịch hay quỹ khẩn cấp.')}
+            </div>)}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {goals.map((g) => {
                 const percentage = g.targetAmount > 0 ? Math.min(100, Math.round((g.currentAmount / g.targetAmount) * 100)) : 0;

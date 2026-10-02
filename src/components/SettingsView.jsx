@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useApp } from '@/context/AppContext';
-import { KeyRound, Sun, Moon, Monitor, Check, Palette, Globe, ShieldCheck, ShieldAlert, Lock, Unlock, Download, Upload, Database, Server, CheckCircle2, AlertCircle } from 'lucide-react';
+import { KeyRound, Sun, Moon, Monitor, Check, Palette, Globe, ShieldCheck, ShieldAlert, Lock, Unlock, Download, Upload, Database, Server, CheckCircle2, AlertCircle, UserCog, Trash2 } from 'lucide-react';
 import { LANGUAGES } from '@/lib/i18n';
 
 export const SettingsView = () => {
@@ -12,8 +12,22 @@ export const SettingsView = () => {
         exportDatabaseJSON, importDatabaseJSON,
         listSecureBackups, createSecureBackup,
         restoreSecureBackup, deleteSecureBackup,
-        showConfirm
+        showConfirm,
+        currentUser, changePassword, deleteAccount,
+        googleAuth, startGoogleAuth, unlinkGoogle
     } = useApp();
+    const isEn = language === 'en';
+    // Accounts created with Google have no password until the user sets one
+    const hasPassword = currentUser?.hasPassword !== false;
+    const [googleMessage, setGoogleMessage] = useState('');
+
+    const [currentPassword, setCurrentPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmNewPassword, setConfirmNewPassword] = useState('');
+    const [passwordMessage, setPasswordMessage] = useState({ text: '', type: '' });
+    const [isChangingPassword, setIsChangingPassword] = useState(false);
+    const [deletePassword, setDeletePassword] = useState('');
+    const [deleteMessage, setDeleteMessage] = useState('');
 
     const [pinCodeInput, setPinCodeInput] = useState('');
     const [pinMessage, setPinMessage] = useState({ text: '', type: '' });
@@ -189,6 +203,70 @@ export const SettingsView = () => {
         } else {
             setPinMessage({ text: res.error || t('common.updateFailed', 'Cập nhật thất bại'), type: 'error' });
         }
+    };
+
+    const handleChangePassword = async (e) => {
+        e.preventDefault();
+        if (newPassword.length < 8) {
+            setPasswordMessage({ text: isEn ? 'New password must be at least 8 characters.' : 'Mật khẩu mới phải có ít nhất 8 ký tự.', type: 'error' });
+            return;
+        }
+        if (newPassword !== confirmNewPassword) {
+            setPasswordMessage({ text: isEn ? 'Password confirmation does not match.' : 'Mật khẩu xác nhận không khớp.', type: 'error' });
+            return;
+        }
+        setIsChangingPassword(true);
+        const res = await changePassword(currentPassword, newPassword);
+        setIsChangingPassword(false);
+        if (res.success) {
+            setCurrentPassword('');
+            setNewPassword('');
+            setConfirmNewPassword('');
+            setPasswordMessage({ text: isEn ? 'Password changed. Other devices have been signed out.' : 'Đã đổi mật khẩu. Các thiết bị khác đã bị đăng xuất.', type: 'success' });
+        } else {
+            setPasswordMessage({ text: res.error, type: 'error' });
+        }
+    };
+
+    const handleUnlinkGoogle = () => {
+        setGoogleMessage('');
+        showConfirm({
+            title: isEn ? 'Unlink Google' : 'Hủy liên kết Google',
+            message: isEn
+                ? `Stop signing in with ${currentUser?.googleEmail || 'this Google account'}? You will sign in with your password.`
+                : `Ngừng đăng nhập bằng ${currentUser?.googleEmail || 'tài khoản Google này'}? Bạn sẽ đăng nhập bằng mật khẩu.`,
+            confirmText: isEn ? 'Unlink' : 'Hủy liên kết',
+            cancelText: isEn ? 'Cancel' : 'Hủy',
+            variant: 'danger',
+            onConfirm: async () => {
+                const res = await unlinkGoogle();
+                setGoogleMessage(res.success ? (isEn ? 'Google account unlinked.' : 'Đã hủy liên kết Google.') : (res.error || ''));
+            },
+        });
+    };
+
+    const handleDeleteAccount = (e) => {
+        e.preventDefault();
+        setDeleteMessage('');
+        if (!deletePassword) {
+            setDeleteMessage(isEn ? 'Enter your password to confirm.' : 'Nhập mật khẩu để xác nhận.');
+            return;
+        }
+        showConfirm({
+            title: isEn ? 'Delete account' : 'Xóa tài khoản',
+            message: isEn
+                ? 'Permanently delete this account, all wallets, transactions and encrypted backups on the server? This cannot be undone. Export a JSON backup first if you want to keep your data.'
+                : 'Xóa vĩnh viễn tài khoản này cùng toàn bộ ví, giao dịch và bản sao lưu mã hóa trên máy chủ? Không thể hoàn tác. Hãy xuất file sao lưu JSON trước nếu muốn giữ dữ liệu.',
+            confirmText: isEn ? 'Delete permanently' : 'Xóa vĩnh viễn',
+            cancelText: isEn ? 'Cancel' : 'Hủy',
+            variant: 'danger',
+            onConfirm: async () => {
+                const res = await deleteAccount(deletePassword);
+                if (!res.success) {
+                    setDeleteMessage(res.error);
+                }
+            },
+        });
     };
 
     const handleFileImport = (e) => {
@@ -461,6 +539,123 @@ export const SettingsView = () => {
             </button>
           </div>
         </form>
+      </div>
+
+      {/* 4b. ACCOUNT: change password / delete account */}
+      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+        <div className="flex items-center space-x-2 pb-3 border-b border-slate-100 dark:border-slate-800">
+          <UserCog className="w-5 h-5 text-indigo-500"/>
+          <h3 className="text-base font-bold text-slate-800 dark:text-white">
+            {isEn ? 'Account' : 'Tài Khoản'}
+          </h3>
+          {currentUser?.username && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 font-semibold">
+              {currentUser.username}
+            </span>
+          )}
+        </div>
+
+        <form onSubmit={handleChangePassword} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-3">
+          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+            {hasPassword ? (isEn ? 'Change password' : 'Đổi mật khẩu') : (isEn ? 'Set a password' : 'Đặt mật khẩu')}
+          </h4>
+          {!hasPassword && (
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              {isEn
+                ? 'This account signs in with Google. Add a password to also sign in with your username.'
+                : 'Tài khoản này đăng nhập bằng Google. Đặt mật khẩu để có thể đăng nhập bằng tên đăng nhập.'}
+            </p>
+          )}
+          {/* Hidden username field lets password managers associate the new password with the right account */}
+          <input type="text" name="username" autoComplete="username" value={currentUser?.username || ''} readOnly hidden />
+          <div className={`grid grid-cols-1 gap-3 ${hasPassword ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
+            {hasPassword && <div>
+              <label htmlFor="current-password" className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                {isEn ? 'Current password:' : 'Mật khẩu hiện tại:'}
+              </label>
+              <input id="current-password" type="password" autoComplete="current-password" required value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)}
+                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold dark:text-white"/>
+            </div>}
+            <div>
+              <label htmlFor="new-password" className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                {isEn ? 'New password (8+ characters):' : 'Mật khẩu mới (từ 8 ký tự):'}
+              </label>
+              <input id="new-password" type="password" autoComplete="new-password" required minLength={8} value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold dark:text-white"/>
+            </div>
+            <div>
+              <label htmlFor="confirm-new-password" className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                {isEn ? 'Confirm new password:' : 'Xác nhận mật khẩu mới:'}
+              </label>
+              <input id="confirm-new-password" type="password" autoComplete="new-password" required minLength={8} value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)}
+                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold dark:text-white"/>
+            </div>
+          </div>
+          <div className="flex items-center justify-between gap-3 pt-1">
+            <span className={`text-[11px] font-semibold ${passwordMessage.type === 'error' ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+              {passwordMessage.text}
+            </span>
+            <button type="submit" disabled={isChangingPassword}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-all shadow-sm shrink-0">
+              {hasPassword ? (isEn ? 'Change password' : 'Đổi mật khẩu') : (isEn ? 'Set password' : 'Đặt mật khẩu')}
+            </button>
+          </div>
+        </form>
+
+        {/* Google account link */}
+        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-2">
+          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+            {isEn ? 'Google account' : 'Tài khoản Google'}
+          </h4>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs text-slate-600 dark:text-slate-300 min-w-0 break-all">
+              {currentUser?.googleLinked
+                ? <>{isEn ? 'Linked to' : 'Đã liên kết với'} <strong>{currentUser.googleEmail || 'Google'}</strong></>
+                : googleAuth?.enabled
+                  ? (isEn ? 'Not linked. Link it to sign in with one click.' : 'Chưa liên kết. Liên kết để đăng nhập bằng Google chỉ với một chạm.')
+                  : (isEn ? 'Google sign-in is not configured on this server (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET).' : 'Máy chủ chưa cấu hình đăng nhập Google (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET).')}
+            </p>
+            {currentUser?.googleLinked ? (
+              <button type="button" onClick={handleUnlinkGoogle} className="px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl shrink-0">
+                {isEn ? 'Unlink' : 'Hủy liên kết'}
+              </button>
+            ) : googleAuth?.enabled && (
+              <button type="button" onClick={() => startGoogleAuth('link')} className="px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 text-slate-800 dark:text-white text-xs font-bold rounded-xl shrink-0">
+                {isEn ? 'Link Google account' : 'Liên kết Google'}
+              </button>
+            )}
+          </div>
+          {googleMessage && <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">{googleMessage}</p>}
+        </div>
+
+        {currentUser?.role === 'host' ? (
+          <p className="text-[11px] text-slate-500 dark:text-slate-400">
+            {isEn
+              ? 'Forgot the host password? On the server machine run: npm run reset-password -- admin'
+              : 'Quên mật khẩu host? Trên máy chủ chạy: npm run reset-password -- admin'}
+          </p>
+        ) : (
+          <form onSubmit={handleDeleteAccount} className="p-4 rounded-2xl bg-rose-50/60 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/50 space-y-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
+              <Trash2 className="w-3.5 h-3.5"/>
+              {isEn ? 'Delete account' : 'Xóa tài khoản'}
+            </h4>
+            <p className="text-[11px] text-slate-600 dark:text-slate-400">
+              {isEn
+                ? 'Removes your account and all of its data from the server. This cannot be undone.'
+                : 'Xóa tài khoản và toàn bộ dữ liệu của bạn khỏi máy chủ. Không thể hoàn tác.'}
+              {!hasPassword && (isEn ? ' Set a password above first to confirm the deletion.' : ' Hãy đặt mật khẩu ở trên trước để xác nhận việc xóa.')}
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <input type="password" autoComplete="current-password" aria-label={isEn ? 'Password' : 'Mật khẩu'} placeholder={isEn ? 'Your password' : 'Mật khẩu của bạn'} value={deletePassword} onChange={(e) => setDeletePassword(e.target.value)}
+                className="flex-1 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold dark:text-white"/>
+              <button type="submit" className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm shrink-0">
+                {isEn ? 'Delete my account' : 'Xóa tài khoản của tôi'}
+              </button>
+            </div>
+            {deleteMessage && <p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400">{deleteMessage}</p>}
+          </form>
+        )}
       </div>
 
       {/* 5. DATA PERSISTENCE & DEPLOYMENT GUIDE (FIX ISSUE 15) */}

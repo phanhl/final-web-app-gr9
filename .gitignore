@@ -16,10 +16,11 @@ yarn-debug.log*
 yarn-error.log*
 *.log
 
-# Environment
+# Environment (.env.example is the documented template)
 .env
 .env.local
 .env.*.local
+!.env.example
 
 # OS
 .DS_Store
@@ -41,6 +42,7 @@ data/users/
 data/users.json
 data/.session_secret
 data/.backup_key
+data/.host_setup_code
 data/secure-backups/
 data/database.json.*
 !data/database.template.json
@@ -50,3 +52,6 @@ data/database.json.*
 .ngrok.pid
 .cloudflared.pid
 current_url.txt
+logs_prod.log
+ngrok.log
+tunnel.log

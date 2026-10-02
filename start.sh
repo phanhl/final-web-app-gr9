@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Script khoi chay FinTrack Pro va cac duong truyen co dinh cho dien thoai
-# Bien moi truong:
-#   APP_PASSWORD (HTTP Basic Auth, khuyen dung khi mo tunnel), APP_USER (mac dinh: admin)
-#   APP_PIN: ma PIN 4-8 so khoa /api/storage (thay the APP_PASSWORD neu chi muon dung PIN)
-#   Phai dat it nhat 1 trong 2 bien tren thi moi mo tunnel ngrok/cloudflared
+# Bien moi truong (co the dat trong file .env, xem .env.example):
+#   APP_PASSWORD: mat khau ban dau cho tai khoan host "admin" (chi dung khi data/users.json chua ton tai)
+#     Neu khong dat, lan dang nhap admin dau tien can MA THIET LAP in ra ben duoi (file data/.host_setup_code)
+#   ALLOW_REGISTRATION=false: tat dang ky tai khoan khach
 #   NGROK_BIN / CLOUDFLARED_BIN: duong dan tuy chinh (mac dinh tim trong PATH va ~/.local/bin)
 #   NGROK_DOMAIN: domain co dinh cua ngrok (tuy chon)
 #   NO_TUNNEL=1: chi chay local, khong mo tunnel
@@ -32,7 +32,16 @@ fi
 nohup setsid npx next start -H 0.0.0.0 -p "$PORT" > logs_prod.log 2>&1 &
 echo $! > .server.pid
 
+# Cho server san sang (goi /api/auth/me cung tao ma thiet lap host neu admin chua co mat khau)
+for _ in $(seq 1 30); do
+  curl -fs "http://localhost:$PORT/api/auth/me" >/dev/null 2>&1 && break
+  sleep 1
+done
+SETUP_CODE=""
+[ -f data/.host_setup_code ] && SETUP_CODE="$(cat data/.host_setup_code)"
+
 if [ "${NO_TUNNEL:-0}" = "1" ]; then
+  [ -n "$SETUP_CODE" ] && echo "Ma thiet lap mat khau host (admin): $SETUP_CODE"
   echo "FinTrack Pro dang chay tai http://localhost:$PORT (khong mo tunnel)"
   exit 0
 fi
@@ -65,7 +74,9 @@ echo ""
 echo "👉 LINK 1 (DANH CHO HOST / BAN):"
 echo "   http://localhost:$PORT"
 echo "   * Dang nhap bang tai khoan: admin"
-echo "   * Neu la lan dau: tu dat mat khau ngay tren form dang nhap"
+if [ -n "$SETUP_CODE" ]; then
+  echo "   * Lan dau: dat mat khau tren form dang nhap kem MA THIET LAP: $SETUP_CODE"
+fi
 echo ""
 if [ -n "$ONLINE_URL" ]; then
   echo "👉 LINK 2 (DANH CHO KHACH / TRUY CAP ONLINE):"

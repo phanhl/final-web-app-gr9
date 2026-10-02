@@ -22,7 +22,8 @@ export const Sidebar = () => {
     activeTab,
     setActiveTab,
     isSidebarOpen,
-    setIsSidebarOpen,
+    isMobileNavOpen,
+    setIsMobileNavOpen,
     toggleSidebar,
     openQuickAdd,
     budgets,
@@ -113,11 +114,17 @@ export const Sidebar = () => {
 
   const handleSelectTab = (id) => {
     setActiveTab(id);
-    // On mobile screens, automatically close the sidebar after selection
-    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-      setIsSidebarOpen(false);
-    }
+    // The mobile drawer closes after a choice; the desktop dock stays as the user left it
+    setIsMobileNavOpen(false);
   };
+
+  // Escape closes the mobile drawer
+  React.useEffect(() => {
+    if (!isMobileNavOpen) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape') setIsMobileNavOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isMobileNavOpen, setIsMobileNavOpen]);
 
   const sidebarContent = (
     <div className="flex flex-col h-full bg-white dark:bg-slate-900 select-none">
@@ -153,9 +160,7 @@ export const Sidebar = () => {
           type="button"
           onClick={() => {
             openQuickAdd('EXPENSE');
-            if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-              setIsSidebarOpen(false);
-            }
+            setIsMobileNavOpen(false);
           }}
           className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
         >
@@ -233,12 +238,12 @@ export const Sidebar = () => {
   return (
     <>
       {/* Mobile Drawer (Slide-Over) */}
-      {isSidebarOpen && (
-        <div className="lg:hidden fixed inset-0 z-50 flex">
+      {isMobileNavOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 flex" role="dialog" aria-modal="true">
           {/* Backdrop overlay */}
           <div
             className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
-            onClick={() => setIsSidebarOpen(false)}
+            onClick={() => setIsMobileNavOpen(false)}
           />
 
           {/* Drawer panel */}

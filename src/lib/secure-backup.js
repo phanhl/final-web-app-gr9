@@ -39,7 +39,7 @@ function getBackupKey() {
     const keyFile = path.join(dataDir, '.backup_key');
     try {
         if (!fs.existsSync(dataDir)) {
-            fs.mkdirSync(dataDir, { recursive: true });
+            fs.mkdirSync(dataDir, { recursive: true, mode: 0o700 });
         }
         if (fs.existsSync(keyFile)) {
             const saved = fs.readFileSync(keyFile, 'utf8').trim();
@@ -52,9 +52,10 @@ function getBackupKey() {
         fs.writeFileSync(keyFile, newKey, { mode: 0o600 });
         backupKeyCache = Buffer.from(newKey, 'hex');
         return backupKeyCache;
-    } catch {
-        backupKeyCache = crypto.createHash('sha256').update('fintrack_pro_secure_backup_key_2026').digest();
-        return backupKeyCache;
+    } catch (err) {
+        // Never fall back to a key derived from a constant in the source code: anyone reading the repo could decrypt backups
+        console.error('Unable to read/create data/.backup_key:', err);
+        throw new Error('Không tạo được khóa mã hóa backup (data/.backup_key). Hãy kiểm tra quyền ghi thư mục data/ hoặc đặt APP_BACKUP_KEY.');
     }
 }
 

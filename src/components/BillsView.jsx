@@ -3,8 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { CalendarCheck, Plus, CheckCircle2, Edit2, Trash2, Check, RotateCcw, X, Bell, } from 'lucide-react';
 import { formatCurrency, formatNumberWithDots, getLocalDateString, formatDisplayDate, isBillPaidForCycle, getBillDueInfo } from '@/lib/utils';
+import { DatePreview } from './DatePreview';
 export const BillsView = () => {
-    const { bills, wallets, categories, addBill, editBill, deleteBill, payBill, unpayBill, findBillPaymentTx, navTargetBillId, setNavTargetBillId, billToAutoPayId, setBillToAutoPayId, t, tCategory, tWalletType, tBillName, tBillNote, tWalletName, language, showConfirm, } = useApp();
+    const { bills, wallets, categories, addBill, editBill, deleteBill, payBill, unpayBill, findBillPaymentTx, editTransaction, navTargetBillId, setNavTargetBillId, billToAutoPayId, setBillToAutoPayId, t, tCategory, tWalletType, tBillName, tBillNote, tWalletName, language, showConfirm, } = useApp();
     const [billModalOpen, setBillModalOpen] = useState(false);
     const [editingBill, setEditingBill] = useState(null);
     // Form State
@@ -45,12 +46,17 @@ export const BillsView = () => {
             }
             setBillToAutoPayId(null);
         }
+        // getDefaultPayWalletId only reads bills/wallets, which are already dependencies
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [billToAutoPayId, bills, wallets, setBillToAutoPayId]);
     // Default payment wallet: wallet attached to the bill, or first asset wallet
     const getDefaultPayWalletId = (bill) => {
         if (bill?.walletId && wallets.some((w) => w.id === bill.walletId))
             return bill.walletId;
-        return (wallets.find((w) => w.type === 'CASH' || w.type === 'BANK') || wallets[0])?.id || '';
+        // Prefer a cash/bank wallet that can actually cover the bill over an empty one
+        const assetWallets = wallets.filter((w) => w.type === 'CASH' || w.type === 'BANK');
+        const amount = Number(bill?.amount) || 0;
+        return (assetWallets.find((w) => (Number(w.balance) || 0) >= amount) || assetWallets[0] || wallets[0])?.id || '';
     };
     // Current date & day in month
     const [currentDateInfo, setCurrentDateInfo] = useState(() => {
@@ -85,7 +91,7 @@ export const BillsView = () => {
         const amountNum = Number(billAmount);
         const dueDayNum = Number(billDueDay);
         if (!billName.trim() || !amountNum || amountNum <= 0) {
-            alert(t('Vui lòng nhập đầy đủ tên và số tiền hóa đơn', 'Vui lòng nhập đầy đủ tên và số tiền hóa đơn'));
+            alert(language === 'en' ? 'Please enter the bill name and amount' : 'Vui lòng nhập đầy đủ tên và số tiền hóa đơn');
             return;
         }
         const cat = categories.find((c) => c.id === billCategory);
@@ -103,11 +109,22 @@ export const BillsView = () => {
         };
         // PAID status is only set by payBill (after expense transaction is recorded successfully),
         // never written directly from form to avoid marked as "paid" without wallet deduction.
+        if (wantsPaid && billLastPaidDate && billLastPaidDate > getLocalDateString()) {
+            alert(t('tx.noFutureDate', 'Không thể đặt ngày giao dịch trong tương lai (chưa đến ngày)! Vui lòng chọn ngày hôm nay hoặc trước đó.'));
+            return;
+        }
         let savedBill;
         if (editingBill) {
             savedBill = { ...editingBill, ...fields };
-            if (wasAlreadyPaid && wantsPaid && billLastPaidDate) {
+            if (wasAlreadyPaid && wantsPaid && billLastPaidDate && billLastPaidDate !== editingBill.lastPaidDate) {
                 fields.lastPaidDate = billLastPaidDate;
+                // Keep the payment transaction on the same day as the bill says it was paid (time of day unchanged)
+                const paymentTx = findBillPaymentTx(editingBill);
+                if (paymentTx) {
+                    const time = String(paymentTx.date || '').slice(10) || 'T12:00:00';
+                    if (!editTransaction(paymentTx.id, { date: `${billLastPaidDate}${time}` }))
+                        return;
+                }
             }
             editBill(editingBill.id, fields);
             if (wasAlreadyPaid && !wantsPaid) {
@@ -148,6 +165,16 @@ export const BillsView = () => {
             onConfirm: () => unpayBill(bill.id, true),
         });
     };
+    // A pay date in an earlier month/quarter/year settles that earlier cycle, not the current one
+    const isPreviousCycleDate = (bill, dateStr) => Boolean(bill && dateStr)
+        && !isBillPaidForCycle({ ...bill, status: 'PAID', lastPaidDate: dateStr }, getLocalDateString());
+    const previousCycleHint = (
+      <span className="text-[11px] text-amber-600 dark:text-amber-400 mt-1 block font-semibold">
+        {language === 'en'
+            ? 'This date belongs to an earlier billing cycle: the current cycle will still show as unpaid.'
+            : 'Ngày này thuộc kỳ trước: hóa đơn của kỳ hiện tại sẽ vẫn hiển thị là chưa thanh toán.'}
+      </span>
+    );
     const handleConfirmPay = () => {
         if (!billToPay)
             return;
@@ -340,7 +367,7 @@ export const BillsView = () => {
                     setBillLastPaidDate(bill.lastPaidDate || getLocalDateString());
                     setBillPayWalletId(wallets.some((w) => w.id === bill.walletId) ? bill.walletId : (wallets[0]?.id || ''));
                     setBillModalOpen(true);
-                }} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg transition-colors">
+                }} title={t('common.edit', 'Chỉnh sửa')} aria-label={t('common.edit', 'Chỉnh sửa')} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg transition-colors">
                       <Edit2 className="w-3.5 h-3.5"/>
                     </button>
                     <button onClick={() => {
@@ -432,7 +459,6 @@ export const BillsView = () => {
                     {t('bill.frequency', 'Tần suất lặp lại')}
                   </label>
                   <select value={billFrequency} 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onChange={(e) => setBillFrequency(e.target.value)} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm dark:text-white">
                     <option value="MONTHLY">{t('bill.frequencyMonthly', 'Hàng tháng')}</option>
                     <option value="QUARTERLY">{t('bill.frequencyQuarterly', 'Hàng quý (3 tháng)')}</option>
@@ -483,7 +509,9 @@ export const BillsView = () => {
                       <label className="block text-[11px] font-medium text-slate-500 mb-1">
                         {t('bill.paidDateOptional', 'Ngày đã thanh toán (có thể điều chỉnh tùy ý):')}
                       </label>
-                      <input type="date" value={billLastPaidDate} onChange={(e) => setBillLastPaidDate(e.target.value)} className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-semibold dark:text-white"/>
+                      <input type="date" max={getLocalDateString()} value={billLastPaidDate} onChange={(e) => setBillLastPaidDate(e.target.value)} className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-semibold dark:text-white"/>
+                      <DatePreview value={billLastPaidDate} language={language}/>
+                      {isPreviousCycleDate({ frequency: billFrequency }, billLastPaidDate) && previousCycleHint}
                     </div>
                   </div>)}
               </div>
@@ -560,10 +588,12 @@ export const BillsView = () => {
                 <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
                   {t('bill.actualPayDate', 'Ngày thanh toán thực tế:')}
                 </label>
-                <input type="date" value={payDate} onChange={(e) => setPayDate(e.target.value)} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold dark:text-white"/>
+                <input type="date" max={getLocalDateString()} value={payDate} onChange={(e) => setPayDate(e.target.value)} className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold dark:text-white"/>
                 <span className="text-[11px] text-slate-400 mt-1 block">
                   {t('bill.actualPayDateNote', 'Mặc định là ngày hôm nay. Bạn có thể tùy chỉnh ngày nếu đã đóng trước đó.')}
                 </span>
+                <DatePreview value={payDate} language={language}/>
+                {isPreviousCycleDate(billToPay, payDate) && previousCycleHint}
               </div>
 
               <p className="text-xs text-slate-500 dark:text-slate-400">

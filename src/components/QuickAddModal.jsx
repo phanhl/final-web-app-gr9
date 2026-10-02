@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { X, Upload, Plus, AlertTriangle, FileSpreadsheet, Check } from 'lucide-react';
 import { IconHelper } from './IconHelper';
+import { DatePreview } from './DatePreview';
 import {
   formatCurrency,
   checkWalletSufficientFunds,
@@ -452,6 +453,7 @@ export const QuickAddModal = () => {
                 onChange={(e) => setDate(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
               />
+              <DatePreview value={date} language={language} />
             </div>
 
             <div>

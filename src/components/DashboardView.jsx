@@ -1,8 +1,8 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Wallet, ArrowUpRight, ArrowDownLeft, ArrowRightLeft, ChevronRight, ChevronLeft, Calendar, AlertTriangle, PiggyBank, Eye, Sparkles, X, } from 'lucide-react';
-import { formatCurrency, formatDate, calculateBudgetStatuses, formatMonthLabel } from '@/lib/utils';
+import { formatCurrency, formatDate, calculateBudgetStatuses, formatMonthLabel, sortTransactionsByDateDesc } from '@/lib/utils';
 import { ReceiptModal } from './ReceiptModal';
 export const DashboardView = () => {
     const { financialSummary, transactions, budgets, bills, currentMonth, setCurrentMonth, availableMonths, openQuickAdd, setActiveTab, t, tCategory, tWalletType, tWalletName, language, isAlertDismissed, dismissAlert, } = useApp();
@@ -12,7 +12,7 @@ export const DashboardView = () => {
     const exceededBudgets = budgetStatuses.filter((b) => b.status === 'EXCEEDED');
     const warningBudgets = budgetStatuses.filter((b) => b.status === 'WARNING');
     const unpaidBills = bills.filter((b) => b.status === 'UNPAID');
-    const recentTransactions = transactions.slice(0, 6);
+    const recentTransactions = useMemo(() => sortTransactionsByDateDesc(transactions).slice(0, 6), [transactions]);
     const quickActions = [
         { label: t('dash.quickExpense', 'Chi phí'), icon: ArrowDownLeft, color: 'bg-rose-500', onClick: () => openQuickAdd('EXPENSE') },
         { label: t('dash.quickIncome', 'Thu nhập'), icon: ArrowUpRight, color: 'bg-emerald-500', onClick: () => openQuickAdd('INCOME') },

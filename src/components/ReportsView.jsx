@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { BarChart3, PieChart as PieChartIcon, TrendingUp, Calendar, FileSpreadsheet, FileText, } from 'lucide-react';
-import { formatCurrency, formatDate, exportToCSV, exportToExcel, formatCompactNumber, formatMonthLabel, toLocalDateKey, } from '@/lib/utils';
+import { formatCurrency, formatSignedCurrency, formatDate, exportToCSV, exportToExcel, formatCompactNumber, formatMonthLabel, toLocalDateKey, } from '@/lib/utils';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis, AreaChart, Area, } from 'recharts';
 const pieChartColors = ['#f97316', '#ec4899', '#8b5cf6', '#0ea5e9', '#eab308', '#10b981', '#64748b', '#ef4444'];
 export const ReportsView = () => {
@@ -296,14 +296,14 @@ export const ReportsView = () => {
           <div>
             <span className="text-xs font-semibold text-slate-400 uppercase">{t('rep.totalIncome', 'Tổng thu nhập')}</span>
             <p className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
-              +{formatCurrency(totalIncome)}
+              {formatSignedCurrency(totalIncome, '+')}
             </p>
           </div>
 
           <div>
             <span className="text-xs font-semibold text-slate-400 uppercase">{t('rep.totalExpense', 'Tổng chi tiêu')}</span>
             <p className="text-xl font-black text-rose-600 dark:text-rose-400 mt-1">
-              -{formatCurrency(totalExpense)}
+              {formatSignedCurrency(totalExpense, '-')}
             </p>
           </div>
 
@@ -595,7 +595,6 @@ export const ReportsView = () => {
               <XAxis dataKey="month" tick={{ fontSize: 12 }}/>
               <YAxis tickFormatter={formatCompactNumber} tick={{ fontSize: 11 }} width={54}/>
               <Tooltip 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     formatter={(val) => formatCurrency(Number(val))} contentStyle={{
             backgroundColor: '#1e293b',
             borderColor: '#334155',

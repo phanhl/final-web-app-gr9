@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Sparkles, TrendingUp, Sliders, Zap, CheckCircle2, AlertTriangle, Plus, Trash2, FileSpreadsheet, CreditCard, Building2, X, Wallet, Pencil, RotateCcw, } from 'lucide-react';
-import { formatCurrency, formatNumberWithDots } from '@/lib/utils';
+import { formatCurrency, formatSignedCurrency, formatNumberWithDots, formatCompactNumber } from '@/lib/utils';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, } from 'recharts';
 import * as XLSX from 'xlsx';
 import { IconHelper, getIconLabel } from './IconHelper';
@@ -13,9 +13,9 @@ export const WhatIfSimulatorView = () => {
     const projectionMonths = simulatorConfig.projectionMonths;
     const setProjectionMonths = (val) => updateSimulatorConfig({ projectionMonths: val });
     // 1. PERSONAL CONSUMPTION SPENDING & REDUCTION OPTIONS
-    const spendingCategories = Array.isArray(simulatorConfig?.spendingCategories)
+    const spendingCategories = useMemo(() => (Array.isArray(simulatorConfig?.spendingCategories)
         ? simulatorConfig.spendingCategories
-        : [];
+        : []), [simulatorConfig?.spendingCategories]);
     const setSpendingCategories = (updater) => {
         if (typeof updater === 'function') {
             updateSimulatorConfig({ spendingCategories: updater(spendingCategories) });
@@ -48,7 +48,7 @@ export const WhatIfSimulatorView = () => {
     // 3. EXTERNAL LOANS & DEBT OBLIGATIONS
     const hasExternalLoan = Boolean(simulatorConfig?.hasExternalLoan);
     const setHasExternalLoan = (val) => updateSimulatorConfig({ hasExternalLoan: val });
-    const externalLoans = Array.isArray(simulatorConfig?.externalLoans) ? simulatorConfig.externalLoans : [];
+    const externalLoans = useMemo(() => (Array.isArray(simulatorConfig?.externalLoans) ? simulatorConfig.externalLoans : []), [simulatorConfig?.externalLoans]);
     const setExternalLoans = (updater) => {
         if (typeof updater === 'function') {
             updateSimulatorConfig({ externalLoans: updater(externalLoans) });
@@ -181,6 +181,7 @@ export const WhatIfSimulatorView = () => {
         savingsInterestRate,
         investmentAmount,
         investmentRateScenario,
+        t,
     ]);
     const finalRow = detailedMonthlyProjections[detailedMonthlyProjections.length - 1];
     const finalDelta = finalRow.netDelta;
@@ -480,7 +481,7 @@ export const WhatIfSimulatorView = () => {
             {t('sim.colCutSavings', 'Tiết kiệm nhờ cắt giảm')}
           </span>
           <p className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
-            +{formatCurrency(totalCutSavings)}{t('whatif.perMonth', '/tháng')}
+            {formatSignedCurrency(totalCutSavings, '+')}{t('whatif.perMonth', '/tháng')}
           </p>
           <span className="text-[10px] text-emerald-600 font-semibold">
             {t('budget.usedBudget', 'Đã chọn')} {selectedCuts.length} / {spendingCategories.length} {t('whatif.categoriesSelected', 'danh mục')}
@@ -536,8 +537,9 @@ export const WhatIfSimulatorView = () => {
           {/* STEP 1: CURRENT PERSONAL CONSUMPTION SPENDING */}
           {/* ========================================================================= */}
           <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
-              <div>
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+              {/* min width + wrap: the totals block drops below instead of squeezing the title into a narrow column */}
+              <div className="min-w-[12rem] flex-1">
                 <div className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 text-[11px] font-bold uppercase tracking-wider mb-1">
                   <span>{t('whatif.step1Title', 'Bước 1 • Khảo sát mức tiêu dùng')}</span>
                 </div>
@@ -757,7 +759,7 @@ export const WhatIfSimulatorView = () => {
 
               {selectedCuts.length > 0 && (<div className="px-3 py-1 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 rounded-xl text-rose-700 dark:text-rose-300 font-extrabold text-xs shrink-0 flex items-center space-x-1.5">
                   <Zap className="w-3.5 h-3.5 fill-current"/>
-                  <span>{t('whatif.surplusBadge', 'Dôi ra:')} +{formatCurrency(totalCutSavings)}{t('whatif.perMonth', '/tháng')}</span>
+                  <span>{t('whatif.surplusBadge', 'Dôi ra:')} {formatSignedCurrency(totalCutSavings, '+')}{t('whatif.perMonth', '/tháng')}</span>
                 </div>)}
             </div>
 
@@ -804,7 +806,7 @@ export const WhatIfSimulatorView = () => {
                           <div className="flex justify-between text-xs">
                             <span className="text-slate-500 text-[11px]">{t('whatif.cutRatio', 'Tỷ lệ cắt giảm:')}</span>
                             <span className="font-extrabold text-rose-600 dark:text-rose-400">
-                              -{cut.cutPercent}% ({t('whatif.savingsPrefix', 'Tiết kiệm')} +{formatCurrency(cutSavings)}{t('whatif.perMonth', '/tháng')})
+                              -{cut.cutPercent}% ({t('whatif.savingsPrefix', 'Tiết kiệm')} {formatSignedCurrency(cutSavings, '+')}{t('whatif.perMonth', '/tháng')})
                             </span>
                           </div>
 
@@ -848,7 +850,7 @@ export const WhatIfSimulatorView = () => {
                     {t('whatif.totalMonthlySavingsSummary', 'Tổng số tiền cắt giảm dôi ra mỗi tháng')} ({selectedCuts.length} {t('whatif.selectedItems', 'mục đã chọn')}):
                   </span>
                   <span className="text-sm font-black text-rose-600 dark:text-rose-400">
-                    +{formatCurrency(totalCutSavings)}{t('whatif.perMonth', '/tháng')}
+                    {formatSignedCurrency(totalCutSavings, '+')}{t('whatif.perMonth', '/tháng')}
                   </span>
                 </div>
               </div>)}
@@ -900,12 +902,11 @@ export const WhatIfSimulatorView = () => {
                   </defs>
                   <XAxis dataKey="label" tick={{ fontSize: 10 }} />
                   <YAxis
-                    tickFormatter={(val) => `${Math.round(val / 1000000)}Tr`}
+                    tickFormatter={(val) => formatCompactNumber(val, language)}
                     tick={{ fontSize: 10 }}
                     width={40}
                   />
                   <Tooltip
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     formatter={(val) => formatCurrency(Number(val))}
                     contentStyle={{
                       backgroundColor: '#0f172a',
@@ -1087,7 +1088,7 @@ export const WhatIfSimulatorView = () => {
                       <div className="flex justify-between text-xs pt-1 border-t border-amber-200/50 dark:border-amber-900/30">
                         <span className="text-slate-500">{t('whatif.mustPayMonthly', 'Phải trả hàng tháng:')}</span>
                         <span className="font-extrabold text-rose-600 dark:text-rose-400">
-                          -{formatCurrency(loan.monthlyPayment)}{t('whatif.perMonth', '/tháng')}
+                          {formatSignedCurrency(loan.monthlyPayment, '-')}{t('whatif.perMonth', '/tháng')}
                         </span>
                       </div>
                     </div>))}
@@ -1098,7 +1099,7 @@ export const WhatIfSimulatorView = () => {
                     {t('whatif.totalDebtPressure', 'Tổng áp lực trả nợ vay ngoài mỗi tháng:')}
                   </span>
                   <span className="text-sm font-black text-rose-600 dark:text-rose-400">
-                    -{formatCurrency(totalMonthlyDebtPayment)}{t('whatif.perMonth', '/tháng')}
+                    {formatSignedCurrency(totalMonthlyDebtPayment, '-')}{t('whatif.perMonth', '/tháng')}
                   </span>
                 </div>
               </div>) : (<p className="text-xs text-slate-400 italic">

@@ -2,105 +2,102 @@ import { NextResponse } from 'next/server';
 import {
     getUsers,
     saveUsers,
+    withUsersLock,
     verifyPassword,
     hashPassword,
-    createSessionToken,
-    SESSION_COOKIE_NAME,
-    SESSION_MAX_AGE
+    setSessionCookie,
+    verifyHostSetupCode,
+    consumeHostSetupCode,
 } from '@/lib/auth-server';
+import { getClientIp, isLocalRequest, createRateLimiter } from '@/lib/request-security';
 import { logSecurityEvent } from '@/lib/security-logger';
 
 export const dynamic = 'force-dynamic';
 
 const FAIL_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
-const MAX_FAILS_PER_IP = 5; // Maximum 5 failed attempts
-const loginFailedAttempts = new Map(); // ip -> { count, first }
-
-function getClientIp(req) {
-    return (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || req.headers.get('x-real-ip') || 'local';
-}
-
-function isLoginRateLimited(ip) {
-    const now = Date.now();
-    const entry = loginFailedAttempts.get(ip);
-    if (entry && now - entry.first > FAIL_WINDOW_MS) {
-        loginFailedAttempts.delete(ip);
-        return false;
-    }
-    return (entry?.count || 0) >= MAX_FAILS_PER_IP;
-}
-
-function recordLoginFailure(ip) {
-    const now = Date.now();
-    const entry = loginFailedAttempts.get(ip);
-    if (!entry || now - entry.first > FAIL_WINDOW_MS) {
-        loginFailedAttempts.set(ip, { count: 1, first: now });
-    } else {
-        entry.count++;
-    }
-}
+// Per-IP limit + per-account limit: rotating (spoofed) IPs no longer gives unlimited guesses on one account
+const ipLimiter = createRateLimiter({ windowMs: FAIL_WINDOW_MS, max: 5 });
+const accountLimiter = createRateLimiter({ windowMs: FAIL_WINDOW_MS, max: 10 });
+// Burn the same scrypt cost for unknown usernames so response timing does not reveal which accounts exist
+const DUMMY_SALT = 'fintrack-dummy-salt-for-timing';
+let dummyHash = null;
+const getDummyHash = async () => (dummyHash ??= (await hashPassword('fintrack-dummy-password', DUMMY_SALT)).hash);
+const INVALID_CREDENTIALS = 'Tên đăng nhập hoặc mật khẩu không chính xác';
 
 export async function POST(req) {
     const ip = getClientIp(req);
     try {
-        if (isLoginRateLimited(ip)) {
-            logSecurityEvent({ event: 'AUTH_LOGIN_RATE_LIMITED', ip, success: false });
-            return NextResponse.json({
-                success: false,
-                error: 'Bạn đã thử đăng nhập sai quá 5 lần. Vì lý do bảo mật, vui lòng thử lại sau 15 phút.'
-            }, { status: 429 });
-        }
-
         const body = await req.json().catch(() => null);
         if (!body || !body.username || !body.password) {
             return NextResponse.json({ success: false, error: 'Vui lòng nhập tên đăng nhập và mật khẩu' }, { status: 400 });
         }
 
-        const username = String(body.username).trim().toLowerCase();
+        const username = String(body.username).trim().toLowerCase().slice(0, 64);
         const password = String(body.password);
+        if (password.length > 256) {
+            return NextResponse.json({ success: false, error: INVALID_CREDENTIALS }, { status: 401 });
+        }
+
+        // Requests made directly on the host machine skip the per-account lockout, so a stranger spamming wrong
+        // passwords through the tunnel cannot lock the owner out of their own account (per-IP limit still applies).
+        const local = isLocalRequest(req);
+        // Every attempt is counted up front (and forgiven on success): checking now and counting after the
+        // password check let parallel bursts slip past the limit
+        if (!ipLimiter.consume(ip) || (!local && !accountLimiter.consume(username))) {
+            logSecurityEvent({ event: 'AUTH_LOGIN_RATE_LIMITED', ip, success: false, details: { username } });
+            return NextResponse.json({
+                success: false,
+                error: 'Bạn đã thử đăng nhập sai quá nhiều lần. Vì lý do bảo mật, vui lòng thử lại sau 15 phút.'
+            }, { status: 429 });
+        }
 
         const users = await getUsers();
         let user = users.find(u => u.username.toLowerCase() === username);
 
+        const fail = (reason, status = 401, error = INVALID_CREDENTIALS) => {
+            logSecurityEvent({ event: 'AUTH_LOGIN_FAILED', userId: user?.id, ip, success: false, details: { username, reason } });
+            return NextResponse.json({ success: false, error }, { status });
+        };
+
         if (!user) {
-            recordLoginFailure(ip);
-            logSecurityEvent({ event: 'AUTH_LOGIN_FAILED', ip, success: false, details: { username, reason: 'USER_NOT_FOUND' } });
-            return NextResponse.json({ success: false, error: 'Tài khoản không tồn tại. Nếu bạn là khách, vui lòng bấm "Tạo tài khoản"' }, { status: 401 });
+            await verifyPassword(password, DUMMY_SALT, await getDummyHash());
+            return fail('USER_NOT_FOUND');
         }
 
-        // Host account first-time login without an established password
         if (user.role === 'host' && !user.hasPassword) {
+            // First-time host setup: requires the one-time setup code printed on the server console,
+            // so a stranger who opens the public tunnel URL first cannot claim the admin account.
+            if (!(await verifyHostSetupCode(body.setupCode))) {
+                return fail('HOST_SETUP_CODE_INVALID', 403, 'Cần mã thiết lập hợp lệ để đặt mật khẩu host lần đầu. Mã được in ở terminal chạy server (hoặc file data/.host_setup_code).');
+            }
             if (password.length < 8) {
                 return NextResponse.json({ success: false, error: 'Mật khẩu khởi tạo cho Host phải có ít nhất 8 ký tự' }, { status: 400 });
             }
-            const { salt, hash } = hashPassword(password);
-            user.salt = salt;
-            user.passwordHash = hash;
-            user.hasPassword = true;
-            user.tokenVersion = user.tokenVersion || 1;
-            await saveUsers(users);
-        } else {
-            // Standard password verification
-            const valid = verifyPassword(password, user.salt, user.passwordHash);
-            if (!valid) {
-                recordLoginFailure(ip);
-                logSecurityEvent({ event: 'AUTH_LOGIN_FAILED', userId: user.id, ip, success: false, details: { username, reason: 'INVALID_PASSWORD' } });
-                return NextResponse.json({ success: false, error: 'Mật khẩu không chính xác' }, { status: 401 });
+            const claimed = await withUsersLock(async () => {
+                const fresh = await getUsers();
+                const host = fresh.find(u => u.id === user.id);
+                if (!host || host.hasPassword) return null; // Someone else finished setup in the meantime
+                const { salt, hash } = await hashPassword(password);
+                host.salt = salt;
+                host.passwordHash = hash;
+                host.hasPassword = true;
+                host.tokenVersion = (host.tokenVersion || 1) + 1;
+                await saveUsers(fresh);
+                return host;
+            });
+            if (!claimed) {
+                return fail('HOST_ALREADY_SET');
             }
+            await consumeHostSetupCode();
+            user = claimed;
+            logSecurityEvent({ event: 'AUTH_HOST_PASSWORD_INITIALIZED', userId: user.id, ip, success: true });
+        } else if (!(await verifyPassword(password, user.salt, user.passwordHash))) {
+            return fail('INVALID_PASSWORD');
         }
 
-        // Successful login -> reset failed attempt counter
-        loginFailedAttempts.delete(ip);
-
-        const sessionPayload = {
-            userId: user.id,
-            username: user.username,
-            role: user.role,
-            tokenVersion: user.tokenVersion || 1,
-            exp: Date.now() + SESSION_MAX_AGE * 1000,
-        };
-
-        const token = await createSessionToken(sessionPayload);
+        // Successful login -> reset failed attempt counters
+        ipLimiter.reset(ip);
+        accountLimiter.reset(username);
         logSecurityEvent({ event: 'AUTH_LOGIN_SUCCESS', userId: user.id, ip, success: true, details: { username, role: user.role } });
 
         const res = NextResponse.json({
@@ -112,19 +109,12 @@ export async function POST(req) {
             },
             message: 'Đăng nhập thành công',
         });
-
-        const isSecure = req.headers.get('x-forwarded-proto') === 'https' || req.nextUrl?.protocol === 'https:';
-        res.cookies.set(SESSION_COOKIE_NAME, token, {
-            httpOnly: true,
-            secure: isSecure,
-            sameSite: 'lax',
-            maxAge: SESSION_MAX_AGE,
-            path: '/',
-        });
-
+        // Signing in does NOT unlock the App PIN: when PIN protection is on it is entered separately afterwards
+        await setSessionCookie(res, req, user);
         return res;
     } catch (err) {
         console.error('API /api/auth/login error:', err);
         return NextResponse.json({ success: false, error: 'Lỗi máy chủ khi đăng nhập' }, { status: 500 });
     }
 }
+

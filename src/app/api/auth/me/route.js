@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSessionUser, getUsers } from '@/lib/auth-server';
+import { getSessionUser, getUsers, getHostSetupCode } from '@/lib/auth-server';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,6 +9,10 @@ export async function GET() {
         const users = await getUsers();
         const adminUser = users.find(u => u.role === 'host' || u.username === 'admin');
         const isHostPasswordSet = Boolean(adminUser && adminUser.hasPassword);
+        if (!isHostPasswordSet) {
+            // Make sure a one-time setup code exists (printed to the server console) for the first host login
+            await getHostSetupCode();
+        }
 
         if (!sessionUser) {
             return NextResponse.json({

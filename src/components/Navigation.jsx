@@ -56,8 +56,8 @@ export const Navigation = () => {
     return (<>
       {/* Mobile Top Header */}
       <header className="lg:hidden sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-100 dark:border-slate-800">
-        <div className="flex items-center justify-between h-14 px-4">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between h-14 px-3 min-[400px]:px-4">
+          <div className="flex items-center gap-2 min-w-0">
             <button
               type="button"
               onClick={toggleSidebar}
@@ -70,15 +70,16 @@ export const Navigation = () => {
             <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-emerald-600 flex items-center justify-center text-white shadow-sm">
               <Flame className="w-4 h-4 fill-current"/>
             </div>
-            <div>
-              <h1 className="text-sm font-bold text-slate-900 dark:text-white leading-tight">FinTrack Pro</h1>
+            {/* Name hidden below 400px so every action button (incl. the avatar) fits on 375px phones */}
+            <div className="hidden min-[400px]:block min-w-0">
+              <h1 className="text-sm font-bold text-slate-900 dark:text-white leading-tight truncate">FinTrack Pro</h1>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
                 {t('app.tagline', 'Quản lý chi tiêu')}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1 min-[400px]:gap-1.5 shrink-0">
             {/* Language Switcher */}
             <LanguageSwitcher />
 
@@ -232,7 +233,7 @@ export const Navigation = () => {
 
               <button
                 type="button"
-                onClick={logoutUser}
+                onClick={() => logoutUser()}
                 className="p-2 text-slate-400 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-all cursor-pointer"
                 title={language === 'en' ? 'Sign Out' : 'Đăng xuất tài khoản'}
               >

@@ -23,7 +23,7 @@ import {
     CreditCard,
     Sparkles,
 } from 'lucide-react';
-import { formatCurrency, formatDate, formatNumberWithDots } from '@/lib/utils';
+import { formatCurrency, formatSignedCurrency, formatDate, formatNumberWithDots } from '@/lib/utils';
 import {
     parseBankStatementFile,
     checkDuplicates,
@@ -165,6 +165,8 @@ export const BankStatementModal = () => {
         if (parsedItems.length > 0 && selectedWalletId) {
             setParsedItems(prev => checkDuplicates(prev, transactions, selectedWalletId));
         }
+        // parsedItems is updated here; depending on it would loop
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedWalletId, transactions]);
 
     const currentWallet = wallets.find(w => w.id === selectedWalletId);
@@ -432,13 +434,13 @@ export const BankStatementModal = () => {
                                 <div className="flex justify-between items-center text-slate-600 dark:text-slate-300">
                                     <span>{t('bs.totalInLabel', 'Tổng tiền vào (+):')}</span>
                                     <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                                        +{formatCurrency(importSuccessResult.totalIncome)}
+                                        {formatSignedCurrency(importSuccessResult.totalIncome, '+')}
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center text-slate-600 dark:text-slate-300">
                                     <span>{t('bs.totalOutLabel', 'Tổng tiền ra (-):')}</span>
                                     <span className="font-bold text-rose-600 dark:text-rose-400">
-                                        -{formatCurrency(importSuccessResult.totalExpense)}
+                                        {formatSignedCurrency(importSuccessResult.totalExpense, '-')}
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center text-slate-700 dark:text-slate-200 pt-2 border-t border-slate-200 dark:border-slate-700">
@@ -712,7 +714,7 @@ export const BankStatementModal = () => {
                                                 <ArrowDownLeft className="w-4 h-4" />
                                             </div>
                                             <div className="text-base font-bold text-emerald-700 dark:text-emerald-300">
-                                                +{formatCurrency(totalSelectedIncome)}
+                                                {formatSignedCurrency(totalSelectedIncome, '+')}
                                             </div>
                                             <div className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80 mt-0.5">
                                                 {selectedItems.filter(i => i.type === 'INCOME').length} {t('bs.incomeTxUnit', 'giao dịch thu')}
@@ -726,7 +728,7 @@ export const BankStatementModal = () => {
                                                 <ArrowUpRight className="w-4 h-4" />
                                             </div>
                                             <div className="text-base font-bold text-rose-700 dark:text-rose-300">
-                                                -{formatCurrency(totalSelectedExpense)}
+                                                {formatSignedCurrency(totalSelectedExpense, '-')}
                                             </div>
                                             <div className="text-[10px] text-rose-600/80 dark:text-rose-400/80 mt-0.5">
                                                 {selectedItems.filter(i => i.type === 'EXPENSE').length} {t('bs.expenseTxUnit', 'giao dịch chi')}

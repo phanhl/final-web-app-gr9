@@ -2,10 +2,31 @@
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Plus, ArrowRightLeft, Banknote, Building2, CreditCard, PiggyBank, Edit2, Trash2, DollarSign, X, ArrowLeft, ArrowDownLeft, ArrowUpRight, TrendingUp, TrendingDown, Search, Receipt, Inbox, FileSpreadsheet, RefreshCw } from 'lucide-react';
-import { formatCurrency, formatDate, formatNumberWithDots } from '@/lib/utils';
+import { formatCurrency, formatSignedCurrency, formatDate, formatNumberWithDots } from '@/lib/utils';
 import { IconHelper } from './IconHelper';
 import { VIETNAMESE_BANKS } from '@/lib/mock-data';
 import { ReceiptModal } from './ReceiptModal';
+// Fallback look for wallets that carry no icon/color (old backups, imported data)
+const DEFAULT_WALLET_LOOK = {
+    CASH: { icon: 'Banknote', color: '#10b981' },
+    BANK: { icon: 'Building2', color: '#0ea5e9' },
+    CREDIT: { icon: 'CreditCard', color: '#f43f5e' },
+    SAVINGS: { icon: 'PiggyBank', color: '#8b5cf6' },
+};
+const getWalletIcon = (wallet) => wallet.icon || DEFAULT_WALLET_LOOK[wallet.type]?.icon || 'Wallet';
+const getWalletColor = (wallet) => wallet.color || DEFAULT_WALLET_LOOK[wallet.type]?.color || '#64748b';
+// Subtitle: bank + account number when known, otherwise the wallet type (not "cash" for every wallet without a bank)
+const getWalletSubtitle = (wallet, t) => {
+    if (wallet.bankName)
+        return wallet.accountNumber ? `${wallet.bankName} • ${wallet.accountNumber}` : wallet.bankName;
+    if (wallet.type === 'BANK')
+        return t('wallets.bankGroup', 'Ngân hàng');
+    if (wallet.type === 'CREDIT')
+        return t('wallets.creditGroup', 'Thẻ tín dụng');
+    if (wallet.type === 'SAVINGS')
+        return t('wallets.savingsGroup', 'Sổ tiết kiệm');
+    return t('wallets.cashWallets', 'Tiền mặt');
+};
 export const WalletsView = () => {
     const { wallets, transactions, financialSummary, addWallet, editWallet, deleteWallet, deleteTransaction, recalculateWalletBalances, payCreditCard, openQuickAdd, openStatementModal, t, tCategory, tWalletType, tTag, tWalletName, tNote, language, showConfirm, } = useApp();
     // Selected Wallet for viewing detailed cash flow
@@ -79,7 +100,7 @@ export const WalletsView = () => {
     const handleSaveWallet = (e) => {
         e.preventDefault();
         if (!walletName.trim()) {
-            alert(t('Vui lòng nhập tên ví', 'Vui lòng nhập tên ví'));
+            alert(language === 'en' ? 'Please enter the wallet name' : 'Vui lòng nhập tên ví');
             return;
         }
         const bal = Number(walletBalance) || 0;
@@ -201,8 +222,8 @@ export const WalletsView = () => {
           <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
               <div className="flex items-start sm:items-center space-x-4">
-                <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-white shadow-md shrink-0" style={{ backgroundColor: selectedWallet.color }}>
-                  <IconHelper name={selectedWallet.icon} size={32}/>
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-white shadow-md shrink-0" style={{ backgroundColor: getWalletColor(selectedWallet) }}>
+                  <IconHelper name={getWalletIcon(selectedWallet)} size={32}/>
                 </div>
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -214,7 +235,9 @@ export const WalletsView = () => {
                     </span>
                   </div>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                    {selectedWallet.bankName ? `${selectedWallet.bankName} • STK: ${selectedWallet.accountNumber || t('wallets.notUpdated', 'Chưa cập nhật')}` : t('wallets.personalCash', 'Tiền mặt tại ví cá nhân')}
+                    {selectedWallet.bankName
+                        ? `${selectedWallet.bankName} • STK: ${selectedWallet.accountNumber || t('wallets.notUpdated', 'Chưa cập nhật')}`
+                        : selectedWallet.type === 'CASH' ? t('wallets.personalCash', 'Tiền mặt tại ví cá nhân') : getWalletSubtitle(selectedWallet, t)}
                   </p>
                   {selectedWallet.type === 'CREDIT' && selectedWallet.creditLimit && (<p className="text-xs text-purple-600 dark:text-purple-400 font-medium mt-0.5">
                       {t('wallets.creditLimit', 'Hạn mức tín dụng:')} {formatCurrency(selectedWallet.creditLimit)} • {t('qa.availableBalance', 'Khả dụng')}: {formatCurrency(Math.max(0, selectedWallet.creditLimit - selectedWallet.balance))}
@@ -295,7 +318,7 @@ export const WalletsView = () => {
                 <TrendingUp className="w-4 h-4 text-emerald-500"/>
               </div>
               <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
-                +{formatCurrency(totalInflow)}
+                {formatSignedCurrency(totalInflow, '+')}
               </p>
               <span className="text-[11px] text-emerald-600/80 dark:text-emerald-400/80">
                 {t('wallets.fromIncomeTransfers', 'Từ các khoản thu & nhận chuyển khoản')}
@@ -309,7 +332,7 @@ export const WalletsView = () => {
                 <TrendingDown className="w-4 h-4 text-rose-500"/>
               </div>
               <p className="text-2xl font-black text-rose-600 dark:text-rose-400 mt-1">
-                -{formatCurrency(totalOutflow)}
+                {formatSignedCurrency(totalOutflow, '-')}
               </p>
               <span className="text-[11px] text-rose-600/80 dark:text-rose-400/80">
                 {t('wallets.fromExpensesTransfers', 'Từ các khoản chi & chuyển sang ví khác')}
@@ -610,7 +633,6 @@ export const WalletsView = () => {
                 { type: 'CREDIT', label: t('wallets.creditGroup', 'Thẻ tín dụng') },
                 { type: 'SAVINGS', label: t('wallets.savingsGroup', 'Sổ tiết kiệm') },
             ].map((t) => (<button key={t.type} type="button" 
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             onClick={() => setWalletType(t.type)} className={`py-2 px-3 text-xs font-bold rounded-xl border transition-all cursor-pointer ${walletType === t.type
                     ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                     : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'}`}>
@@ -749,15 +771,15 @@ const WalletCard = ({ wallet, onEdit, onDelete, onViewDetail }) => {
       <div>
         <div className="flex items-start justify-between mb-3 gap-2">
           <div className="flex items-center space-x-3 min-w-0 flex-1">
-            <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-white shadow-sm shrink-0" style={{ backgroundColor: wallet.color }}>
-              <IconHelper name={wallet.icon} size={20}/>
+            <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-white shadow-sm shrink-0" style={{ backgroundColor: getWalletColor(wallet) }}>
+              <IconHelper name={getWalletIcon(wallet)} size={20}/>
             </div>
             <div className="min-w-0 flex-1">
               <h4 className="text-sm font-bold text-slate-800 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
                 {tWalletName ? tWalletName(wallet.name) : wallet.name}
               </h4>
               <p className="text-[11px] text-slate-400 truncate">
-                {wallet.bankName ? `${wallet.bankName} • ${wallet.accountNumber || ''}` : t('wallets.cashWallets', 'Tiền mặt')}
+                {getWalletSubtitle(wallet, t)}
               </p>
             </div>
           </div>

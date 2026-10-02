@@ -2,9 +2,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Search, Filter, ArrowDownLeft, ArrowUpRight, ArrowRightLeft, Calendar, FileSpreadsheet, Plus, Edit2, Trash2, FileCheck, X, Upload, BarChart3, ReceiptText, AlertTriangle, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, } from 'lucide-react';
-import { formatCurrency, formatDate, exportToCSV, exportToExcel, formatNumberWithDots, formatMonthLabel, toLocalDateTimeInput, normalizeSaveDate, toLocalDateKey, getLocalDateString, compressImageFile } from '@/lib/utils';
+import { formatCurrency, formatSignedCurrency, formatDate, exportToCSV, exportToExcel, formatNumberWithDots, formatMonthLabel, toLocalDateTimeInput, normalizeSaveDate, toLocalDateKey, getLocalDateString, compressImageFile, sortTransactionsByDateDesc } from '@/lib/utils';
 import { POPULAR_TAGS } from '@/lib/mock-data';
 import { ReceiptModal } from './ReceiptModal';
+import { DatePreview } from './DatePreview';
 import { ReportsView } from './ReportsView';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, } from 'recharts';
 const pieChartColors = ['#f97316', '#ec4899', '#8b5cf6', '#0ea5e9', '#eab308', '#10b981', '#64748b', '#ef4444'];
@@ -65,7 +66,8 @@ export const TransactionsView = () => {
     // Filter logic
     const filteredTransactions = useMemo(() => {
         const todayKey = getLocalDateString();
-        return transactions.filter((tx) => {
+        // Sorted by date before paging, so "load more" walks back in time instead of in insertion order
+        return sortTransactionsByDateDesc(transactions.filter((tx) => {
             // Never show transactions from the future (no transactions exist before their date arrives)
             if (toLocalDateKey(tx.date) > todayKey)
                 return false;
@@ -108,17 +110,26 @@ export const TransactionsView = () => {
             }
             // Search term
             if (searchTerm.trim()) {
-                const term = searchTerm.toLowerCase();
-                const matchNote = tx.note?.toLowerCase().includes(term);
-                const matchCat = tx.categoryName?.toLowerCase().includes(term);
-                const matchWallet = tx.walletName?.toLowerCase().includes(term);
-                const matchTags = (tx.tags || []).some((t) => t.toLowerCase().includes(term));
+                const term = searchTerm.trim().toLowerCase();
+                // Match both the stored (Vietnamese) value and what is displayed in the current language
+                const matches = (raw, translate) => {
+                    if (!raw)
+                        return false;
+                    if (String(raw).toLowerCase().includes(term))
+                        return true;
+                    const shown = translate ? translate(raw) : '';
+                    return Boolean(shown) && String(shown).toLowerCase().includes(term);
+                };
+                const matchNote = matches(tx.note, tNote);
+                const matchCat = matches(tx.categoryName, tCategory);
+                const matchWallet = matches(tx.walletName, tWalletName) || matches(tx.toWalletName, tWalletName);
+                const matchTags = (tx.tags || []).some((tag) => matches(tag, tTag));
                 if (!matchNote && !matchCat && !matchWallet && !matchTags)
                     return false;
             }
             return true;
-        });
-    }, [transactions, selectedMonth, selectedType, selectedWallet, selectedCategory, selectedTag, startDate, endDate, searchTerm]);
+        }));
+    }, [transactions, selectedMonth, selectedType, selectedWallet, selectedCategory, selectedTag, startDate, endDate, searchTerm, tTag, tNote, tCategory, tWalletName]);
     // Auto switch pieType if active filtered transactions have no expenses but have income
     useEffect(() => {
         const hasExpenses = filteredTransactions.some((t) => t.type === 'EXPENSE');
@@ -296,7 +307,7 @@ export const TransactionsView = () => {
             });
         });
         return Array.from(map.entries()).map(([display, raw]) => ({ display, raw }));
-    }, [transactions, tTag, language]);
+    }, [transactions, tTag]);
     const clearFilters = () => {
         setSearchTerm('');
         setSelectedType('ALL');
@@ -438,7 +449,7 @@ export const TransactionsView = () => {
             {t('tx.totalIncome', 'Tổng khoản thu')}
           </span>
           <p className="text-lg font-black text-emerald-600 dark:text-emerald-400">
-            +{formatCurrency(stats.income)}
+            {formatSignedCurrency(stats.income, '+')}
           </p>
         </div>
         <div>
@@ -446,7 +457,7 @@ export const TransactionsView = () => {
             {t('tx.totalExpense', 'Tổng khoản chi')}
           </span>
           <p className="text-lg font-black text-rose-600 dark:text-rose-400">
-            -{formatCurrency(stats.expense)}
+            {formatSignedCurrency(stats.expense, '-')}
           </p>
         </div>
         <div>
@@ -575,7 +586,7 @@ export const TransactionsView = () => {
                 {totalPieAmount > 0 && (<span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${pieType === 'INCOME'
                     ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/40'
                     : 'bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/40'}`}>
-                    {pieType === 'INCOME' ? '+' : '-'}{formatCurrency(totalPieAmount)}
+                    {formatSignedCurrency(totalPieAmount, pieType === 'INCOME' ? '+' : '-')}
                   </span>)}
               </div>
             </div>
@@ -583,12 +594,13 @@ export const TransactionsView = () => {
             {/* Quick Scope Toggle / Month Navigator */}
             <div className="flex items-center justify-between my-2 pb-1.5 border-b border-slate-100 dark:border-slate-800 flex-wrap gap-1.5">
               <span className="text-[11px] text-slate-400 font-medium">{t('tx.statPeriod', 'Kỳ thống kê:')}</span>
-              <div className="flex items-center gap-1">
+              {/* wraps inside narrow chart columns (sidebar open on 1024-1280px screens) instead of overflowing */}
+              <div className="flex flex-wrap items-center gap-1 min-w-0 max-w-full">
                 <button type="button" onClick={handlePrevMonth} disabled={selectedMonth === availableMonths[availableMonths.length - 1]} className="p-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer" title={t('tx.prevMonth', 'Tháng trước')}>
                   <ChevronLeft className="w-3.5 h-3.5"/>
                 </button>
 
-                <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-[11px] font-semibold text-slate-800 dark:text-white border-0 focus:ring-1 focus:ring-blue-500 cursor-pointer">
+                <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="min-w-0 max-w-full px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-[11px] font-semibold text-slate-800 dark:text-white border-0 focus:ring-1 focus:ring-blue-500 cursor-pointer">
                   <option value="ALL">{t('tx.allMonths', 'Tất cả các tháng')}</option>
                   {availableMonths.map((m) => (<option key={m} value={m}>
                       {formatMonthLabel(m, language)} {m === currentMonth ? `(${t('tx.quickMonth', 'Hiện tại')})` : ''}
@@ -880,10 +892,10 @@ export const TransactionsView = () => {
                 </div>
                 <div className="flex items-center space-x-3 text-xs">
                   {group.dayIncome > 0 && (<span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                      +{formatCurrency(group.dayIncome)}
+                      {formatSignedCurrency(group.dayIncome, '+')}
                     </span>)}
                   {group.dayExpense > 0 && (<span className="font-semibold text-rose-600 dark:text-rose-400">
-                      -{formatCurrency(group.dayExpense)}
+                      {formatSignedCurrency(group.dayExpense, '-')}
                     </span>)}
                 </div>
               </div>
@@ -1078,12 +1090,17 @@ const EditTransactionModal = ({ isOpen, onClose, transaction, }) => {
             return;
         }
         if (type === 'TRANSFER' && walletId === toWalletId) {
-            alert(t('Ví nhận phải khác ví chuyển', 'Ví nhận phải khác ví chuyển!'));
+            alert(language === 'en' ? 'Receiving wallet must differ from the source wallet!' : 'Ví nhận phải khác ví chuyển!');
             return;
         }
         const selectedWallet = wallets.find((w) => w.id === walletId);
         const selectedToWallet = wallets.find((w) => w.id === toWalletId);
         const selectedCategory = categories.find((c) => c.id === categoryId);
+        // An emptied date field must not silently move the transaction to "now"
+        if (!date) {
+            alert(language === 'en' ? 'Please choose the transaction date and time.' : 'Vui lòng chọn ngày giờ giao dịch.');
+            return;
+        }
         const savedDate = normalizeSaveDate(date);
         const todayKey = getLocalDateString();
         if (toLocalDateKey(savedDate) > todayKey) {
@@ -1264,7 +1281,8 @@ const EditTransactionModal = ({ isOpen, onClose, transaction, }) => {
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
               {t('qa.date', 'Thời gian giao dịch')}
             </label>
-            <input type="datetime-local" max={toLocalDateTimeInput()} value={date} onChange={(e) => setDate(e.target.value)} className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"/>
+            <input type="datetime-local" required max={toLocalDateTimeInput()} value={date} onChange={(e) => setDate(e.target.value)} className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"/>
+            <DatePreview value={date} language={language}/>
           </div>
 
           {/* Note */}

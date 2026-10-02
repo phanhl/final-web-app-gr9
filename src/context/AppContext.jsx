@@ -3,12 +3,28 @@ import React, { createContext, useContext, useState, useEffect, useRef, useCallb
 import { INITIAL_WALLETS, INITIAL_TRANSACTIONS, INITIAL_BUDGETS, INITIAL_BILLS, INITIAL_GOALS, INITIAL_PLANNER, DEFAULT_CATEGORIES, INITIAL_SIMULATOR_CONFIG, } from '@/lib/mock-data';
 import { calculateFinancialSummary, checkWalletSufficientFunds, formatCurrency, getLocalDateString, toLocalDateKey, normalizeSaveDate, applyTxToWallets, recomputeWalletBalances, sumWalletTxEffect, mergeSnapshots, generateId, MAX_TX_AMOUNT } from '@/lib/utils';
 import { validateBackupData } from '@/lib/backup-validation';
+import { normalizeSnapshotNumbers } from '@/lib/storage-validation';
 import { translate, translateCategory, translateWalletType, translateTag, translateBillName, translateBillNote, translateWalletName, translateNote } from '@/lib/i18n';
 import { KeyRound, ShieldCheck } from 'lucide-react';
 import { AuthModal } from '@/components/AuthModal';
 import { ConfirmModal } from '@/components/ConfirmModal';
 const AppContext = createContext(undefined);
 const STORAGE_KEY = 'quan_ly_chi_tieu_data_v2';
+/**
+ * Older versions saved the PIN and even the account password in plaintext under fintrack_pin_<uid>.
+ * Unlocking now relies on an httpOnly cookie, so wipe any such leftovers.
+ */
+function purgeStoredCredentials() {
+    for (const store of [() => localStorage, () => sessionStorage]) {
+        try {
+            const s = store();
+            for (let i = s.length - 1; i >= 0; i--) {
+                const key = s.key(i);
+                if (key && key.startsWith('fintrack_pin_')) s.removeItem(key);
+            }
+        } catch {}
+    }
+}
 export const AppProvider = ({ children }) => {
     const [currentUser, setCurrentUser] = useState(null);
     const [authLoading, setAuthLoading] = useState(true);
@@ -16,6 +32,13 @@ export const AppProvider = ({ children }) => {
     const currentUserRef = useRef(currentUser);
     currentUserRef.current = currentUser;
     const [mounted, setMounted] = useState(false);
+    // Signed in, but neither the server nor the local cache could provide this user's data
+    const [dataLoadError, setDataLoadError] = useState(false);
+    // Message shown on the sign-in screen (e.g. session expired)
+    const [authNotice, setAuthNotice] = useState('');
+    // Google Sign-In availability (server has GOOGLE_CLIENT_ID/SECRET) and the result of a return from Google
+    const [googleAuth, setGoogleAuth] = useState({ enabled: false, signupEnabled: false });
+    const googleResultRef = useRef(null);
     const [wallets, setWallets] = useState(INITIAL_WALLETS);
     const [transactions, setTransactions] = useState(INITIAL_TRANSACTIONS);
     const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
@@ -61,7 +84,20 @@ export const AppProvider = ({ children }) => {
         } catch (e) {}
     }, []);
 
+    // The mobile drawer (with its full-screen backdrop) is separate from the desktop dock: sharing one flag made
+    // the drawer pop open over the page on phones/tablets/zoomed windows whenever the dock was left open on desktop
+    const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+    useEffect(() => {
+        const mq = window.matchMedia('(min-width: 1024px)');
+        const onChange = (e) => { if (e.matches) setIsMobileNavOpen(false); };
+        mq.addEventListener('change', onChange);
+        return () => mq.removeEventListener('change', onChange);
+    }, []);
     const toggleSidebar = useCallback(() => {
+        if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+            setIsMobileNavOpen((open) => !open);
+            return;
+        }
         setIsSidebarOpen(prev => {
             const next = !prev;
             try { localStorage.setItem('fintrack_sidebar_open', String(next)); } catch (e) {}
@@ -251,31 +287,24 @@ export const AppProvider = ({ children }) => {
             // ignore
         }
     };
-    const t = (key, fallback) => {
-        return translate(language, key, fallback);
-    };
-    const tCategory = (name) => {
-        return translateCategory(name || '', language);
-    };
-    const tWalletType = (type) => {
-        return translateWalletType(type || '', language);
-    };
-    const tTag = (tag) => {
-        return translateTag(tag || '', language);
-    };
-    const tBillName = (name) => {
-        return translateBillName(name || '', language);
-    };
-    const tBillNote = (note) => {
-        return translateBillNote(note || '', language);
-    };
-    const tWalletName = (name) => {
-        return translateWalletName(name || '', language);
-    };
-    const tNote = (note) => {
-        return translateNote(note || '', language);
-    };
+    // Keep <html lang> in sync (screen readers, hyphenation, browser translate prompts)
+    useEffect(() => {
+        document.documentElement.lang = language === 'en' ? 'en' : 'vi';
+    }, [language]);
+    // Stable per language so memoized lists (filters, charts) do not recompute on every render
+    const t = useCallback((key, fallback) => translate(language, key, fallback), [language]);
+    const tCategory = useCallback((name) => translateCategory(name || '', language), [language]);
+    const tWalletType = useCallback((type) => translateWalletType(type || '', language), [language]);
+    const tTag = useCallback((tag) => translateTag(tag || '', language), [language]);
+    const tBillName = useCallback((name) => translateBillName(name || '', language), [language]);
+    const tBillNote = useCallback((note) => translateBillNote(note || '', language), [language]);
+    const tWalletName = useCallback((name) => translateWalletName(name || '', language), [language]);
+    const tNote = useCallback((note) => translateNote(note || '', language), [language]);
     // Real-time multi-device sync refs
+    // Latest-render helpers for callbacks/effects created earlier: are there local edits the server has not
+    // acknowledged yet, and how to push them now (both assigned on every render further down)
+    const hasPendingLocalChangesRef = useRef(() => false);
+    const saveDataNowRef = useRef(async () => false);
     const lastServerUpdatedAtRef = useRef(null);
     const isSavingRef = useRef(false);
     const lastSavedDataSignatureRef = useRef('');
@@ -303,11 +332,19 @@ export const AppProvider = ({ children }) => {
         return headers;
     }, []);
     // 401 due to missing/invalid PIN -> trigger lock screen
+    // 401 has two meanings: PIN required (show lock screen) or session gone (expired, signed out
+    // elsewhere, password changed on another device) -> back to sign-in, which a PIN can never fix.
+    const sessionExpiredRef = useRef(() => {});
     const handleAuthFailure = useCallback(async (res) => {
         if (res.status !== 401)
             return false;
-        setIsPinLocked(true);
-        setServerSyncStatus('offline');
+        const body = await res.clone().json().catch(() => ({}));
+        if (body.requiresPin) {
+            setIsPinLocked(true);
+            setServerSyncStatus('offline');
+        } else {
+            sessionExpiredRef.current();
+        }
         return true;
     }, []);
     const computeDataSignature = (data) => {
@@ -395,6 +432,10 @@ export const AppProvider = ({ children }) => {
                 }
                 if (result.success && result.data) {
                     setIsPinLocked(false);
+                    if (hasPendingLocalChangesRef.current()) {
+                        // Unsaved local edits (e.g. made offline): push them; a newer server version is merged on 409
+                        return saveDataNowRef.current();
+                    }
                     applyServerData(result.data);
                     setServerSyncStatus('synced');
                     return true;
@@ -449,20 +490,21 @@ export const AppProvider = ({ children }) => {
             if (res.ok) {
                 const result = await res.json();
                 if (result.success && result.data) {
-                    setAppPin(enteredPin);
-                    try {
-                        const uid = currentUserRef.current?.id;
-                        if (uid) {
-                            sessionStorage.setItem(`fintrack_pin_${uid}`, enteredPin);
-                            localStorage.setItem(`fintrack_pin_${uid}`, enteredPin);
-                        }
-                    } catch (e) {}
+                    // The server now sets an httpOnly unlock cookie: the PIN is never written to browser storage
+                    setAppPin('');
                     setPinUnlockError('');
                     applyInitialData(result.data, readLocalCache());
                     setIsPinLocked(false);
                     setServerSyncStatus('synced');
                     setMounted(true);
                     return { success: true };
+                }
+            }
+            if (res.status === 401) {
+                const body = await res.clone().json().catch(() => ({}));
+                if (!body.requiresPin) {
+                    sessionExpiredRef.current();
+                    return { success: false };
                 }
             }
             let message = language === 'en' ? 'Incorrect PIN code or password!' : 'Mã PIN hoặc mật khẩu không chính xác!';
@@ -490,18 +532,17 @@ export const AppProvider = ({ children }) => {
                 headers: getApiHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({ action: 'updateSecurity', pinEnabled: Boolean(pinEnabled), pinCode: cleanPin || undefined }),
             });
+            if (await handleAuthFailure(res))
+                return { success: false, error: t('err.PIN_REQUIRED', 'Yêu cầu mã PIN') };
             const result = await res.json().catch(() => ({}));
             if (res.ok && result.success) {
-                if (cleanPin)
-                    setAppPin(cleanPin);
+                // The server re-issued the unlock cookie for the new PIN; nothing is kept client-side
                 setSecurity({
                     pinEnabled: Boolean(result.security?.pinEnabled),
                     hasPin: Boolean(result.security?.hasPin),
                 });
                 return { success: true };
             }
-            if (res.status === 401)
-                setIsPinLocked(true);
             return { success: false, error: result.code ? t(`err.${result.code}`, result.error) : (result.error || `HTTP ${res.status}`) };
         }
         catch (e) {
@@ -512,6 +553,22 @@ export const AppProvider = ({ children }) => {
     useEffect(() => {
         let isSubscribed = true;
         async function checkAuthAndLoad() {
+            purgeStoredCredentials();
+            // Back from Google: remember ?google=<result>&reason=<code> and clean the address bar
+            try {
+                const params = new URLSearchParams(window.location.search);
+                if (params.has('google')) {
+                    googleResultRef.current = { result: params.get('google'), reason: params.get('reason') || '' };
+                    params.delete('google');
+                    params.delete('reason');
+                    const qs = params.toString();
+                    window.history.replaceState(null, '', `${window.location.pathname}${qs ? `?${qs}` : ''}${window.location.hash}`);
+                }
+            } catch {}
+            fetch('/api/auth/google/status', { cache: 'no-store' })
+                .then((r) => r.json())
+                .then((g) => isSubscribed && setGoogleAuth({ enabled: Boolean(g.enabled), signupEnabled: Boolean(g.signupEnabled) }))
+                .catch(() => {});
             try {
                 const authRes = await fetch('/api/auth/me', { cache: 'no-store' });
                 const authData = await authRes.json().catch(() => ({ authenticated: false }));
@@ -523,13 +580,6 @@ export const AppProvider = ({ children }) => {
                     currentUserRef.current = authData.user;
                     setCurrentUser(authData.user);
 
-                    // Auto-load remembered PIN or credential for this user
-                    try {
-                        const savedPin = sessionStorage.getItem(`fintrack_pin_${authData.user.id}`) || localStorage.getItem(`fintrack_pin_${authData.user.id}`);
-                        if (savedPin) {
-                            appPinRef.current = savedPin;
-                        }
-                    } catch (e) {}
 
                     let serverData = null;
                     let locked = false;
@@ -538,11 +588,14 @@ export const AppProvider = ({ children }) => {
                             cache: 'no-store',
                             headers: getApiHeaders(),
                         });
-                        if (res.status === 401) {
+                        if (res.status === 401 || res.status === 429) {
                             const errData = await res.json().catch(() => ({}));
                             if (errData.requiresPin) {
                                 locked = true;
-                                if (isSubscribed) setIsPinLocked(true);
+                                if (isSubscribed) {
+                                    setIsPinLocked(true);
+                                    if (res.status === 429) setPinUnlockError(t('err.RATE_LIMITED', errData.error));
+                                }
                             }
                         }
                         else if (res.ok) {
@@ -563,7 +616,15 @@ export const AppProvider = ({ children }) => {
                         return;
                     }
 
-                    applyInitialData(serverData, readLocalCache(authData.user.id));
+                    const localData = readLocalCache(authData.user.id);
+                    if (!serverData && !localData) {
+                        // Never fall back to the built-in demo dataset: auto-save would push it into the real account
+                        setDataLoadError(true);
+                        setServerSyncStatus('offline');
+                        return;
+                    }
+                    setDataLoadError(false);
+                    applyInitialData(serverData, localData);
                     setServerSyncStatus(serverData ? 'synced' : 'offline');
                     setMounted(true);
                 } else {
@@ -583,6 +644,7 @@ export const AppProvider = ({ children }) => {
             finally {
                 if (isSubscribed) {
                     setAuthLoading(false);
+                    showGoogleResultRef.current();
                 }
             }
         }
@@ -590,26 +652,35 @@ export const AppProvider = ({ children }) => {
         return () => {
             isSubscribed = false;
         };
+        // Runs once per page load: depending on `t` would re-run the whole session check on every language switch
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [applyInitialData, getApiHeaders]);
 
-    const handleLoginSuccess = async (user, password) => {
+    // Server unreachable: continue offline from this browser's cache, or show a retry screen (never the demo dataset)
+    const mountFromLocalCacheOrFail = (uid) => {
+        const local = readLocalCache(uid);
+        if (local) {
+            applyInitialData(null, local);
+            setDataLoadError(false);
+            setMounted(true);
+        } else {
+            setDataLoadError(true);
+        }
+        setServerSyncStatus('offline');
+    };
+
+    // The login response sets httpOnly session + unlock cookies, so the password is never kept in the browser
+    const handleLoginSuccess = async (loginUser) => {
+        // The login response only carries id/username/role: load the full profile (password / Google link state)
+        let user = loginUser;
+        try {
+            const me = await (await fetch('/api/auth/me', { cache: 'no-store' })).json();
+            if (me.authenticated && me.user?.id === loginUser.id) user = me.user;
+        } catch {}
         currentUserRef.current = user;
         setCurrentUser(user);
         setAuthLoading(true);
-
-        if (password) {
-            appPinRef.current = password;
-            try {
-                sessionStorage.setItem(`fintrack_pin_${user.id}`, password);
-            } catch (e) {}
-        } else {
-            try {
-                const savedPin = sessionStorage.getItem(`fintrack_pin_${user.id}`) || localStorage.getItem(`fintrack_pin_${user.id}`);
-                if (savedPin) {
-                    appPinRef.current = savedPin;
-                }
-            } catch (e) {}
-        }
+        appPinRef.current = '';
 
         try {
             const res = await fetch('/api/storage', {
@@ -617,63 +688,82 @@ export const AppProvider = ({ children }) => {
                 headers: getApiHeaders(),
             });
 
-            if (res.status === 401) {
+            if (res.status === 401 || res.status === 429) {
                 const errData = await res.json().catch(() => ({}));
                 if (errData.requiresPin) {
                     setIsPinLocked(true);
+                    if (res.status === 429) setPinUnlockError(t('err.RATE_LIMITED', errData.error));
                     setServerSyncStatus('offline');
                     setAuthLoading(false);
                     return;
                 }
             }
 
-            if (res.ok) {
-                const result = await res.json();
-                if (result.success && result.data) {
-                    applyServerData(result.data, true);
-                    setServerSyncStatus('synced');
-                    setIsPinLocked(false);
-                    setMounted(true);
-                }
+            const result = res.ok ? await res.json() : null;
+            if (result?.success && result.data) {
+                applyServerData(result.data, true);
+                setServerSyncStatus('synced');
+                setIsPinLocked(false);
+                setDataLoadError(false);
+                setMounted(true);
             } else {
-                const local = readLocalCache(user.id);
-                if (local) {
-                    applyInitialData(null, local);
-                    setMounted(true);
-                }
+                mountFromLocalCacheOrFail(user.id);
             }
         }
         catch (err) {
             console.error('Failed to load data after login:', err);
-            const local = readLocalCache(user.id);
-            if (local) {
-                applyInitialData(null, local);
-                setMounted(true);
-            }
+            mountFromLocalCacheOrFail(user.id);
         }
         finally {
             setAuthLoading(false);
         }
     };
 
-    const logoutUser = async () => {
-        const uid = currentUserRef.current?.id || currentUser?.id;
+    // Remove this user's financial data cache from the browser (shared devices) - called on logout / account deletion
+    const clearLocalUserData = (uid) => {
+        purgeStoredCredentials();
         try {
-            await fetch('/api/auth/logout', { method: 'POST' });
-        } catch {}
-        try {
-            if (uid) {
-                sessionStorage.removeItem(`fintrack_pin_${uid}`);
-                localStorage.removeItem(`fintrack_pin_${uid}`);
-            }
             for (let i = localStorage.length - 1; i >= 0; i--) {
                 const key = localStorage.key(i);
-                if (key && (key === 'quan_ly_chi_tieu_data_v2' || key.startsWith('fintrack_user_profile'))) {
+                if (key && (key === STORAGE_KEY || key.startsWith('fintrack_user_profile') || (uid && key === `${STORAGE_KEY}_${uid}`))) {
                     localStorage.removeItem(key);
                 }
             }
         } catch {}
+    };
+
+    const logoutUser = async ({ force = false } = {}) => {
+        const uid = currentUserRef.current?.id || currentUser?.id;
+        // The local cache is wiped below, so first flush edits that have not reached the server yet
+        if (!force && mounted && !isPinLocked) {
+            const data = getCurrentData();
+            if (computeDataSignature(data) !== lastSavedDataSignatureRef.current) {
+                const saved = await pushToServer(data).catch(() => false);
+                if (!saved) {
+                    showConfirm({
+                        title: language === 'en' ? 'Unsynced changes' : 'Còn thay đổi chưa đồng bộ',
+                        message: language === 'en'
+                            ? 'Some changes could not be saved to the server. Signing out now will discard them from this device.'
+                            : 'Một số thay đổi chưa lưu được lên máy chủ. Đăng xuất bây giờ sẽ xóa chúng khỏi thiết bị này.',
+                        confirmText: language === 'en' ? 'Sign out anyway' : 'Vẫn đăng xuất',
+                        cancelText: language === 'en' ? 'Stay signed in' : 'Ở lại',
+                        variant: 'danger',
+                        onConfirm: () => logoutUser({ force: true }),
+                    });
+                    return;
+                }
+            }
+        }
+        try {
+            await fetch('/api/auth/logout', { method: 'POST' });
+        } catch {}
+        clearLocalUserData(uid);
+        resetSessionState();
+    };
+
+    const resetSessionState = () => {
         appPinRef.current = '';
+        setDataLoadError(false);
         currentUserRef.current = null;
         setCurrentUser(null);
         setMounted(false);
@@ -691,6 +781,110 @@ export const AppProvider = ({ children }) => {
             emergencyPercent: 0,
             notes: '',
         });
+    };
+
+    /** Change the account password. Other devices are signed out; this one gets a fresh session cookie. */
+    const changePassword = async (currentPassword, newPassword) => {
+        try {
+            const res = await fetch('/api/auth/password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ currentPassword, newPassword }),
+            });
+            const result = await res.json().catch(() => ({}));
+            if (res.ok && result.success) {
+                setCurrentUser((u) => (u ? { ...u, hasPassword: true } : u));
+                return { success: true };
+            }
+            return { success: false, error: result.error || `HTTP ${res.status}` };
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    };
+
+    /** Permanently delete the current (guest) account and its data, then return to the sign-in screen. */
+    const deleteAccount = async (password) => {
+        const uid = currentUserRef.current?.id;
+        try {
+            const res = await fetch('/api/auth/account', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password }),
+            });
+            const result = await res.json().catch(() => ({}));
+            if (!res.ok || !result.success) {
+                return { success: false, error: result.error || `HTTP ${res.status}` };
+            }
+            clearLocalUserData(uid);
+            resetSessionState();
+            return { success: true };
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    };
+
+    // Human-readable outcome of a Google sign-in / link round trip
+    const googleMessage = (result, reason) => {
+        const en = language === 'en';
+        if (result === 'linked') return en ? 'Your Google account is now linked. You can sign in with Google next time.' : 'Đã liên kết tài khoản Google. Lần sau bạn có thể đăng nhập bằng Google.';
+        if (result === 'signup') return en ? 'Your account was created with Google. Set a password in Settings if you also want to sign in without Google.' : 'Đã tạo tài khoản bằng Google. Bạn có thể đặt mật khẩu trong Cài đặt nếu muốn đăng nhập cả khi không dùng Google.';
+        if (result === 'login') return '';
+        const messages = {
+            cancelled: en ? 'Google sign-in was cancelled.' : 'Bạn đã hủy đăng nhập Google.',
+            not_linked: en ? 'This Google account is not linked to any FinTrack account yet. Sign in with your password and link it in Settings, or use "Sign up with Google".' : 'Tài khoản Google này chưa liên kết với tài khoản FinTrack nào. Hãy đăng nhập bằng mật khẩu rồi liên kết trong Cài đặt, hoặc chọn "Đăng ký bằng Google".',
+            already_linked: en ? 'This Google account is already linked to another FinTrack account.' : 'Tài khoản Google này đã được liên kết với một tài khoản FinTrack khác.',
+            expired: en ? 'The Google sign-in took too long or was opened in another browser. Please try again.' : 'Phiên đăng nhập Google đã hết hạn hoặc được mở ở trình duyệt khác. Vui lòng thử lại.',
+            state: en ? 'The Google response could not be verified. Please try again.' : 'Không xác minh được phản hồi từ Google. Vui lòng thử lại.',
+            session: en ? 'Please sign in to your FinTrack account before linking Google.' : 'Vui lòng đăng nhập tài khoản FinTrack trước khi liên kết Google.',
+            disabled: en ? 'Google sign-in is not configured on this server.' : 'Máy chủ chưa cấu hình đăng nhập Google.',
+            registration_disabled: en ? 'Creating new accounts is turned off on this server.' : 'Máy chủ đang tắt chức năng tạo tài khoản mới.',
+            rate_limited: en ? 'Too many new accounts were created recently. Please try again later.' : 'Đã tạo quá nhiều tài khoản trong thời gian ngắn, vui lòng thử lại sau.',
+        };
+        return messages[reason] || (en ? 'Google sign-in failed. Please try again.' : 'Đăng nhập Google không thành công. Vui lòng thử lại.');
+    };
+    const showGoogleResultRef = useRef(() => {});
+    showGoogleResultRef.current = () => {
+        const pending = googleResultRef.current;
+        if (!pending) return;
+        googleResultRef.current = null;
+        const message = googleMessage(pending.result, pending.reason);
+        if (!message) return;
+        if (!currentUserRef.current) {
+            setAuthNotice(message);
+            return;
+        }
+        showConfirm({
+            title: pending.result === 'error' ? (language === 'en' ? 'Google account' : 'Tài khoản Google') : (language === 'en' ? 'Done' : 'Thành công'),
+            message,
+            confirmText: 'OK',
+            cancelText: null,
+            variant: pending.result === 'error' ? 'danger' : 'info',
+        });
+    };
+    // Full-page navigations: Google needs a top-level redirect, not a fetch
+    const startGoogleAuth = (mode) => {
+        window.location.assign(`/api/auth/google/start?mode=${encodeURIComponent(mode)}`);
+    };
+    const unlinkGoogle = async () => {
+        try {
+            const res = await fetch('/api/auth/google/unlink', { method: 'POST' });
+            const result = await res.json().catch(() => ({}));
+            if (await handleAuthFailure(res)) return { success: false };
+            if (!res.ok || !result.success) return { success: false, error: result.error || `HTTP ${res.status}` };
+            setCurrentUser((u) => (u ? { ...u, googleLinked: false, googleEmail: '' } : u));
+            return { success: true };
+        } catch (e) {
+            return { success: false, error: e.message };
+        }
+    };
+
+    // Session no longer valid: return to sign-in. The local cache is kept so unsynced edits merge back after login.
+    sessionExpiredRef.current = () => {
+        if (!currentUserRef.current) return;
+        resetSessionState();
+        setAuthNotice(language === 'en'
+            ? 'Your session has ended (signed out or password changed on another device). Please sign in again.'
+            : 'Phiên đăng nhập đã kết thúc (đã đăng xuất hoặc đổi mật khẩu ở thiết bị khác). Vui lòng đăng nhập lại.');
     };
 
     // Real-time polling & focus/visibility sync across multi-devices (Phone <-> PC)
@@ -715,6 +909,12 @@ export const AppProvider = ({ children }) => {
                     // Local changes pending save -> do not apply server data to prevent overwriting (will merge upon saving)
                     if (isSavingRef.current)
                         return;
+                    // A previous save failed (offline): retry it now instead of overwriting those edits with the
+                    // server snapshot. pushToServer 3-way merges with anything another device saved meanwhile.
+                    if (result.success && result.data && hasPendingLocalChangesRef.current()) {
+                        await saveDataNowRef.current();
+                        return;
+                    }
                     if (result.success && result.data) {
                         setIsPinLocked(false);
                         if (result.data.security) {
@@ -764,6 +964,8 @@ export const AppProvider = ({ children }) => {
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             window.removeEventListener('focus', handleFocus);
         };
+        // currentUser only changes together with `mounted` (login/logout reset it), which already restarts polling
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [mounted, applyServerData, getApiHeaders, handleAuthFailure]);
     const getCurrentData = () => ({
         wallets,
@@ -873,6 +1075,8 @@ export const AppProvider = ({ children }) => {
             if (!fired)
                 isSavingRef.current = false;
         };
+        // Triggered by data changes only; helpers are recreated each render and would re-arm the debounce constantly
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [mounted, isPinLocked, wallets, transactions, categories, budgets, bills, goals, planner, currentMonth, userProfile, simulatorConfig]);
     // Immediate save on demand
     const saveDataNow = async () => {
@@ -892,6 +1096,9 @@ export const AppProvider = ({ children }) => {
             isSavingRef.current = false;
         }
     };
+    hasPendingLocalChangesRef.current = () => mounted && !isPinLocked
+        && computeDataSignature(getCurrentData()) !== lastSavedDataSignatureRef.current;
+    saveDataNowRef.current = saveDataNow;
     const openQuickAdd = (type = 'EXPENSE', defaultWalletId) => {
         setQuickAddDefaultType(type);
         setQuickAddDefaultWalletId(defaultWalletId);
@@ -947,7 +1154,7 @@ export const AppProvider = ({ children }) => {
         }
         if (tx.type === 'TRANSFER') {
             if (!tx.toWalletId || tx.toWalletId === tx.walletId) {
-                alert(t('Ví nhận phải khác ví chuyển', 'Ví nhận phải khác ví chuyển!'));
+                alert(language === 'en' ? 'Receiving wallet must differ from the source wallet!' : 'Ví nhận phải khác ví chuyển!');
                 return false;
             }
             if (!wallets.some((w) => w.id === tx.toWalletId)) {
@@ -1072,7 +1279,7 @@ export const AppProvider = ({ children }) => {
         }
         if (newTx.type === 'TRANSFER') {
             if (!newTx.toWalletId || newTx.walletId === newTx.toWalletId) {
-                alert(t('Ví nhận phải khác ví chuyển', 'Ví nhận phải khác ví chuyển!'));
+                alert(language === 'en' ? 'Receiving wallet must differ from the source wallet!' : 'Ví nhận phải khác ví chuyển!');
                 return false;
             }
             const destW = wallets.find((w) => w.id === newTx.toWalletId);
@@ -1523,8 +1730,11 @@ export const AppProvider = ({ children }) => {
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
         link.download = `quan-ly-chi-tieu-backup-${getLocalDateString()}.json`;
+        document.body.appendChild(link);
         link.click();
-        URL.revokeObjectURL(link.href);
+        document.body.removeChild(link);
+        // Revoking synchronously can cancel the download in Safari/Firefox
+        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
     };
     const importDatabaseJSON = (jsonStr) => {
         try {
@@ -1542,22 +1752,14 @@ export const AppProvider = ({ children }) => {
                 return false;
             }
 
-            // Normalize wallet.
-            // Do not trust raw balance in backup file.
-            const importedWallets = data.wallets.map((w) => ({
-                ...w,
-                initialBalance:
-                    w.initialBalance !== undefined
-                        ? Number(w.initialBalance) || 0
-                        : Number(w.balance) || 0,
-                balance:
-                    Number(w.balance) || 0,
-            }));
+            // Old backups may store numbers as strings ("200000"): coerce them before any arithmetic
+            Object.assign(data, normalizeSnapshotNumbers(data));
 
-            // Recalculate balance based on initialBalance + transaction history.
+            // Do not trust raw balances in the backup file: recompute from opening balance + transaction history
+            // (wallets from old backups without initialBalance get it derived from their final balance).
             const recalculatedWallets =
                 recomputeWalletBalances(
-                    importedWallets,
+                    data.wallets,
                     data.transactions
                 );
 
@@ -1728,6 +1930,8 @@ export const AppProvider = ({ children }) => {
             setActiveTab,
             isSidebarOpen,
             setIsSidebarOpen,
+            isMobileNavOpen,
+            setIsMobileNavOpen,
             toggleSidebar,
             quickAddOpen,
             setQuickAddOpen,
@@ -1820,6 +2024,11 @@ export const AppProvider = ({ children }) => {
             isHostPasswordSet,
             logoutUser,
             handleLoginSuccess,
+            changePassword,
+            deleteAccount,
+            googleAuth,
+            startGoogleAuth,
+            unlinkGoogle,
             showConfirm,
         }}>
       {authLoading ? (
@@ -1834,10 +2043,32 @@ export const AppProvider = ({ children }) => {
         </div>
       ) : !currentUser ? (
         <AuthModal
-          onLoginSuccess={handleLoginSuccess}
+          onLoginSuccess={(user) => { setAuthNotice(''); return handleLoginSuccess(user); }}
           isHostPasswordSet={isHostPasswordSet}
           language={language}
+          notice={authNotice}
+          googleAuth={googleAuth}
+          onGoogle={startGoogleAuth}
         />
+      ) : dataLoadError && !isPinLocked ? (
+        <div className="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 p-6 text-center" role="alert">
+          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-2">
+            {language === 'en' ? 'Could not load your data' : 'Không tải được dữ liệu của bạn'}
+          </h2>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mb-6 max-w-sm">
+            {language === 'en'
+                ? 'The server could not be reached. Nothing was changed - please try again in a moment.'
+                : 'Không kết nối được tới máy chủ. Chưa có gì bị thay đổi - vui lòng thử lại sau giây lát.'}
+          </p>
+          <div className="flex gap-3">
+            <button type="button" onClick={() => window.location.reload()} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl shadow-sm">
+              {language === 'en' ? 'Try again' : 'Thử lại'}
+            </button>
+            <button type="button" onClick={() => logoutUser()} className="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 text-sm font-bold rounded-xl">
+              {language === 'en' ? 'Sign out' : 'Đăng xuất'}
+            </button>
+          </div>
+        </div>
       ) : (
         <>
           {children}

@@ -1,36 +1,49 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs/promises';
 import crypto from 'crypto';
 import {
     getUsers,
     saveUsers,
+    withUsersLock,
     hashPassword,
-    createSessionToken,
+    setSessionCookie,
     getUserDataFilePath,
     getDefaultUserData,
-    SESSION_COOKIE_NAME,
-    SESSION_MAX_AGE,
-    USERS_DIR
+    writeJsonAtomic,
 } from '@/lib/auth-server';
+import { validatePayload, normalizeSnapshotNumbers } from '@/lib/storage-validation';
+import { getClientIp, readBodyWithLimit } from '@/lib/request-security';
+import { registrationEnabled, consumeRegistrationSlot } from '@/lib/registration';
 import { logSecurityEvent } from '@/lib/security-logger';
 
 export const dynamic = 'force-dynamic';
 
-function getClientIp(req) {
-    return (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || req.headers.get('x-real-ip') || 'local';
-}
+// Username + password + optional offline data carried over from the browser. Larger offline data can be
+// imported as a JSON backup after signing up instead.
+const MAX_BODY_BYTES = 1024 * 1024;
 
 export async function POST(req) {
     const ip = getClientIp(req);
     try {
-        const body = await req.json().catch(() => null);
+        if (!registrationEnabled()) {
+            return NextResponse.json({ success: false, error: 'Máy chủ đang tắt chức năng đăng ký tài khoản mới' }, { status: 403 });
+        }
+        const { raw, tooLarge } = await readBodyWithLimit(req, MAX_BODY_BYTES);
+        if (tooLarge) {
+            return NextResponse.json({ success: false, error: 'Dữ liệu quá lớn' }, { status: 413 });
+        }
+        let body = null;
+        try {
+            body = JSON.parse(raw);
+        } catch {
+            body = null;
+        }
         if (!body || !body.username || !body.password) {
             return NextResponse.json({ success: false, error: 'Vui lòng nhập tên đăng nhập và mật khẩu' }, { status: 400 });
         }
 
         const username = String(body.username).trim().toLowerCase();
         const password = String(body.password);
-        const displayName = body.displayName ? String(body.displayName).trim() : username;
+        const displayName = (body.displayName ? String(body.displayName).trim() : username).slice(0, 50) || username;
 
         // Validate username format (lowercase letters, numbers, and underscore only, 3-20 chars)
         if (!/^[a-z0-9_]{3,20}$/.test(username)) {
@@ -39,66 +52,74 @@ export async function POST(req) {
                 error: 'Tên đăng nhập phải từ 3-20 ký tự, chỉ gồm chữ cái thường, số và dấu gạch dưới (_)'
             }, { status: 400 });
         }
-
-        // Security requirement: Minimum password length 8 characters
-        if (password.length < 8) {
-            return NextResponse.json({ success: false, error: 'Mật khẩu phải có ít nhất 8 ký tự' }, { status: 400 });
+        if (username === 'admin') {
+            return NextResponse.json({ success: false, error: 'Tên đăng nhập này đã được sử dụng. Vui lòng chọn tên khác' }, { status: 409 });
         }
 
-        const users = await getUsers();
-        if (users.some(u => u.username.toLowerCase() === username)) {
+        // Security requirement: Minimum password length 8 characters
+        if (password.length < 8 || password.length > 256) {
+            return NextResponse.json({ success: false, error: 'Mật khẩu phải có từ 8 đến 256 ký tự' }, { status: 400 });
+        }
+
+        // Reserve a sign-up slot only now (cheap checks done, expensive scrypt + disk writes ahead). Checking and
+        // counting in one synchronous step keeps parallel bursts from creating more accounts than allowed.
+        if (!consumeRegistrationSlot(ip)) {
+            logSecurityEvent({ event: 'AUTH_REGISTER_RATE_LIMITED', ip, success: false });
+            return NextResponse.json({ success: false, error: 'Đã tạo quá nhiều tài khoản trong thời gian ngắn, vui lòng thử lại sau' }, { status: 429 });
+        }
+
+        // Optional offline data carried over from the browser: must pass the same validation as /api/storage
+        let initialUserData = getDefaultUserData(displayName);
+        const initialData = body.initialData;
+        if (initialData && typeof initialData === 'object' && Array.isArray(initialData.wallets) && initialData.wallets.length > 0) {
+            const candidate = {
+                ...initialUserData,
+                wallets: initialData.wallets,
+                transactions: Array.isArray(initialData.transactions) ? initialData.transactions : [],
+                categories: Array.isArray(initialData.categories) && initialData.categories.length > 0 ? initialData.categories : initialUserData.categories,
+                budgets: Array.isArray(initialData.budgets) ? initialData.budgets : [],
+                bills: Array.isArray(initialData.bills) ? initialData.bills : [],
+                goals: Array.isArray(initialData.goals) ? initialData.goals : [],
+                planner: initialData.planner || initialUserData.planner,
+                simulatorConfig: initialData.simulatorConfig || initialUserData.simulatorConfig,
+                updatedAt: new Date().toISOString(),
+            };
+            // Invalid carried-over data is dropped instead of blocking sign-up
+            if (!validatePayload(candidate)) {
+                initialUserData = normalizeSnapshotNumbers(candidate);
+            }
+        }
+
+        // Hash outside the users.json lock so other account writes do not wait for scrypt
+        const { salt, hash } = await hashPassword(password);
+        const newUser = await withUsersLock(async () => {
+            const users = await getUsers();
+            if (users.some(u => u.username.toLowerCase() === username)) {
+                return null;
+            }
+            const created = {
+                id: `usr_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`,
+                username,
+                role: 'guest',
+                tokenVersion: 1,
+                hasPassword: true,
+                salt,
+                passwordHash: hash,
+                displayName,
+                createdAt: new Date().toISOString(),
+            };
+            // Write the data file first so a registered account never points at a missing store
+            await writeJsonAtomic(getUserDataFilePath(created.id), initialUserData);
+            users.push(created);
+            await saveUsers(users);
+            return created;
+        });
+
+        if (!newUser) {
             logSecurityEvent({ event: 'AUTH_REGISTER_CONFLICT', ip, success: false, details: { username } });
             return NextResponse.json({ success: false, error: 'Tên đăng nhập này đã được sử dụng. Vui lòng chọn tên khác' }, { status: 409 });
         }
 
-        const userId = `usr_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
-        const { salt, hash } = hashPassword(password);
-
-        const newUser = {
-            id: userId,
-            username,
-            role: 'guest',
-            tokenVersion: 1,
-            hasPassword: true,
-            salt,
-            passwordHash: hash,
-            displayName,
-            createdAt: new Date().toISOString(),
-        };
-
-        users.push(newUser);
-        await saveUsers(users);
-
-        // Initialize isolated user data store for guest
-        await fs.mkdir(USERS_DIR, { recursive: true });
-        const userFilePath = getUserDataFilePath(userId);
-        let initialUserData = getDefaultUserData(displayName);
-        if (body.initialData && typeof body.initialData === 'object' && Array.isArray(body.initialData.wallets) && body.initialData.wallets.length > 0) {
-            initialUserData = {
-                ...initialUserData,
-                wallets: body.initialData.wallets,
-                transactions: Array.isArray(body.initialData.transactions) ? body.initialData.transactions : [],
-                categories: Array.isArray(body.initialData.categories) && body.initialData.categories.length > 0 ? body.initialData.categories : initialUserData.categories,
-                budgets: Array.isArray(body.initialData.budgets) ? body.initialData.budgets : [],
-                bills: Array.isArray(body.initialData.bills) ? body.initialData.bills : [],
-                goals: Array.isArray(body.initialData.goals) ? body.initialData.goals : [],
-                planner: body.initialData.planner || initialUserData.planner,
-                simulatorConfig: body.initialData.simulatorConfig || initialUserData.simulatorConfig,
-                updatedAt: new Date().toISOString(),
-            };
-        }
-        await fs.writeFile(userFilePath, JSON.stringify(initialUserData, null, 2), 'utf-8');
-
-        // Create session cookie with tokenVersion for revocation support
-        const sessionPayload = {
-            userId: newUser.id,
-            username: newUser.username,
-            role: newUser.role,
-            tokenVersion: newUser.tokenVersion,
-            exp: Date.now() + SESSION_MAX_AGE * 1000,
-        };
-
-        const token = await createSessionToken(sessionPayload);
         logSecurityEvent({ event: 'AUTH_REGISTER_SUCCESS', userId: newUser.id, ip, success: true, details: { username } });
 
         const res = NextResponse.json({
@@ -110,16 +131,7 @@ export async function POST(req) {
             },
             message: 'Đăng ký tài khoản thành công',
         });
-
-        const isSecure = req.headers.get('x-forwarded-proto') === 'https' || req.nextUrl?.protocol === 'https:';
-        res.cookies.set(SESSION_COOKIE_NAME, token, {
-            httpOnly: true,
-            secure: isSecure,
-            sameSite: 'lax',
-            maxAge: SESSION_MAX_AGE,
-            path: '/',
-        });
-
+        await setSessionCookie(res, req, newUser);
         return res;
     } catch (err) {
         console.error('API /api/auth/register error:', err);

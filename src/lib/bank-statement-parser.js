@@ -348,25 +348,19 @@ export function parseDate(val) {
     // Regex DD/MM/YYYY or DD-MM-YYYY (with optional time)
     const dmyMatch = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
     if (dmyMatch) {
-        const day = dmyMatch[1].padStart(2, '0');
-        const month = dmyMatch[2].padStart(2, '0');
-        const year = dmyMatch[3];
-        const hour = (dmyMatch[4] || '12').padStart(2, '0');
-        const min = (dmyMatch[5] || '00').padStart(2, '0');
-        const sec = (dmyMatch[6] || '00').padStart(2, '0');
-        return `${year}-${month}-${day}T${hour}:${min}:${sec}`;
+        let day = Number(dmyMatch[1]);
+        let month = Number(dmyMatch[2]);
+        // Vietnamese banks use day/month; a "month" above 12 with a valid day means the file is month/day (US export)
+        if (month > 12 && day <= 12) {
+            [day, month] = [month, day];
+        }
+        return buildIsoDate(dmyMatch[3], month, day, dmyMatch[4], dmyMatch[5], dmyMatch[6]);
     }
 
     // Regex YYYY/MM/DD or YYYY-MM-DD
     const ymdMatch = str.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
     if (ymdMatch) {
-        const year = ymdMatch[1];
-        const month = ymdMatch[2].padStart(2, '0');
-        const day = ymdMatch[3].padStart(2, '0');
-        const hour = (ymdMatch[4] || '12').padStart(2, '0');
-        const min = (ymdMatch[5] || '00').padStart(2, '0');
-        const sec = (ymdMatch[6] || '00').padStart(2, '0');
-        return `${year}-${month}-${day}T${hour}:${min}:${sec}`;
+        return buildIsoDate(ymdMatch[1], Number(ymdMatch[2]), Number(ymdMatch[3]), ymdMatch[4], ymdMatch[5], ymdMatch[6]);
     }
 
     // Fallback: Date.parse
@@ -376,6 +370,21 @@ export function parseDate(val) {
     }
 
     return null;
+}
+
+/**
+ * Local ISO string for a calendar date, or null when the date does not exist (31/02, month 13, 25:00...):
+ * new Date() would silently roll such values into another day/month.
+ */
+function buildIsoDate(year, month, day, hour, minute, second) {
+    const y = Number(year);
+    const h = hour === undefined ? 12 : Number(hour);
+    const mi = Number(minute || 0);
+    const se = Number(second || 0);
+    if (month < 1 || month > 12 || day < 1 || day > new Date(y, month, 0).getDate()) return null;
+    if (h > 23 || mi > 59 || se > 59) return null;
+    const p = (n) => String(n).padStart(2, '0');
+    return `${y}-${p(month)}-${p(day)}T${p(h)}:${p(mi)}:${p(se)}`;
 }
 
 function toLocalIso(d) {
