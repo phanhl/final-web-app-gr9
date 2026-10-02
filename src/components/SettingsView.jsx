@@ -613,7 +613,9 @@ export const SettingsView = () => {
                 ? <>{isEn ? 'Linked to' : 'Đã liên kết với'} <strong>{currentUser.googleEmail || 'Google'}</strong></>
                 : googleAuth?.enabled
                   ? (isEn ? 'Not linked. Link it to sign in with one click.' : 'Chưa liên kết. Liên kết để đăng nhập bằng Google chỉ với một chạm.')
-                  : (isEn ? 'Google sign-in is not configured on this server (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET).' : 'Máy chủ chưa cấu hình đăng nhập Google (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET).')}
+                  : googleAuth?.reason === 'needs_https'
+                    ? (isEn ? 'Google only works on an https address (your ngrok domain) or on localhost, not on a local network IP like http://192.168.x.x.' : 'Google chỉ hoạt động trên địa chỉ https (domain ngrok) hoặc localhost, không dùng được qua IP mạng LAN dạng http://192.168.x.x.')
+                    : (isEn ? 'Google sign-in is not configured on this server (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET).' : 'Máy chủ chưa cấu hình đăng nhập Google (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET).')}
             </p>
             {currentUser?.googleLinked ? (
               <button type="button" onClick={handleUnlinkGoogle} className="px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl shrink-0">

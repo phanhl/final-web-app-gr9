@@ -203,6 +203,8 @@ Setup:
 3. *OAuth consent screen*: while in "Testing", add the Google accounts allowed to sign in as test users.
 4. Put `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env` and restart. The Google buttons appear automatically.
 
+Only the Google buttons depend on Google Cloud Console: username + password sign-in, sign-up, the App PIN and the host setup code work without it. Google only redirects back to `https://` addresses or `http://localhost`, so the buttons are hidden (with an explanation in Settings) when the app is opened on a LAN address such as `http://192.168.x.x`.
+
 Security: authorization code flow with PKCE, `state` and `nonce` kept in a short-lived signed httpOnly cookie, ID token signature checked against Google's JWKS plus issuer / audience / expiry / nonce.
 
 ### Quality Checks

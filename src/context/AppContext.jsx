@@ -37,7 +37,7 @@ export const AppProvider = ({ children }) => {
     // Message shown on the sign-in screen (e.g. session expired)
     const [authNotice, setAuthNotice] = useState('');
     // Google Sign-In availability (server has GOOGLE_CLIENT_ID/SECRET) and the result of a return from Google
-    const [googleAuth, setGoogleAuth] = useState({ enabled: false, signupEnabled: false });
+    const [googleAuth, setGoogleAuth] = useState({ enabled: false, configured: false, reason: null, signupEnabled: false });
     const googleResultRef = useRef(null);
     const [wallets, setWallets] = useState(INITIAL_WALLETS);
     const [transactions, setTransactions] = useState(INITIAL_TRANSACTIONS);
@@ -567,7 +567,7 @@ export const AppProvider = ({ children }) => {
             } catch {}
             fetch('/api/auth/google/status', { cache: 'no-store' })
                 .then((r) => r.json())
-                .then((g) => isSubscribed && setGoogleAuth({ enabled: Boolean(g.enabled), signupEnabled: Boolean(g.signupEnabled) }))
+                .then((g) => isSubscribed && setGoogleAuth({ enabled: Boolean(g.enabled), configured: Boolean(g.configured), reason: g.reason || null, signupEnabled: Boolean(g.signupEnabled) }))
                 .catch(() => {});
             try {
                 const authRes = await fetch('/api/auth/me', { cache: 'no-store' });
