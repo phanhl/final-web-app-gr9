@@ -6,50 +6,50 @@ The system features **Multi-User Isolation** with strict security architecture: 
 
 ---
 
-## 🌟 1. Key Features
+## 1. Key Features
 
-### 🔐 Multi-User Accounts & Access Control
+### Multi-User Accounts & Access Control
 - **Mandatory Authentication:** Modern Glassmorphism welcome screen and Login / Register modal, preventing unauthorized access.
 - **Host Account:** Dedicated `admin` account holding complete real financial records (wallets, bank accounts, transaction history). Password is set upon first login.
 - **Guest Accounts:** Guests visit online links and click **"Create Guest Account"** to register. The system generates an isolated `User ID` (`usr_...`) pre-populated with a clean sample dataset. Guests cannot view or modify Host data, and vice versa.
 - **Session Management:** Role badges (Host / Guest) integrated into the top navigation bar with a secure **Sign Out** button.
 
-### 💳 Wallets & Asset Management
+### Wallets & Asset Management
 - **4 Specialized Wallet Types:** Cash, Bank Accounts, Credit Cards (credit limit, statement cycle, isolated debt balance), and Savings Accounts (tenor, interest rate).
 - Automatic calculation of **Available Balance** and **Net Worth**; credit card debt is strictly isolated to prevent financial distortion.
 - **Internal Transfers** between wallets (with optional transaction fees) and **Credit Card Debt Settlement**.
 - **Balance Reconciliation:** One-click *"Recalculate Balance"* verifies initial balance against entire transaction history.
 
-### 📝 Transaction Tracking & Quick Entry
+### Transaction Tracking & Quick Entry
 - Manage expenses, incomes, and transfers; categorize by tags, notes, and attach **receipt images** (automatically compressed before saving).
 - **Quick Add Modal:** Instantly accessible from any screen, featuring fast amount increment buttons (+50k, +100k, +500k, etc.).
 - Smart validation: Overdraft alerts, credit limit enforcement, and prevention of future-dated transactions.
 
-### 📥 Automated Bank Statement Parser
+### Automated Bank Statement Parser
 - Upload **Excel (.xlsx, .xls)** or **CSV** files. Automatically recognizes statement layouts of over 15 Vietnamese banks (Techcombank, Vietcombank, MB Bank, ACB, VPBank, BIDV, VietinBank, TPBank, VIB, Agribank, Sacombank, Timo, Cake, MoMo, etc.).
 - Duplicate transaction detection and intelligent expense category suggestions based on transfer descriptions.
 
-### 🎯 Budgets & Savings Goals
+### Budgets & Savings Goals
 - Set spending caps per category, with automated warning thresholds: **approaching 80%** (amber) and **exceeded 100%** (red).
 - Allocate income according to multi-jar envelope budgeting principles with an emergency fund.
 - **Financial Goals:** Deposit/withdraw funds directly to/from wallets, complete with celebratory confetti animations upon goal attainment.
 
-### ⏰ Recurring Bills & Subscriptions
+### Recurring Bills & Subscriptions
 - Track electricity, water, internet, and rent on **Monthly / Quarterly / Yearly** cycles.
 - Accurate calendar due-date calculation, countdown timers, and visual alerts for upcoming or overdue bills.
 - **"Pay Now"** button instantly creates the corresponding expense transaction and deducts funds from the designated wallet.
 
-### 🔮 What-If Financial Simulation
+### What-If Financial Simulation
 - Experiment with future financial projections: expense reduction sliders (0–50%), monthly savings deposits, investment market scenarios, and external loan amortization.
 - Multi-horizon projections (**6 / 12 / 24 / 36 months**) with interactive charts comparing baseline growth against simulated scenarios.
 
-### 📊 Reports & Data Export
+### Reports & Data Export
 - Visual analytics for expense distribution, monthly cash flow trends, and net income trajectory.
 - Export to **Multi-sheet Excel (.xlsx)** (transactions, wallets, budgets, executive summary) and language-localized **UTF-8 CSV**.
 
 ---
 
-## 🔒 2. Strict Security Architecture
+## 2. Strict Security Architecture
 
 FinTrack Pro is built on a 6-layer defense-in-depth model:
 
@@ -64,7 +64,7 @@ FinTrack Pro is built on a 6-layer defense-in-depth model:
 
 ---
 
-## 💻 3. Technology Stack
+## 3. Technology Stack
 
 | Component | Technology |
 |---|---|
@@ -111,7 +111,7 @@ data/
 
 ---
 
-## 🚀 4. Installation & Getting Started
+## 4. Installation & Getting Started
 
 ### Prerequisites
 * **Node.js 18.18+** (LTS Node 20 or Node 22 recommended).
@@ -165,7 +165,7 @@ FinTrack Pro has launched successfully with Multi-User Isolation!
 
 ---
 
-## 🗄️ 5. Data Management & Backups
+## 5. Data Management & Backups
 
 - **Atomic Writes:** During writes, data is flushed to a temporary `.tmp` file prior to renaming (`fs.rename`), guarding against database corruption in the event of abrupt server termination or power loss.
 - **Realtime Multi-Device Sync:** The application monitors snapshot versioning. In the event of simultaneous edits across devices, the server triggers conflict resolution (`HTTP 409`) and initiates three-way merging (`mergeSnapshots`), safeguarding all balances and transactions.
