@@ -450,13 +450,6 @@ export const AppProvider = ({ children }) => {
                 const result = await res.json();
                 if (result.success && result.data) {
                     setAppPin(enteredPin);
-                    try {
-                        const uid = currentUserRef.current?.id;
-                        if (uid) {
-                            sessionStorage.setItem(`fintrack_pin_${uid}`, enteredPin);
-                            localStorage.setItem(`fintrack_pin_${uid}`, enteredPin);
-                        }
-                    } catch (e) {}
                     setPinUnlockError('');
                     applyInitialData(result.data, readLocalCache());
                     setIsPinLocked(false);
@@ -523,13 +516,8 @@ export const AppProvider = ({ children }) => {
                     currentUserRef.current = authData.user;
                     setCurrentUser(authData.user);
 
-                    // Auto-load remembered PIN or credential for this user
-                    try {
-                        const savedPin = sessionStorage.getItem(`fintrack_pin_${authData.user.id}`) || localStorage.getItem(`fintrack_pin_${authData.user.id}`);
-                        if (savedPin) {
-                            appPinRef.current = savedPin;
-                        }
-                    } catch (e) {}
+                    // Không tự khôi phục PIN.
+                    // Sau mỗi lần reload/mở lại app, appPinRef phải bắt đầu rỗng.
 
                     let serverData = null;
                     let locked = false;
@@ -597,19 +585,9 @@ export const AppProvider = ({ children }) => {
         setCurrentUser(user);
         setAuthLoading(true);
 
-        if (password) {
-            appPinRef.current = password;
-            try {
-                sessionStorage.setItem(`fintrack_pin_${user.id}`, password);
-            } catch (e) {}
-        } else {
-            try {
-                const savedPin = sessionStorage.getItem(`fintrack_pin_${user.id}`) || localStorage.getItem(`fintrack_pin_${user.id}`);
-                if (savedPin) {
-                    appPinRef.current = savedPin;
-                }
-            } catch (e) {}
-        }
+        // Không dùng mật khẩu tài khoản làm App PIN.
+        // App PIN phải được nhập riêng sau khi đăng nhập nếu PIN protection đang bật.
+        appPinRef.current = '';
 
         try {
             const res = await fetch('/api/storage', {
