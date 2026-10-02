@@ -11,6 +11,10 @@ const SRC = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src')
 
 registerHooks({
     resolve(specifier, context, nextResolve) {
+        // Only the project's own files use these shortcuts; packages (and their require() calls) resolve normally
+        if (!context.parentURL || context.parentURL.includes('/node_modules/')) {
+            return nextResolve(specifier, context);
+        }
         let spec = specifier;
         if (spec.startsWith('@/')) {
             spec = pathToFileURL(path.join(SRC, spec.slice(2))).href;

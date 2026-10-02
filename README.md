@@ -65,9 +65,10 @@ FinTrack Pro được xây dựng theo mô hình phòng thủ theo chiều sâu 
 | **Khóa PIN ứng dụng** | Nhập mã PIN (hoặc mật khẩu tài khoản) sẽ cấp một cookie `HttpOnly` thời hạn ngắn (`fintrack_unlock`, 12 giờ, gắn liền với mã băm PIN và phiên làm việc). Việc đăng nhập **không** tự động mở khóa PIN. Mã PIN và mật khẩu **tuyệt đối không lưu trong localStorage / sessionStorage**; dữ liệu thừa từ các phiên bản cũ sẽ tự động bị xóa khi tải trang. |
 | **Chống CSRF & Tiêu đề bảo mật** | Từ chối các lệnh gọi API làm thay đổi dữ liệu đến từ các trang web khác (`Sec-Fetch-Site: cross-site / same-site`). Thiết lập CSP nghiêm ngặt không có `unsafe-eval` trong môi trường production, `frame-ancestors 'none'`, HSTS, `nosniff`. |
 | **Sao lưu mã hóa** | Mã hóa chuẩn AES-256-GCM với `APP_BACKUP_KEY` hoặc `data/.backup_key`; máy chủ sẽ từ chối tạo bản sao lưu nếu thiếu khóa riêng thay vì dùng khóa mặc định có sẵn. |
-| **Cách ly dữ liệu (Data Isolation)** | Máy chủ trích xuất `userId` tuyệt đối từ chữ ký phiên đã được xác thực (theo nguyên lý Zero Trust Client). Cơ chế làm sạch chống Path Traversal (`replace(/[^a-zA-Z0-9_-]/g, '')`) ngăn chặn truy cập tệp tin trái phép. |
-| **Phân quyền hệ thống tệp** | Thư mục `data/` và `data/users/` được tạo / thắt chặt quyền **`0700`**, và mọi tệp dữ liệu được ghi với quyền **`0600`** (chỉ người dùng hệ điều hành máy chủ mới có quyền truy cập). Tệp `users.json` nếu bị lỗi cấu trúc sẽ không bao giờ bị ghi đè tự động. |
-| **Bảo mật khi đẩy lên Git** | `.gitignore` loại trừ hoàn toàn `data/*.json` (ngoại trừ tệp template), `data/users/`, `data/secure-backups/`, `data/.session_secret`, `data/.backup_key`, `data/.host_setup_code` và `.env`. Khi push mã nguồn lên GitHub, **toàn bộ dữ liệu tài chính, tài khoản người dùng và các khóa bí mật đều được giữ lại trên máy cục bộ của bạn và tuyệt đối không bao giờ bị rò rỉ**. |
+| **Cách ly dữ liệu (Data Isolation)** | Máy chủ trích xuất `userId` tuyệt đối từ chữ ký phiên đã được xác thực (theo nguyên lý Zero Trust Client). Mọi bảng dữ liệu trong MySQL đều có cột `user_id` nằm trong khóa chính, và mọi câu truy vấn đều lọc theo `user_id` lấy từ phiên, nên một tài khoản không thể đọc hay ghi dữ liệu của tài khoản khác. Mọi câu lệnh SQL truyền giá trị qua tham số `?` (được escape tự động, không ghép chuỗi), chống SQL injection. |
+| **Cơ sở dữ liệu** | MySQL chỉ mở cổng trên `127.0.0.1` (không truy cập được từ mạng), ứng dụng dùng tài khoản MySQL riêng `fintrack` thay vì `root`. Ràng buộc nằm ngay trong database (khóa ngoại, `CHECK` số tiền > 0, loại giao dịch hợp lệ, tên đăng nhập không trùng, chỉ một tài khoản Host), nên dữ liệu sai bị từ chối kể cả khi bỏ qua lớp kiểm tra của ứng dụng. |
+| **Phân quyền hệ thống tệp** | Thư mục `data/` (chứa các khóa bí mật) được tạo / thắt chặt quyền **`0700`**, các tệp khóa có quyền **`0600`**; tệp sao lưu database (`npm run db:backup`) cũng được ghi với quyền `0600`. |
+| **Bảo mật khi đẩy lên Git** | `.gitignore` loại trừ hoàn toàn `data/*.json` (ngoại trừ tệp template), `data/users/`, `data/legacy-json-*/`, `data/.session_secret`, `data/.backup_key`, `data/.host_setup_code`, thư mục `backups/` (bản sao lưu database) và `.env`. Khi push mã nguồn lên GitHub, **toàn bộ dữ liệu tài chính, tài khoản người dùng và các khóa bí mật đều được giữ lại trên máy cục bộ của bạn và tuyệt đối không bao giờ bị rò rỉ**. |
 
 ---
 
@@ -81,7 +82,7 @@ FinTrack Pro được xây dựng theo mô hình phòng thủ theo chiều sâu 
 | **Xử lý bảng tính** | **SheetJS (xlsx)** |
 | **Xác thực & Mật mã học** | Mô-đun `crypto` tích hợp sẵn của Node.js (scrypt, HMAC-SHA256, timingSafeEqual) |
 | **Quản lý trạng thái** | React Context (`src/context/AppContext.jsx`) |
-| **Cơ chế lưu trữ** | Tệp tin JSON dạng tài liệu trên ổ đĩa máy chủ (ghi nguyên tử thông qua `writeJsonAtomic` để chống hỏng dữ liệu) |
+| **Cơ sở dữ liệu** | **MySQL 8.4** (thư viện `mysql2`), chạy bằng Docker / Podman qua `docker-compose.yml`. Mỗi lần lưu là một **transaction**: hoặc ghi trọn vẹn, hoặc không ghi gì |
 
 ### Cấu Trúc Mã Nguồn (Source Tree)
 ```
@@ -104,11 +105,13 @@ src/
 │                                  # Navigation, AuthModal, QuickAddModal, BankStatementModal...
 ├── context/AppContext.jsx         # Quản lý trạng thái toàn cục, nạp dữ liệu người dùng, đồng bộ thời gian thực
 ├── lib/
-│   ├── auth-server.js             # Xác thực phía máy chủ, băm scrypt, ký phiên HMAC, danh bạ người dùng
+│   ├── auth-server.js             # Xác thực phía máy chủ, băm scrypt, ký phiên HMAC, khởi tạo tài khoản Host
+│   ├── db.js                      # Kết nối MySQL (connection pool), tạo / nâng cấp bảng (migrations), transaction
+│   ├── store.js                   # Đọc / ghi dữ liệu người dùng vào các bảng MySQL, kiểm tra xung đột phiên bản
+│   ├── legacy-import.js           # Chuyển dữ liệu từ các tệp JSON của phiên bản cũ sang MySQL (chạy một lần)
 │   ├── request-security.js        # IP máy khách, phát hiện yêu cầu cục bộ, giới hạn tần suất, giới hạn kích thước body
 │   ├── registration.js            # Bật/tắt đăng ký (ALLOW_REGISTRATION) và giới hạn tần suất đăng ký
 │   ├── storage-validation.js      # Xác thực tính hợp lệ của snapshot dữ liệu phía máy chủ (storage + register)
-│   ├── user-data.js               # Phân giải đường dẫn tệp dữ liệu riêng cho từng người dùng
 │   ├── secure-backup.js           # Sao lưu mã hóa chuẩn AES-256-GCM
 │   ├── backup-validation.js       # Xác thực tệp sao lưu trước khi nhập
 │   ├── security-logger.js         # Nhật ký kiểm toán bảo mật có cấu trúc (audit log)
@@ -117,28 +120,38 @@ src/
 │   ├── utils.js                   # Các phép tính tài chính, đối soát số dư, định dạng tiền tệ
 │   └── mock-data.js               # Định nghĩa schema ban đầu và dữ liệu mẫu khởi tạo
 └── middleware.js                  # Lớp bảo vệ CSRF (Sec-Fetch-Site), ranh giới xác thực, tiêu đề bảo mật
-scripts/reset-password.mjs         # Đặt lại mật khẩu bị quên trực tiếp trên máy chủ
-tests/                             # Các bài kiểm thử đơn vị node:test
-data/
+scripts/
+├── reset-password.mjs             # Đặt lại mật khẩu bị quên trực tiếp trên máy chủ
+├── db-check.mjs                   # Kiểm tra kết nối MySQL, tạo / nâng cấp bảng (npm run db:check)
+└── db-backup.mjs                  # Sao lưu toàn bộ database ra tệp .sql.gz (npm run db:backup)
+tests/                             # Kiểm thử node:test (đơn vị + tích hợp với MySQL)
+docker-compose.yml                 # Dịch vụ MySQL 8.4 (chỉ mở trên 127.0.0.1, dữ liệu nằm trong volume)
+data/                              # Chỉ còn các khóa bí mật (trong .gitignore)
 ├── database.template.json         # Tệp schema mẫu sạch (được theo dõi trong Git)
-├── database.json                  # Dữ liệu host cũ, chỉ đọc một lần duy nhất để di chuyển sang users/admin.json (trong .gitignore)
-├── users.json                     # Danh bạ người dùng kèm mã băm mật khẩu scrypt (trong .gitignore)
-├── .session_secret                # Khóa ký HMAC (trong .gitignore)
-├── .backup_key                    # Khóa mã hóa sao lưu (trong .gitignore)
-├── .host_setup_code               # Mã thiết lập Host dùng một lần, tự xóa sau khi dùng (trong .gitignore)
-├── secure-backups/                # Các bản sao lưu mã hóa của Host (trong .gitignore)
-└── users/                         # Thư mục lưu trữ dữ liệu cách ly theo người dùng (trong .gitignore)
-    ├── admin.json                 # Hồ sơ & cơ sở dữ liệu tài chính của Host
-    ├── usr_<id>.json              # Kho dữ liệu cách ly của từng tài khoản Khách
-    └── usr_<id>/secure-backups/   # Các bản sao lưu mã hóa của từng tài khoản Khách
+├── .session_secret                # Khóa ký HMAC
+├── .backup_key                    # Khóa mã hóa sao lưu
+├── .host_setup_code               # Mã thiết lập Host dùng một lần, tự xóa sau khi dùng
+└── legacy-json-<thời gian>/       # Tệp JSON của phiên bản cũ, được giữ lại sau khi chuyển sang MySQL
 ```
+
+### Cấu Trúc Cơ Sở Dữ Liệu (MySQL)
+| Bảng | Nội dung |
+|---|---|
+| `users` | Tài khoản: tên đăng nhập (không trùng, không phân biệt hoa thường), vai trò host/guest, mã băm mật khẩu + salt, `token_version` |
+| `user_state` | Mỗi tài khoản một dòng: phiên bản đồng bộ (`updated_at`), tháng đang xem, kế hoạch, cấu hình mô phỏng, hồ sơ, mã băm PIN |
+| `wallets`, `categories`, `transactions`, `budgets`, `bills`, `goals`, `goal_history` | Dữ liệu tài chính, mỗi dòng gắn với `user_id`. Giao dịch có khóa ngoại tới ví; số tiền lưu bằng `DECIMAL(19,4)` (không sai số làm tròn như số thực) |
+| `secure_backups` | Các bản sao lưu mã hóa AES-256-GCM (tối đa 20 bản / tài khoản) |
+| `schema_migrations`, `app_meta` | Phiên bản cấu trúc bảng đã áp dụng, thông tin hệ thống |
+
+Bảng được tạo tự động ở lần chạy đầu tiên (hoặc bằng `npm run db:check`); khi cấu trúc thay đổi ở phiên bản sau, ứng dụng tự nâng cấp và ghi lại vào `schema_migrations`.
 
 ---
 
 ## 4. Cài Đặt & Bắt Đầu Sử Dụng
 
 ### Yêu Cầu Hệ Thống
-* **Node.js 18.18+** để build và chạy ứng dụng; **Node.js 22.15+** để chạy các bài kiểm thử đơn vị (`npm test`). Khuyến nghị sử dụng phiên bản Node 22 LTS (phiên bản được sử dụng trong CI).
+* **Node.js 18.18+** để build và chạy ứng dụng; **Node.js 22.15+** để chạy các bài kiểm thử (`npm test`). Khuyến nghị sử dụng phiên bản Node 22 LTS (phiên bản được sử dụng trong CI).
+* **MySQL 8.4**: cách đơn giản nhất là chạy bằng **Docker** hoặc **Podman** với tệp `docker-compose.yml` có sẵn (hoặc dùng một máy chủ MySQL 8 sẵn có).
 * Hệ điều hành: Linux / macOS / Windows (WSL2).
 
 ### Tải Về & Cài Đặt
@@ -146,8 +159,22 @@ data/
 git clone https://github.com/vietnamlm05-bit/final-web-app.git
 cd final-web-app
 npm install
-cp .env.example .env   # tùy chọn: APP_PASSWORD, APP_SESSION_SECRET, APP_BACKUP_KEY, ALLOW_REGISTRATION...
+cp .env.example .env   # điền MYSQL_PASSWORD, MYSQL_ROOT_PASSWORD, DATABASE_URL; tùy chọn: APP_PASSWORD, ALLOW_REGISTRATION...
 ```
+
+### Database (MySQL)
+1. Mở `.env`, đặt hai mật khẩu ngẫu nhiên (tạo bằng `openssl rand -hex 16`) cho `MYSQL_ROOT_PASSWORD` và `MYSQL_PASSWORD`, rồi điền **cùng mật khẩu `MYSQL_PASSWORD`** vào `DATABASE_URL`:
+   ```bash
+   DATABASE_URL=mysql://fintrack:<MYSQL_PASSWORD>@127.0.0.1:3306/fintrack
+   ```
+2. Khởi động MySQL và kiểm tra kết nối (lệnh thứ hai cũng tạo các bảng):
+   ```bash
+   docker compose up -d db      # hoặc: podman compose up -d db
+   npm run db:check
+   ```
+3. **Nâng cấp từ phiên bản cũ lưu bằng JSON:** chỉ cần giữ nguyên thư mục `data/` cũ. Ở lần chạy đầu tiên với database trống, ứng dụng tự chuyển toàn bộ tài khoản (giữ nguyên mật khẩu), dữ liệu tài chính và bản sao lưu mã hóa sang MySQL trong **một transaction**: nếu có lỗi thì không có gì được ghi và tệp JSON vẫn nguyên vẹn. Sau khi chuyển xong, các tệp JSON được dời (không xóa) vào `data/legacy-json-<thời gian>/`.
+
+Nếu MySQL ngừng hoạt động khi ứng dụng đang chạy, trang web hiển thị thông báo *"Máy chủ tạm thời không phản hồi"* kèm nút *Thử lại* (không đăng xuất người dùng); ứng dụng tự kết nối lại khi MySQL chạy trở lại.
 
 ### Chạy Với Cơ Chế Liên Kết Kép (Khuyến Nghị)
 Dự án tích hợp sẵn tập lệnh khởi động tự động giúp build bản production đồng thời thiết lập đường hầm mạng (tunneling) bảo mật ra internet:
@@ -194,17 +221,22 @@ npm run lint    # Kiểm tra mã nguồn với ESLint (next/core-web-vitals)
 npm test        # Chạy kiểm thử đơn vị node:test: số dư & hợp nhất dữ liệu, hóa đơn, bộ đọc sao kê, xác thực, sao lưu mã hóa, giới hạn tần suất
 npm run build   # Build bản phát hành production
 ```
+Kiểm thử tích hợp với MySQL (lưu / đọc dữ liệu, xung đột đồng bộ, ràng buộc database, chuyển dữ liệu JSON cũ) chỉ chạy khi có `TEST_DATABASE_URL` trỏ tới **một database riêng dùng để thử**, vì mọi bảng trong database đó sẽ bị xóa:
+```bash
+TEST_DATABASE_URL=mysql://fintrack:<mật khẩu>@127.0.0.1:3306/fintrack_test npm test
+```
 Các bước kiểm tra này cũng được tự động thực thi trên GitHub Actions sau mỗi lần push hoặc tạo pull request (`.github/workflows/ci.yml`).
 
 ### Lưu Ý Về Triển Khai (Deployment)
-Dữ liệu được lưu trữ trong các tệp JSON thuộc thư mục `data/`, do đó ứng dụng yêu cầu **ổ đĩa lưu trữ cố định (persistent disk)**: máy tính cá nhân của bạn (kèm tunnel qua `start.sh`), máy chủ VPS hoặc Docker volume. Các nền tảng Serverless như Vercel chỉ cung cấp thư mục `/tmp` tạm thời, dẫn đến dữ liệu sẽ bị mất sau mỗi lần khởi động lại hoặc triển khai lại mã nguồn.
+Dữ liệu nằm trong MySQL (volume `fintrack-mysql-data` khi chạy bằng `docker-compose.yml`), còn thư mục `data/` giữ các khóa bí mật. Ứng dụng phù hợp với máy tính cá nhân (kèm tunnel qua `start.sh`) hoặc máy chủ VPS. Khi chuyển máy chủ, cần mang theo **cả** bản sao lưu database lẫn thư mục `data/` (thiếu `.backup_key` thì không giải mã được các bản sao lưu mã hóa).
 
 ---
 
 ## 5. Quản Lý Dữ Liệu & Sao Lưu
 
-- **Ghi dữ liệu nguyên tử (Atomic Writes):** Trong quá trình ghi, dữ liệu được xả vào một tệp tạm `.tmp` trước khi đổi tên thay thế tệp cũ (`fs.rename`), bảo vệ cơ sở dữ liệu không bị hỏng hóc ngay cả khi máy chủ bị tắt đột ngột hoặc mất điện.
+- **Ghi dữ liệu bằng transaction:** Mỗi lần lưu được thực hiện trong một transaction MySQL (InnoDB): hoặc toàn bộ thay đổi được ghi, hoặc không có gì thay đổi, kể cả khi máy chủ bị tắt đột ngột hoặc mất điện. Dòng `user_state` của tài khoản được khóa (`SELECT ... FOR UPDATE`) trong lúc so sánh phiên bản, nên hai thiết bị lưu cùng lúc không thể ghi đè lên nhau.
 - **Đồng bộ thời gian thực trên nhiều thiết bị:** Ứng dụng theo dõi phiên bản snapshot. Khi xảy ra chỉnh sửa đồng thời trên nhiều thiết bị khác nhau, máy chủ sẽ kích hoạt cơ chế giải quyết xung đột (`HTTP 409`) và thực hiện hợp nhất 3 chiều (`mergeSnapshots`), bảo toàn trọn vẹn số dư và tất cả các giao dịch.
 - **Chỉnh sửa ngoại tuyến (Offline):** Các thay đổi được thực hiện khi mất kết nối máy chủ sẽ được lưu lại trên thiết bị (được đánh dấu trạng thái *Ngoại tuyến*) và tự động đẩy lên, hợp nhất khi có mạng trở lại; nếu người dùng đăng xuất khi còn thay đổi chưa đồng bộ, hệ thống sẽ hiển thị cảnh báo xác nhận.
 - **Sao lưu định dạng JSON:** Tải xuống bản snapshot JSON đầy đủ từ mục *Cài đặt* (phần dữ liệu & sao lưu) hoặc từ menu tài khoản, và khôi phục trực tiếp tại các vị trí này. Hệ thống hỗ trợ tương thích ngược với các định dạng sao lưu cũ hơn (tự động tính lại số dư từ lịch sử giao dịch, chuyển đổi các số bị lưu dưới dạng chuỗi văn bản).
+- **Sao lưu toàn bộ database:** `npm run db:backup` ghi một bản sao lưu nhất quán của tất cả tài khoản vào `backups/fintrack-<thời gian>.sql.gz` (không cần cài `mysqldump`). Khôi phục: `gunzip -c <tệp>.sql.gz | docker exec -i fintrack-mysql mysql -u fintrack -p<MYSQL_PASSWORD> fintrack` (hoặc `| mysql -h 127.0.0.1 -u fintrack -p fintrack` nếu máy có sẵn lệnh `mysql`). Nên đặt lệnh này chạy định kỳ (ví dụ cron hằng ngày) và sao chép tệp ra nơi khác.
 - **Sao lưu mã hóa trên máy chủ:** Mục *Cài đặt → Sao lưu bảo mật* lưu trữ tối đa 20 bản snapshot mã hóa chuẩn AES-256-GCM cho mỗi tài khoản trên máy chủ; trước khi khôi phục một bản sao lưu bất kỳ, hệ thống sẽ tự động tạo một bản sao lưu an toàn cho dữ liệu hiện tại.

@@ -36,6 +36,8 @@ export const AppProvider = ({ children }) => {
     const [dataLoadError, setDataLoadError] = useState(false);
     // Message shown on the sign-in screen (e.g. session expired)
     const [authNotice, setAuthNotice] = useState('');
+    // The server answered 503 (database unreachable): show a retry screen, not the sign-in form
+    const [serverUnavailable, setServerUnavailable] = useState(false);
     const [wallets, setWallets] = useState(INITIAL_WALLETS);
     const [transactions, setTransactions] = useState(INITIAL_TRANSACTIONS);
     const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
@@ -555,6 +557,10 @@ export const AppProvider = ({ children }) => {
                 const authRes = await fetch('/api/auth/me', { cache: 'no-store' });
                 const authData = await authRes.json().catch(() => ({ authenticated: false }));
                 if (!isSubscribed) return;
+                if (authRes.status >= 500) {
+                    setServerUnavailable(true);
+                    return;
+                }
 
                 setIsHostPasswordSet(Boolean(authData.isHostPasswordSet));
 
@@ -1959,6 +1965,20 @@ export const AppProvider = ({ children }) => {
           <p className="text-xs text-slate-400 mt-1">
             {language === 'en' ? 'Checking security session...' : 'Đang kiểm tra phiên bảo mật...'}
           </p>
+        </div>
+      ) : serverUnavailable ? (
+        <div className="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 p-6 text-center" role="alert">
+          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-2">
+            {language === 'en' ? 'The server is temporarily unavailable' : 'Máy chủ tạm thời không phản hồi'}
+          </h2>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mb-6 max-w-sm">
+            {language === 'en'
+                ? 'The database could not be reached. Your data is safe - please try again in a moment.'
+                : 'Không kết nối được tới cơ sở dữ liệu. Dữ liệu của bạn vẫn an toàn - vui lòng thử lại sau giây lát.'}
+          </p>
+          <button type="button" onClick={() => window.location.reload()} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl shadow-sm">
+            {language === 'en' ? 'Try again' : 'Thử lại'}
+          </button>
         </div>
       ) : !currentUser ? (
         <AuthModal

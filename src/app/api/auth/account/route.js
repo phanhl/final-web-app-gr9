@@ -1,18 +1,7 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs/promises';
-import path from 'path';
-import {
-    getSessionUser,
-    getUsers,
-    saveUsers,
-    withUsersLock,
-    verifyPassword,
-    clearAuthCookies,
-    getUserDataFilePath,
-    USERS_DIR,
-} from '@/lib/auth-server';
+import { getSessionUser, verifyPassword, clearAuthCookies } from '@/lib/auth-server';
+import { getUserById, deleteUser } from '@/lib/store';
 import { getClientIp, createRateLimiter } from '@/lib/request-security';
-import { withDataWriteQueue } from '@/lib/user-data';
 import { logSecurityEvent } from '@/lib/security-logger';
 
 export const dynamic = 'force-dynamic';
@@ -44,28 +33,15 @@ export async function DELETE(req) {
             return NextResponse.json({ success: false, error: 'Mật khẩu không chính xác' }, { status: 403 });
         }
 
-        const deleted = await withUsersLock(async () => {
-            const users = await getUsers();
-            const user = users.find(u => u.id === sessionUser.id);
-            if (!user || !(await verifyPassword(password, user.salt, user.passwordHash))) {
-                return false;
-            }
-            await saveUsers(users.filter(u => u.id !== user.id));
-            return true;
-        });
+        const user = await getUserById(sessionUser.id);
+        const passwordOk = Boolean(user) && await verifyPassword(password, user.salt, user.passwordHash);
+        // One transaction removes the account and everything it owns (data, settings, encrypted backups)
+        const deleted = passwordOk && await deleteUser(sessionUser.id);
 
         if (!deleted) {
             logSecurityEvent({ event: 'AUTH_ACCOUNT_DELETE_FAILED', userId: sessionUser.id, ip, success: false });
             return NextResponse.json({ success: false, error: 'Mật khẩu không chính xác' }, { status: 403 });
         }
-
-        // getUserDataFilePath sanitizes the id, so these paths always stay inside data/users/.
-        // Queued behind in-flight saves so none of them can recreate the file after it is removed.
-        await withDataWriteQueue(async () => {
-            await fs.rm(getUserDataFilePath(sessionUser.id), { force: true });
-            const userDir = path.join(USERS_DIR, path.basename(getUserDataFilePath(sessionUser.id), '.json'));
-            await fs.rm(userDir, { recursive: true, force: true });
-        });
 
         logSecurityEvent({ event: 'AUTH_ACCOUNT_DELETED', userId: sessionUser.id, ip, success: true });
         const res = NextResponse.json({ success: true, message: 'Đã xóa tài khoản và toàn bộ dữ liệu' });

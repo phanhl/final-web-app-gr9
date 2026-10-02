@@ -1,9 +1,6 @@
 import { NextResponse } from 'next/server';
 import {
     getSessionUser,
-    getUsers,
-    saveUsers,
-    withUsersLock,
     verifyPassword,
     hashPassword,
     setSessionCookie,
@@ -11,7 +8,7 @@ import {
     hasValidUnlockCookie,
 } from '@/lib/auth-server';
 import { getClientIp, createRateLimiter } from '@/lib/request-security';
-import { readUserSecurity } from '@/lib/user-data';
+import { getUserById, getSecurity, changePassword } from '@/lib/store';
 import { logSecurityEvent } from '@/lib/security-logger';
 
 export const dynamic = 'force-dynamic';
@@ -36,7 +33,7 @@ export async function POST(req) {
 
         // Only a browser that had already unlocked the App PIN stays unlocked after the change
         // (the old unlock cookie dies with the tokenVersion bump); changing the password never unlocks the PIN by itself
-        const securityBefore = await readUserSecurity(sessionUser);
+        const securityBefore = await getSecurity(sessionUser.id);
         const wasUnlocked = await hasValidUnlockCookie(req, sessionUser, securityBefore?.pinHash);
 
         const body = await req.json().catch(() => null);
@@ -52,21 +49,16 @@ export async function POST(req) {
             return NextResponse.json({ success: false, error: 'Mật khẩu mới phải khác mật khẩu hiện tại' }, { status: 400 });
         }
 
-        const updated = await withUsersLock(async () => {
-            const users = await getUsers();
-            const user = users.find(u => u.id === sessionUser.id);
-            if (!user || !(await verifyPassword(currentPassword, user.salt, user.passwordHash))) {
-                return null;
-            }
+        const user = await getUserById(sessionUser.id);
+        let updated = null;
+        if (user && await verifyPassword(currentPassword, user.salt, user.passwordHash)) {
             const { salt, hash } = await hashPassword(newPassword);
-            user.salt = salt;
-            user.passwordHash = hash;
-            user.hasPassword = true;
-            user.tokenVersion = (user.tokenVersion || 1) + 1;
-            user.passwordChangedAt = new Date().toISOString();
-            await saveUsers(users);
-            return user;
-        });
+            // Compare-and-set on tokenVersion: if this account changed meanwhile (another password change,
+            // a logout), nothing is written and the request fails instead of silently overwriting it
+            if (await changePassword(user.id, user.tokenVersion, salt, hash)) {
+                updated = await getUserById(user.id);
+            }
+        }
 
         if (!updated) {
             logSecurityEvent({ event: 'AUTH_PASSWORD_CHANGE_FAILED', userId: sessionUser.id, ip, success: false });
@@ -78,8 +70,7 @@ export async function POST(req) {
         const res = NextResponse.json({ success: true, message: 'Đã đổi mật khẩu. Các thiết bị khác đã bị đăng xuất.' });
         await setSessionCookie(res, req, updated);
         if (wasUnlocked) {
-            const security = await readUserSecurity(updated);
-            await setUnlockCookie(res, req, updated, security?.pinHash);
+            await setUnlockCookie(res, req, updated, securityBefore?.pinHash);
         }
         return res;
     } catch (err) {

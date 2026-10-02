@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server';
 import {
-    getUsers,
-    saveUsers,
-    withUsersLock,
+    ensureReady,
     verifyPassword,
     hashPassword,
     setSessionCookie,
     verifyHostSetupCode,
     consumeHostSetupCode,
 } from '@/lib/auth-server';
+import { getUserByUsername, getUserById, setHostPasswordIfUnset } from '@/lib/store';
 import { getClientIp, isLocalRequest, createRateLimiter } from '@/lib/request-security';
 import { logSecurityEvent } from '@/lib/security-logger';
 
@@ -51,8 +50,9 @@ export async function POST(req) {
             }, { status: 429 });
         }
 
-        const users = await getUsers();
-        let user = users.find(u => u.username.toLowerCase() === username);
+        await ensureReady();
+        // Usernames are unique case-insensitively in the database
+        let user = await getUserByUsername(username);
 
         const fail = (reason, status = 401, error = INVALID_CREDENTIALS) => {
             logSecurityEvent({ event: 'AUTH_LOGIN_FAILED', userId: user?.id, ip, success: false, details: { username, reason } });
@@ -73,23 +73,13 @@ export async function POST(req) {
             if (password.length < 8) {
                 return NextResponse.json({ success: false, error: 'Mật khẩu khởi tạo cho Host phải có ít nhất 8 ký tự' }, { status: 400 });
             }
-            const claimed = await withUsersLock(async () => {
-                const fresh = await getUsers();
-                const host = fresh.find(u => u.id === user.id);
-                if (!host || host.hasPassword) return null; // Someone else finished setup in the meantime
-                const { salt, hash } = await hashPassword(password);
-                host.salt = salt;
-                host.passwordHash = hash;
-                host.hasPassword = true;
-                host.tokenVersion = (host.tokenVersion || 1) + 1;
-                await saveUsers(fresh);
-                return host;
-            });
-            if (!claimed) {
+            const { salt, hash } = await hashPassword(password);
+            // Atomic: only succeeds while the host still has no password (someone else may finish first)
+            if (!(await setHostPasswordIfUnset(user.id, salt, hash))) {
                 return fail('HOST_ALREADY_SET');
             }
             await consumeHostSetupCode();
-            user = claimed;
+            user = await getUserById(user.id);
             logSecurityEvent({ event: 'AUTH_HOST_PASSWORD_INITIALIZED', userId: user.id, ip, success: true });
         } else if (!(await verifyPassword(password, user.salt, user.passwordHash))) {
             return fail('INVALID_PASSWORD');

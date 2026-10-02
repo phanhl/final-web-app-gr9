@@ -1,15 +1,12 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import {
-    getUsers,
-    saveUsers,
-    withUsersLock,
+    ensureReady,
     hashPassword,
     setSessionCookie,
-    getUserDataFilePath,
     getDefaultUserData,
-    writeJsonAtomic,
 } from '@/lib/auth-server';
+import { createUserWithData, snapshotToRows } from '@/lib/store';
 import { validatePayload, normalizeSnapshotNumbers } from '@/lib/storage-validation';
 import { getClientIp, readBodyWithLimit } from '@/lib/request-security';
 import { registrationEnabled, consumeRegistrationSlot } from '@/lib/registration';
@@ -86,34 +83,31 @@ export async function POST(req) {
             };
             // Invalid carried-over data is dropped instead of blocking sign-up
             if (!validatePayload(candidate)) {
-                initialUserData = normalizeSnapshotNumbers(candidate);
+                const normalized = normalizeSnapshotNumbers(candidate);
+                try {
+                    snapshotToRows(normalized); // database schema rules (enums, sizes)
+                    initialUserData = normalized;
+                } catch {
+                    // keep the clean default data
+                }
             }
         }
 
-        // Hash outside the users.json lock so other account writes do not wait for scrypt
+        await ensureReady();
         const { salt, hash } = await hashPassword(password);
-        const newUser = await withUsersLock(async () => {
-            const users = await getUsers();
-            if (users.some(u => u.username.toLowerCase() === username)) {
-                return null;
-            }
-            const created = {
-                id: `usr_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`,
-                username,
-                role: 'guest',
-                tokenVersion: 1,
-                hasPassword: true,
-                salt,
-                passwordHash: hash,
-                displayName,
-                createdAt: new Date().toISOString(),
-            };
-            // Write the data file first so a registered account never points at a missing store
-            await writeJsonAtomic(getUserDataFilePath(created.id), initialUserData);
-            users.push(created);
-            await saveUsers(users);
-            return created;
-        });
+        // One transaction: the account and its first data are created together. The UNIQUE username index
+        // (case-insensitive) decides who wins when two people pick the same name at the same moment.
+        const newUser = await createUserWithData({
+            id: `usr_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`,
+            username,
+            role: 'guest',
+            tokenVersion: 1,
+            hasPassword: true,
+            salt,
+            passwordHash: hash,
+            displayName,
+            createdAt: new Date().toISOString(),
+        }, initialUserData);
 
         if (!newUser) {
             logSecurityEvent({ event: 'AUTH_REGISTER_CONFLICT', ip, success: false, details: { username } });

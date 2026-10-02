@@ -47,6 +47,10 @@ data/secure-backups/
 data/database.json.*
 !data/database.template.json
 
+# Database dumps from npm run db:backup (contain everybody's financial data)
+backups/
+data/legacy-json-*/
+
 # PID cua start.sh
 .server.pid
 .ngrok.pid

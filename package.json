@@ -8,12 +8,15 @@
     "start": "next start -H 0.0.0.0",
     "lint": "eslint .",
     "test": "node --import ./tests/resolve-hook.mjs --test --disable-warning=MODULE_TYPELESS_PACKAGE_JSON \"tests/*.test.mjs\"",
-    "reset-password": "node scripts/reset-password.mjs"
+    "reset-password": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/reset-password.mjs",
+    "db:check": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/db-check.mjs",
+    "db:backup": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/db-backup.mjs"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
     "lucide-react": "^1.16.0",
+    "mysql2": "^3.24.5",
     "next": "^15.5.27",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

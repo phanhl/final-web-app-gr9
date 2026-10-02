@@ -5,19 +5,14 @@ import { promisify } from 'util';
 import { cookies } from 'next/headers';
 import { DEFAULT_CATEGORIES } from './mock-data';
 import { isSecureRequest } from './request-security';
+import { getPool } from './db';
+import { getUserById, getHostUser, createUserWithData } from './store';
+import { importLegacyJsonIfNeeded } from './legacy-import';
 
-function getDataDir() {
-    if (process.env.VERCEL) {
-        return '/tmp/data';
-    }
-    return path.join(process.cwd(), 'data');
-}
-
-const DATA_DIR = getDataDir();
-const USERS_FILE = path.join(DATA_DIR, 'users.json');
-const USERS_DIR = path.join(DATA_DIR, 'users');
+// Accounts and financial data live in MySQL (src/lib/db.js). data/ only keeps the server's secrets:
+// session signing key, backup encryption key, the one-time host setup code, and archived JSON from older versions.
+const DATA_DIR = path.join(process.cwd(), 'data');
 const SECRET_FILE = path.join(DATA_DIR, '.session_secret');
-const LEGACY_DB_FILE = path.join(DATA_DIR, 'database.json');
 const SETUP_CODE_FILE = path.join(DATA_DIR, '.host_setup_code');
 const SESSION_COOKIE_NAME = 'fintrack_session';
 const SESSION_MAX_AGE = 7 * 24 * 60 * 60; // 7 days (reduced from 30 days for security)
@@ -28,35 +23,18 @@ const UNLOCK_MAX_AGE = 12 * 60 * 60; // 12 hours
 let sessionSecretCache = null;
 
 /**
- * Create data directories with owner-only permissions (0700) and tighten them if they already exist.
+ * Create data/ with owner-only permissions (0700) and tighten the secret files in it (0600).
  */
 let dataDirsReady = false;
 export async function ensureDataDirs() {
     if (dataDirsReady) return;
-    for (const dir of [DATA_DIR, USERS_DIR]) {
-        await fs.mkdir(dir, { recursive: true, mode: 0o700 });
-        await fs.chmod(dir, 0o700).catch(() => {});
-        // Files created by older versions were world-readable (0664): tighten them once at startup
-        const entries = await fs.readdir(dir, { withFileTypes: true }).catch(() => []);
-        for (const entry of entries) {
-            if (entry.isFile()) {
-                await fs.chmod(path.join(dir, entry.name), 0o600).catch(() => {});
-            } else if (entry.isDirectory() && dir === USERS_DIR) {
-                await fs.chmod(path.join(dir, entry.name), 0o700).catch(() => {});
-            }
-        }
+    await fs.mkdir(DATA_DIR, { recursive: true, mode: 0o700 });
+    await fs.chmod(DATA_DIR, 0o700).catch(() => {});
+    const entries = await fs.readdir(DATA_DIR, { withFileTypes: true }).catch(() => []);
+    for (const entry of entries) {
+        if (entry.isFile()) await fs.chmod(path.join(DATA_DIR, entry.name), 0o600).catch(() => {});
     }
     dataDirsReady = true;
-}
-
-/**
- * Atomic JSON write (temp file + rename) with owner-only file permissions (0600).
- */
-export async function writeJsonAtomic(filePath, data) {
-    await fs.mkdir(path.dirname(filePath), { recursive: true, mode: 0o700 });
-    const tmp = `${filePath}.${process.pid}.${Date.now()}.${crypto.randomBytes(3).toString('hex')}.tmp`;
-    await fs.writeFile(tmp, JSON.stringify(data, null, 2), { encoding: 'utf-8', mode: 0o600 });
-    await fs.rename(tmp, filePath);
 }
 
 async function getSessionSecret() {
@@ -206,110 +184,49 @@ export function getDefaultUserData(username = '') {
 }
 
 /**
- * Read all user accounts.
- * Missing users.json -> initialize with the host account.
- * Corrupt users.json -> throw (NEVER re-initialize: that would wipe every guest and reopen host setup).
+ * Make sure the database is reachable and migrated, older JSON data is imported, and the host account exists.
+ * Runs once per process (concurrent callers share the same promise; a failure is retried on the next call).
  */
-export async function getUsers() {
-    await ensureDataDirs();
-    let content;
-    try {
-        content = await fs.readFile(USERS_FILE, 'utf-8');
-    } catch (err) {
-        if (err.code !== 'ENOENT') throw err;
-        return initializeUsersOnce();
-    }
-    try {
-        const users = JSON.parse(content);
-        if (!Array.isArray(users)) throw new Error('users.json is not an array');
-        return users;
-    } catch (err) {
-        console.error('CRITICAL: data/users.json is corrupt. Fix or restore it manually; refusing to overwrite.', err.message);
-        const error = new Error('Tệp tài khoản bị hỏng, vui lòng liên hệ quản trị viên');
-        error.code = 'USERS_CORRUPT';
-        throw error;
-    }
-}
-
-// Single in-flight initialization shared by concurrent callers. Deliberately NOT withUsersLock:
-// getUsers() is called from inside that lock (register, logout...), and re-entering it would deadlock.
-let initUsersPromise = null;
-function initializeUsersOnce() {
-    if (!initUsersPromise) {
-        initUsersPromise = initializeUsers().finally(() => {
-            initUsersPromise = null;
+let readyPromise = null;
+export function ensureReady() {
+    if (!readyPromise) {
+        readyPromise = (async () => {
+            await ensureDataDirs();
+            await getPool();
+            await importLegacyJsonIfNeeded(DATA_DIR, { defaultUserData: getDefaultUserData });
+            await ensureHostUser();
+        })().catch((err) => {
+            readyPromise = null;
+            throw err;
         });
     }
-    return initUsersPromise;
+    return readyPromise;
 }
 
-async function initializeUsers() {
-    // Re-check: another request may have created the file meanwhile
-    try {
-        return JSON.parse(await fs.readFile(USERS_FILE, 'utf-8'));
-    } catch (err) {
-        if (err.code !== 'ENOENT') throw err;
+async function ensureHostUser() {
+    let host = await getHostUser();
+    if (!host) {
+        let salt = '';
+        let hash = '';
+        const pw = process.env.APP_PASSWORD || '';
+        if (pw && pw.length < 8) console.warn('APP_PASSWORD is shorter than 8 characters and was ignored');
+        if (pw.length >= 8) ({ salt, hash } = await hashPassword(pw));
+        // A concurrent start may create it first: createUserWithData then returns null and we re-read
+        await createUserWithData({
+            id: 'admin',
+            username: 'admin',
+            role: 'host',
+            hasPassword: Boolean(hash),
+            salt,
+            passwordHash: hash,
+            tokenVersion: 1,
+            createdAt: new Date().toISOString(),
+        }, getDefaultUserData('admin'));
+        host = await getHostUser();
     }
-
-    let hasHostPassword = false;
-    let hostHash = '';
-    let hostSalt = '';
-    if (process.env.APP_PASSWORD) {
-        if (process.env.APP_PASSWORD.length < 8) {
-            console.warn('APP_PASSWORD is shorter than 8 characters and was ignored');
-        } else {
-            const h = await hashPassword(process.env.APP_PASSWORD);
-            hostSalt = h.salt;
-            hostHash = h.hash;
-            hasHostPassword = true;
-        }
-    }
-
-    const initialUsers = [{
-        id: 'admin',
-        username: 'admin',
-        role: 'host',
-        tokenVersion: 1,
-        hasPassword: hasHostPassword,
-        salt: hostSalt,
-        passwordHash: hostHash,
-        createdAt: new Date().toISOString(),
-    }];
-    await writeJsonAtomic(USERS_FILE, initialUsers);
-
-    // Ensure admin data is initialized (copy from legacy database.json if available)
-    const adminDataFile = path.join(USERS_DIR, 'admin.json');
-    try {
-        await fs.access(adminDataFile);
-    } catch {
-        try {
-            const legacy = JSON.parse(await fs.readFile(LEGACY_DB_FILE, 'utf-8'));
-            await writeJsonAtomic(adminDataFile, legacy);
-        } catch {
-            await writeJsonAtomic(adminDataFile, getDefaultUserData('admin'));
-        }
-    }
-
-    if (!hasHostPassword) {
+    if (host && !host.hasPassword) {
         await getHostSetupCode();
     }
-    return initialUsers;
-}
-
-/**
- * Save user accounts. Callers that read-modify-write must hold withUsersLock.
- */
-export async function saveUsers(users) {
-    await ensureDataDirs();
-    await writeJsonAtomic(USERS_FILE, users);
-}
-
-// Serializes read-modify-write cycles on users.json so concurrent requests cannot drop each other's changes
-let usersLock = Promise.resolve();
-export function withUsersLock(fn) {
-    const run = usersLock.then(fn, fn);
-    usersLock = run.catch(() => {});
-    return run;
 }
 
 /**
@@ -347,45 +264,39 @@ export async function consumeHostSetupCode() {
 }
 
 /**
- * Get data file path for a specific user
- */
-export function getUserDataFilePath(userId) {
-    const safeId = String(userId).replace(/[^a-zA-Z0-9_-]/g, '');
-    return path.join(USERS_DIR, `${safeId}.json`);
-}
-
-/**
- * Retrieve active session user from request cookies
+ * Signed-in user from the session cookie, or null when there is no valid session.
+ * Database errors are NOT turned into "signed out": they propagate so the caller answers 503 instead of
+ * showing the sign-in screen to someone whose session is fine.
  */
 export async function getSessionUser() {
+    let session;
     try {
         const cookieStore = await cookies();
         const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
         if (!token) return null;
-        const session = await verifySessionToken(token);
-        // Unlock tokens share the signing key but must never be accepted as a session
-        if (!session || !session.userId || session.kind) return null;
-        
-        // Verify user still exists in registry
-        const users = await getUsers();
-        const user = users.find(u => u.id === session.userId);
-        if (!user) return null;
-
-        // Session Revocation: if tokenVersion was incremented (e.g. after logout or password change), invalidate token
-        const currentVersion = user.tokenVersion || 1;
-        if ((session.tokenVersion || 1) !== currentVersion) {
-            return null;
-        }
-
-        return {
-            id: user.id,
-            username: user.username,
-            role: user.role,
-            tokenVersion: currentVersion,
-        };
+        session = await verifySessionToken(token);
     } catch {
         return null;
     }
+    // Unlock tokens share the signing key but must never be accepted as a session
+    if (!session || !session.userId || session.kind) return null;
+
+    await ensureReady();
+    const user = await getUserById(String(session.userId));
+    if (!user) return null;
+
+    // Session revocation: logout / password change increments tokenVersion and invalidates older tokens
+    const currentVersion = user.tokenVersion || 1;
+    if ((session.tokenVersion || 1) !== currentVersion) {
+        return null;
+    }
+
+    return {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        tokenVersion: currentVersion,
+    };
 }
 
 /**
@@ -451,4 +362,4 @@ export function clearAuthCookies(res, req) {
     res.cookies.set(UNLOCK_COOKIE_NAME, '', { httpOnly: true, secure, sameSite: 'strict', maxAge: 0, path: '/api' });
 }
 
-export { SESSION_COOKIE_NAME, SESSION_MAX_AGE, USERS_DIR, DATA_DIR, LEGACY_DB_FILE };
+export { SESSION_COOKIE_NAME, SESSION_MAX_AGE, DATA_DIR };

@@ -12,9 +12,6 @@ const AUTH_TAG_LENGTH = 16;
 let backupKeyCache = null;
 
 function getDataDir() {
-    if (process.env.VERCEL) {
-        return '/tmp/data';
-    }
     return path.join(process.cwd(), 'data');
 }
 

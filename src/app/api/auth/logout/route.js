@@ -1,11 +1,6 @@
 import { NextResponse } from 'next/server';
-import {
-    getSessionUser,
-    getUsers,
-    saveUsers,
-    withUsersLock,
-    clearAuthCookies,
-} from '@/lib/auth-server';
+import { getSessionUser, clearAuthCookies } from '@/lib/auth-server';
+import { bumpTokenVersion } from '@/lib/store';
 import { getClientIp } from '@/lib/request-security';
 import { logSecurityEvent } from '@/lib/security-logger';
 
@@ -20,14 +15,7 @@ export async function POST(req) {
         if (sessionUser) {
             userId = sessionUser.id;
             // Invalidate existing tokens server-side by bumping tokenVersion
-            await withUsersLock(async () => {
-                const users = await getUsers();
-                const idx = users.findIndex(u => u.id === sessionUser.id);
-                if (idx !== -1) {
-                    users[idx].tokenVersion = (users[idx].tokenVersion || 1) + 1;
-                    await saveUsers(users);
-                }
-            });
+            await bumpTokenVersion(sessionUser.id);
         }
     } catch (err) {
         console.error('Session revocation error during logout:', err);

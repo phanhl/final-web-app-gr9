@@ -1,0 +1,27 @@
+# MySQL for FinTrack Pro.
+#   docker compose up -d db      (or: podman compose up -d db)
+# Credentials come from .env (MYSQL_ROOT_PASSWORD, MYSQL_PASSWORD); the app connects with DATABASE_URL.
+# The port is bound to 127.0.0.1 only: the database is never reachable from the network.
+services:
+  db:
+    image: mysql:8.4
+    container_name: fintrack-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: fintrack
+      MYSQL_USER: fintrack
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env}
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci"]
+    ports:
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - fintrack-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  fintrack-mysql-data:

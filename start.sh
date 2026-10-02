@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Script khoi chay FinTrack Pro va cac duong truyen co dinh cho dien thoai
 # Bien moi truong (co the dat trong file .env, xem .env.example):
-#   APP_PASSWORD: mat khau ban dau cho tai khoan host "admin" (chi dung khi data/users.json chua ton tai)
+#   APP_PASSWORD: mat khau ban dau cho tai khoan host "admin" (chi dung khi database chua co mat khau admin)
 #     Neu khong dat, lan dang nhap admin dau tien can MA THIET LAP in ra ben duoi (file data/.host_setup_code)
 #   ALLOW_REGISTRATION=false: tat dang ky tai khoan khach
+#   DATABASE_URL: ket noi MySQL (mysql://user:pass@127.0.0.1:3306/fintrack)
 #   NGROK_BIN / CLOUDFLARED_BIN: duong dan tuy chinh (mac dinh tim trong PATH va ~/.local/bin)
 #   NGROK_DOMAIN: domain co dinh cua ngrok (tuy chon)
 #   NO_TUNNEL=1: chi chay local, khong mo tunnel
@@ -26,6 +27,12 @@ sleep 1
 if [ ! -f ".next/BUILD_ID" ] || [ -n "$(find src package.json next.config.mjs -newer .next/BUILD_ID -print -quit 2>/dev/null)" ]; then
   echo "Dang build ung dung cho production..."
   npm run build || { echo "Build that bai"; exit 1; }
+fi
+
+# 0. Kiem tra MySQL (tao/cap nhat bang neu can). Chua chay MySQL: docker compose up -d db
+if ! npm run --silent db:check; then
+  echo "Khong ket noi duoc MySQL - xem README, muc 'Database (MySQL)'."
+  exit 1
 fi
 
 # 1. Khoi chay Next.js Production Server ngam doc lap

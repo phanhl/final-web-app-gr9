@@ -55,6 +55,8 @@ const securityHeaders = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Native-friendly server packages stay outside the server bundle
+  serverExternalPackages: ['mysql2'],
   transpilePackages: ['lucide-react'],
   outputFileTracingRoot: path.resolve(__dirname),
   allowedDevOrigins: ['*.ngrok-free.dev', '*.ngrok.io', '*.trycloudflare.com', 'localhost:*', '127.0.0.1:*'],
