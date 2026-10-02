@@ -1,7 +1,7 @@
 import { createRateLimiter } from './request-security';
 
 const HOUR_MS = 60 * 60 * 1000;
-// Anti-spam for account creation (password or Google): per IP and server-wide per hour
+// Anti-spam for account creation: per IP and server-wide per hour
 export const registerIpLimiter = createRateLimiter({ windowMs: HOUR_MS, max: 5 });
 export const registerGlobalLimiter = createRateLimiter({ windowMs: HOUR_MS, max: Number(process.env.MAX_REGISTRATIONS_PER_HOUR) || 30 });
 

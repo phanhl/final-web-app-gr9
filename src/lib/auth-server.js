@@ -382,9 +382,6 @@ export async function getSessionUser() {
             username: user.username,
             role: user.role,
             tokenVersion: currentVersion,
-            hasPassword: Boolean(user.hasPassword),
-            googleLinked: Boolean(user.googleSub),
-            googleEmail: user.googleEmail || '',
         };
     } catch {
         return null;

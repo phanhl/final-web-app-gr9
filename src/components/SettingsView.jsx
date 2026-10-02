@@ -13,13 +13,9 @@ export const SettingsView = () => {
         listSecureBackups, createSecureBackup,
         restoreSecureBackup, deleteSecureBackup,
         showConfirm,
-        currentUser, changePassword, deleteAccount,
-        googleAuth, startGoogleAuth, unlinkGoogle
+        currentUser, changePassword, deleteAccount
     } = useApp();
     const isEn = language === 'en';
-    // Accounts created with Google have no password until the user sets one
-    const hasPassword = currentUser?.hasPassword !== false;
-    const [googleMessage, setGoogleMessage] = useState('');
 
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
@@ -226,23 +222,6 @@ export const SettingsView = () => {
         } else {
             setPasswordMessage({ text: res.error, type: 'error' });
         }
-    };
-
-    const handleUnlinkGoogle = () => {
-        setGoogleMessage('');
-        showConfirm({
-            title: isEn ? 'Unlink Google' : 'Hủy liên kết Google',
-            message: isEn
-                ? `Stop signing in with ${currentUser?.googleEmail || 'this Google account'}? You will sign in with your password.`
-                : `Ngừng đăng nhập bằng ${currentUser?.googleEmail || 'tài khoản Google này'}? Bạn sẽ đăng nhập bằng mật khẩu.`,
-            confirmText: isEn ? 'Unlink' : 'Hủy liên kết',
-            cancelText: isEn ? 'Cancel' : 'Hủy',
-            variant: 'danger',
-            onConfirm: async () => {
-                const res = await unlinkGoogle();
-                setGoogleMessage(res.success ? (isEn ? 'Google account unlinked.' : 'Đã hủy liên kết Google.') : (res.error || ''));
-            },
-        });
     };
 
     const handleDeleteAccount = (e) => {
@@ -557,25 +536,18 @@ export const SettingsView = () => {
 
         <form onSubmit={handleChangePassword} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-3">
           <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-            {hasPassword ? (isEn ? 'Change password' : 'Đổi mật khẩu') : (isEn ? 'Set a password' : 'Đặt mật khẩu')}
+            {isEn ? 'Change password' : 'Đổi mật khẩu'}
           </h4>
-          {!hasPassword && (
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              {isEn
-                ? 'This account signs in with Google. Add a password to also sign in with your username.'
-                : 'Tài khoản này đăng nhập bằng Google. Đặt mật khẩu để có thể đăng nhập bằng tên đăng nhập.'}
-            </p>
-          )}
           {/* Hidden username field lets password managers associate the new password with the right account */}
           <input type="text" name="username" autoComplete="username" value={currentUser?.username || ''} readOnly hidden />
-          <div className={`grid grid-cols-1 gap-3 ${hasPassword ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
-            {hasPassword && <div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
               <label htmlFor="current-password" className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
                 {isEn ? 'Current password:' : 'Mật khẩu hiện tại:'}
               </label>
               <input id="current-password" type="password" autoComplete="current-password" required value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)}
                 className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold dark:text-white"/>
-            </div>}
+            </div>
             <div>
               <label htmlFor="new-password" className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
                 {isEn ? 'New password (8+ characters):' : 'Mật khẩu mới (từ 8 ký tự):'}
@@ -597,38 +569,10 @@ export const SettingsView = () => {
             </span>
             <button type="submit" disabled={isChangingPassword}
               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-all shadow-sm shrink-0">
-              {hasPassword ? (isEn ? 'Change password' : 'Đổi mật khẩu') : (isEn ? 'Set password' : 'Đặt mật khẩu')}
+              {isEn ? 'Change password' : 'Đổi mật khẩu'}
             </button>
           </div>
         </form>
-
-        {/* Google account link */}
-        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-2">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-            {isEn ? 'Google account' : 'Tài khoản Google'}
-          </h4>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-xs text-slate-600 dark:text-slate-300 min-w-0 break-all">
-              {currentUser?.googleLinked
-                ? <>{isEn ? 'Linked to' : 'Đã liên kết với'} <strong>{currentUser.googleEmail || 'Google'}</strong></>
-                : googleAuth?.enabled
-                  ? (isEn ? 'Not linked. Link it to sign in with one click.' : 'Chưa liên kết. Liên kết để đăng nhập bằng Google chỉ với một chạm.')
-                  : googleAuth?.reason === 'needs_https'
-                    ? (isEn ? 'Google only works on an https address (your ngrok domain) or on localhost, not on a local network IP like http://192.168.x.x.' : 'Google chỉ hoạt động trên địa chỉ https (domain ngrok) hoặc localhost, không dùng được qua IP mạng LAN dạng http://192.168.x.x.')
-                    : (isEn ? 'Google sign-in is not configured on this server (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET).' : 'Máy chủ chưa cấu hình đăng nhập Google (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET).')}
-            </p>
-            {currentUser?.googleLinked ? (
-              <button type="button" onClick={handleUnlinkGoogle} className="px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl shrink-0">
-                {isEn ? 'Unlink' : 'Hủy liên kết'}
-              </button>
-            ) : googleAuth?.enabled && (
-              <button type="button" onClick={() => startGoogleAuth('link')} className="px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 text-slate-800 dark:text-white text-xs font-bold rounded-xl shrink-0">
-                {isEn ? 'Link Google account' : 'Liên kết Google'}
-              </button>
-            )}
-          </div>
-          {googleMessage && <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">{googleMessage}</p>}
-        </div>
 
         {currentUser?.role === 'host' ? (
           <p className="text-[11px] text-slate-500 dark:text-slate-400">
@@ -646,7 +590,6 @@ export const SettingsView = () => {
               {isEn
                 ? 'Removes your account and all of its data from the server. This cannot be undone.'
                 : 'Xóa tài khoản và toàn bộ dữ liệu của bạn khỏi máy chủ. Không thể hoàn tác.'}
-              {!hasPassword && (isEn ? ' Set a password above first to confirm the deletion.' : ' Hãy đặt mật khẩu ở trên trước để xác nhận việc xóa.')}
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <input type="password" autoComplete="current-password" aria-label={isEn ? 'Password' : 'Mật khẩu'} placeholder={isEn ? 'Your password' : 'Mật khẩu của bạn'} value={deletePassword} onChange={(e) => setDeletePassword(e.target.value)}

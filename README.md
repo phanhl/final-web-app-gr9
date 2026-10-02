@@ -1,229 +1,210 @@
-# FinTrack Pro - Multi-User Expense Management & Financial Simulation System
+# FinTrack Pro - Hệ Thống Quản Lý Chi Tiêu Đa Người Dùng & Mô Phỏng Tài Chính
 
-A comprehensive personal finance management web application: multi-wallet income and expense tracking, smart budgets, recurring bills, savings goals, automated bank statement import, and **What-If financial simulation**.
+Ứng dụng web quản lý tài chính cá nhân toàn diện: theo dõi thu chi đa ví, ngân sách thông minh, hóa đơn định kỳ, mục tiêu tiết kiệm, tự động nhập sao kê ngân hàng và **mô phỏng tài chính (What-If simulation)**.
 
-The system features **Multi-User Isolation** with strict security architecture: one Host (`admin`) account plus self-registered Guest accounts, each with its own `User ID` and server-side data file that is **completely excluded from Git commits**. Features a bilingual interface (**Vietnamese / English**), **Light / Dark mode**, optional **Sign in with Google**, and works on phones, tablets and desktops (installable to the home screen).
-
----
-
-## 1. Key Features
-
-### Multi-User Accounts & Access Control
-- **Mandatory Authentication:** Modern Glassmorphism welcome screen and Login / Register modal, preventing unauthorized access.
-- **Host Account:** Dedicated `admin` account holding complete real financial records (wallets, bank accounts, transaction history). The password comes from `APP_PASSWORD`, or is chosen at the first login together with a **one-time setup code** printed in the server terminal (`data/.host_setup_code`), so nobody who merely opens the public link can claim it.
-- **Guest Accounts:** Guests open the app link and click **"Create Guest Account"** (or **"Sign up with Google"**). Each gets an isolated `User ID` (`usr_...`) that starts empty: a Cash wallet, a Bank account (both 0 ₫) and the default categories. Guests cannot view or modify Host data, and vice versa.
-- **Session Management:** Role badges (Host / Guest) integrated into the top navigation bar with a secure **Sign Out** button.
-- **Account Settings:** Change password (signs out other devices), link / unlink a Google account and, for guests, permanently delete the account with all its data. Forgotten passwords are reset on the server: `npm run reset-password -- <username>`.
-- **App PIN Lock:** Optional 4–8 digit PIN that must be entered on each browser (after every sign-in, and again after 12 h) before any financial data is shown. The account password is accepted on the PIN screen as a recovery path.
-
-### Wallets & Asset Management
-- **4 Specialized Wallet Types:** Cash, Bank Accounts, Credit Cards (credit limit, isolated debt balance), and Savings Accounts (interest rate).
-- Automatic calculation of **Available Balance** and **Net Worth**; credit card debt is strictly isolated to prevent financial distortion.
-- **Credit Card Debt Settlement:** pay the card from a cash / bank wallet (recorded as an internal transfer, not as spending).
-- **Balance Reconciliation:** One-click *"Recalculate Balance"* rebuilds every balance from its opening balance plus the full transaction history.
-
-### Transaction Tracking & Quick Entry
-- Record expenses and incomes; categorize by tags and notes, attach **receipt images** (automatically compressed before saving), edit or delete with automatic balance rollback. The list is ordered by transaction date and searchable in both languages.
-- **Quick Add Modal:** Instantly accessible from any screen, featuring fast amount buttons (+50k, +100k, +200k, +500k, +1M, +2M, +5M).
-- Smart validation: no overdraft, credit limit enforcement, no future-dated transactions; the chosen date is spelled out in the app's own format.
-
-### Automated Bank Statement Parser
-- Upload **Excel (.xlsx, .xls)** or **CSV** files. Automatically recognizes the statement layouts of 14 Vietnamese banks (Techcombank, Vietcombank, MB Bank, VPBank, ACB, BIDV, VietinBank, TPBank, VIB, Agribank, Sacombank, Timo, HDBank, Cake by VPBank); other files can be mapped to a wallet manually.
-- Duplicate transaction detection, intelligent category suggestions based on transfer descriptions, and rejection of rows with impossible dates.
-
-### Budgets & Savings Goals
-- Set spending caps per category, with automated warning thresholds: **approaching 80%** (amber) and **exceeded 100%** (red).
-- Allocate income according to multi-jar envelope budgeting principles with an emergency fund.
-- **Financial Goals:** Deposit/withdraw funds directly to/from wallets, complete with celebratory confetti animations upon goal attainment.
-
-### Recurring Bills & Subscriptions
-- Track electricity, water, internet, and rent on **Monthly / Quarterly / Yearly** cycles.
-- Accurate calendar due-date calculation, countdown timers, and visual alerts for upcoming or overdue bills.
-- **"Pay Now"** button instantly creates the corresponding expense transaction and deducts funds from the chosen wallet (defaults to one that can cover the bill); undoing the payment refunds the wallet.
-- Reminder bell in the header for upcoming / overdue bills and budgets over their limit.
-
-### What-If Financial Simulation
-- Experiment with future financial projections: expense reduction sliders (0–50%), monthly savings deposits, investment market scenarios, and external loan amortization.
-- Multi-horizon projections (**6 / 12 / 24 / 36 months**) with interactive charts comparing baseline growth against simulated scenarios.
-
-### Reports & Data Export
-- Visual analytics for expense distribution, monthly cash flow trends, and net income trajectory.
-- Export to **Multi-sheet Excel (.xlsx)** (transactions, wallets, budgets, executive summary) and language-localized **UTF-8 CSV** (cells that start with `= + - @` are escaped so spreadsheets never run them as formulas).
+Hệ thống sở hữu cơ chế **Cách ly đa người dùng (Multi-User Isolation)** với kiến trúc bảo mật nghiêm ngặt: một tài khoản Host (`admin`) và các tài khoản Khách (Guest) tự đăng ký, mỗi tài khoản có `User ID` riêng và tệp dữ liệu lưu trữ phía máy chủ được **loại trừ hoàn toàn khỏi các commit Git**. Ứng dụng hỗ trợ giao diện song ngữ (**Tiếng Việt / Tiếng Anh**), chế độ **Sáng / Tối (Light / Dark mode)**, hoạt động mượt mà trên điện thoại, máy tính bảng và máy tính để bàn (hỗ trợ cài đặt trực tiếp vào màn hình chính).
 
 ---
 
-## 2. Strict Security Architecture
+## 1. Các Tính Năng Nổi Bật
 
-FinTrack Pro is built on a defense-in-depth model:
+### Tài Khoản Đa Người Dùng & Kiểm Soát Truy Cập
+- **Xác thực bắt buộc:** Màn hình chào mừng phong cách Glassmorphism hiện đại cùng hộp thoại Đăng nhập / Đăng ký, ngăn chặn mọi truy cập trái phép.
+- **Tài khoản Host (Chủ sở hữu):** Tài khoản `admin` chuyên dụng lưu trữ đầy đủ dữ liệu tài chính thực tế (các ví, tài khoản ngân hàng, lịch sử giao dịch). Mật khẩu được thiết lập từ biến môi trường `APP_PASSWORD`, hoặc được khởi tạo ở lần đăng nhập đầu tiên kết hợp với **mã thiết lập dùng một lần (one-time setup code)** hiển thị trên terminal máy chủ (`data/.host_setup_code`), đảm bảo người lạ truy cập link công khai không thể chiếm quyền quản trị.
+- **Tài khoản Khách (Guest):** Khách truy cập liên kết ứng dụng và nhấn **"Tạo tài khoản Khách"**. Mỗi khách sẽ nhận được một `User ID` riêng biệt (`usr_...`) với dữ liệu khởi tạo trống: một ví Tiền mặt, một tài khoản Ngân hàng (đều có số dư 0 ₫) cùng các danh mục mặc định. Khách không thể xem hoặc chỉnh sửa dữ liệu của Host và ngược lại.
+- **Quản lý phiên làm việc:** Huy hiệu phân quyền (Host / Guest) hiển thị trên thanh điều hướng đầu trang cùng nút **Đăng xuất** an toàn.
+- **Cài đặt tài khoản:** Đổi mật khẩu (tự động đăng xuất khỏi các thiết bị khác) và cho phép khách xóa vĩnh viễn tài khoản cùng toàn bộ dữ liệu. Trường hợp quên mật khẩu có thể đặt lại trực tiếp trên máy chủ qua lệnh: `npm run reset-password -- <username>`.
+- **Khóa PIN ứng dụng:** Mã PIN tùy chọn từ 4–8 chữ số cần nhập trên mỗi trình duyệt (sau mỗi lần đăng nhập và định kỳ sau 12 giờ) trước khi hiển thị dữ liệu tài chính. Mật khẩu tài khoản cũng có thể được sử dụng trên màn hình nhập PIN như một phương thức khôi phục.
 
-| Security Layer | Technical Implementation |
+### Quản Lý Ví & Tài Sản
+- **4 Loại ví chuyên biệt:** Tiền mặt, Tài khoản ngân hàng, Thẻ tín dụng (hạn mức tín dụng, theo dõi dư nợ riêng biệt) và Tài khoản tiết kiệm (theo dõi lãi suất).
+- Tự động tính toán **Số dư khả dụng** và **Giá trị tài sản ròng (Net Worth)**; dư nợ thẻ tín dụng được tách bạch nghiêm ngặt để phản ánh chính xác bức tranh tài chính.
+- **Thanh toán dư nợ thẻ tín dụng:** Trích tiền từ ví tiền mặt / tài khoản ngân hàng để thanh toán thẻ tín dụng (được ghi nhận là chuyển khoản nội bộ, không tính trùng vào chi tiêu).
+- **Đối soát số dư (Balance Reconciliation):** Tính năng *"Tính toán lại số dư"* chỉ với 1 cú nhấp chuột giúp tái tạo lại chính xác số dư của từng ví từ số dư ban đầu cộng dồn toàn bộ lịch sử giao dịch.
+
+### Ghi Chép Giao Dịch & Nhập Liệu Nhanh
+- Ghi chép chi tiêu và thu nhập; phân loại theo nhãn (tags) và ghi chú, đính kèm **ảnh hóa đơn** (tự động nén tối ưu trước khi lưu), chỉnh sửa hoặc xóa giao dịch với cơ chế tự động hoàn tác số dư. Danh sách giao dịch được sắp xếp theo ngày và hỗ trợ tìm kiếm linh hoạt bằng cả hai ngôn ngữ.
+- **Hộp thoại Thêm nhanh (Quick Add):** Truy cập tức thì từ bất kỳ màn hình nào, tích hợp sẵn các phím bấm số tiền nhanh (+50k, +100k, +200k, +500k, +1M, +2M, +5M).
+- Kiểm tra tính hợp lệ thông minh: chống bội chi tài khoản, giới hạn theo hạn mức tín dụng, ngăn chặn giao dịch ở tương lai; ngày giao dịch được hiển thị rõ ràng theo định dạng chuẩn của ứng dụng.
+
+### Trình Phân Tích Sao Kê Ngân Hàng Tự Động
+- Tải lên tệp **Excel (.xlsx, .xls)** hoặc **CSV**. Tự động nhận diện cấu trúc định dạng sao kê của 14 ngân hàng Việt Nam (Techcombank, Vietcombank, MB Bank, VPBank, ACB, BIDV, VietinBank, TPBank, VIB, Agribank, Sacombank, Timo, HDBank, Cake by VPBank); các định dạng khác có thể ghép cột thủ công vào ví tương ứng.
+- Cơ chế phát hiện giao dịch trùng lặp, tự động gợi ý danh mục thông minh dựa trên nội dung chuyển khoản và loại bỏ các dòng có ngày tháng không hợp lệ.
+
+### Ngân Sách & Mục Tiêu Tiết Kiệm
+- Thiết lập hạn mức chi tiêu cho từng danh mục với các ngưỡng cảnh báo tự động: **chạm ngưỡng 80%** (màu vàng cam) và **vượt hạn mức 100%** (màu đỏ).
+- Phân bổ thu nhập theo phương pháp quản lý tài chính nhiều hũ / phong bì (envelope budgeting) kèm quỹ dự phòng khẩn cấp.
+- **Mục tiêu tài chính:** Nạp/rút tiền trực tiếp từ các ví, kèm hiệu ứng pháo hoa chúc mừng (confetti) khi hoàn thành mục tiêu.
+
+### Hóa Đơn Định Kỳ & Đăng Ký Gói Cước
+- Theo dõi tiền điện, nước, internet, tiền thuê nhà theo chu kỳ **Hàng tháng / Hàng quý / Hàng năm**.
+- Tính toán chính xác ngày đến hạn theo lịch, hiển thị đồng hồ đếm ngược và thông báo trực quan cho các hóa đơn sắp đến hạn hoặc quá hạn.
+- Nút **"Thanh toán ngay"** lập tức tạo giao dịch chi tiêu tương ứng và trừ tiền từ ví được chọn (mặc định ưu tiên ví có đủ số dư); hủy thanh toán sẽ hoàn tiền lại cho ví.
+- Biểu tượng chuông nhắc nhở ở thanh tiêu đề thông báo về các hóa đơn sắp đến hạn / quá hạn và ngân sách bị vượt mức.
+
+### Mô Phỏng Tài Chính What-If
+- Thử nghiệm các kịch bản dự báo tài chính tương lai: thanh trượt cắt giảm chi tiêu (0–50%), tích lũy tiết kiệm hàng tháng, các kịch bản thị trường đầu tư và khấu hao các khoản vay bên ngoài.
+- Dự phóng đa khung thời gian (**6 / 12 / 24 / 36 tháng**) với biểu đồ tương tác so sánh giữa xu hướng tăng trưởng cơ sở và các kịch bản mô phỏng.
+
+### Báo Cáo & Xuất Dữ Liệu
+- Phân tích trực quan về cơ cấu phân bổ chi tiêu, xu hướng dòng tiền hàng tháng và quỹ đạo thu nhập ròng.
+- Xuất dữ liệu sang tệp **Excel đa trang tính (.xlsx)** (giao dịch, các ví, ngân sách, báo cáo tổng hợp) và tệp **CSV chuẩn UTF-8** theo ngôn ngữ đã chọn (các ô bắt đầu bằng `= + - @` được xử lý thoát ký tự an toàn để phần mềm bảng tính không tự ý thực thi công thức).
+
+---
+
+## 2. Kiến Trúc Bảo Mật Nghiêm Ngặt
+
+FinTrack Pro được xây dựng theo mô hình phòng thủ theo chiều sâu (defense-in-depth):
+
+| Lớp bảo mật | Triển khai kỹ thuật |
 |---|---|
-| **Password Hashing** | One-way hashing using **`scrypt`** combined with a cryptographically secure 16-byte random `salt`. Raw passwords are never stored. Verified via `crypto.timingSafeEqual` to thwart timing attacks. |
-| **Brute-Force Mitigation** | Login / PIN attempts are limited **per IP (5 / 15 min)** and **per account (10 / 15 min)**; each attempt is counted atomically before it is checked, so parallel bursts and rotating spoofed `X-Forwarded-For` values do not help. The client IP is taken from `cf-connecting-ip` or the right-most proxy hop. Requests made directly on the host machine are exempt from the per-account lockout, so outsiders cannot lock the owner out. Sign-up (password or Google) is limited to 5 / IP / hour and `MAX_REGISTRATIONS_PER_HOUR` server-wide, can be turned off with `ALLOW_REGISTRATION=false`, and its request body is capped at 1 MB. Hashing uses async `scrypt` so it never blocks other requests. |
-| **Host Setup** | First-time `admin` password requires `APP_PASSWORD` or the one-time setup code from the server console. |
-| **Session Protection** | Session cookie `fintrack_session` is signed with **HMAC-SHA256** (`APP_SESSION_SECRET` or `data/.session_secret`), `HttpOnly`, `SameSite=lax`, 7-day expiry, revoked on logout / password change (`tokenVersion`). |
-| **PIN Lock** | Entering the PIN (or the account password) issues a short-lived `HttpOnly` cookie (`fintrack_unlock`, 12 h, bound to the PIN hash and session version). Signing in with a password or Google does **not** unlock the PIN. The PIN and password are **never stored in localStorage / sessionStorage**; leftovers from older versions are wiped on load. |
-| **Google Sign-In** | OAuth 2.0 authorization code flow with PKCE, `state` and `nonce`; the ID token is verified against Google's JWKS (issuer, audience, expiry, nonce). One Google account maps to one FinTrack account. |
-| **CSRF & Headers** | State-changing API calls from other sites (`Sec-Fetch-Site: cross-site / same-site`) are rejected. Strict CSP without `unsafe-eval` in production, `frame-ancestors 'none'`, HSTS, `nosniff`. |
-| **Encrypted Backups** | AES-256-GCM with `APP_BACKUP_KEY` or `data/.backup_key`; the server refuses to run backups rather than fall back to a built-in key. |
-| **Data Isolation** | The server extracts `userId` strictly from the verified session signature (Zero Trust Client). Path Traversal sanitizer (`replace(/[^a-zA-Z0-9_-]/g, '')`) prevents unauthorized file access. |
-| **Filesystem Permissions** | `data/` and `data/users/` are created / tightened to **`0700`** and every data file is written as **`0600`** (accessible exclusively by the host OS user). A corrupt `users.json` is never overwritten. |
-| **Git Privacy** | `.gitignore` excludes `data/*.json` (except the template), `data/users/`, `data/secure-backups/`, `data/.session_secret`, `data/.backup_key`, `data/.host_setup_code` and `.env`. When pushing code to GitHub, **all financial records, accounts and keys remain local on your machine and are never leaked**. |
+| **Băm mật khẩu (Password Hashing)** | Băm một chiều bằng thuật toán **`scrypt`** kết hợp với chuỗi `salt` ngẫu nhiên 16-byte chuẩn mật mã học. Mật khẩu gốc không bao giờ được lưu trữ. Xác thực thông qua `crypto.timingSafeEqual` nhằm chống lại các cuộc tấn công dựa trên thời gian (timing attacks). |
+| **Chống tấn công Brute-Force** | Giới hạn số lần thử Đăng nhập / PIN **theo từng IP (5 lần / 15 phút)** và **theo từng tài khoản (10 lần / 15 phút)**; mỗi lần thử được đếm nguyên tử (atomic) trước khi xác thực, vô hiệu hóa các đợt bùng nổ song song và giả mạo xoay vòng tiêu đề `X-Forwarded-For`. IP máy khách được lấy từ `cf-connecting-ip` hoặc proxy hop ngoài cùng bên phải. Các yêu cầu gửi trực tiếp từ máy chủ (host) được miễn trừ khóa theo tài khoản, tránh trường hợp kẻ xấu cố tình khóa tài khoản chủ sở hữu. Đăng ký tài khoản bị giới hạn 5 tài khoản / IP / giờ và `MAX_REGISTRATIONS_PER_HOUR` trên toàn hệ thống; có thể tắt đăng ký bằng `ALLOW_REGISTRATION=false`, và giới hạn kích thước request body tối đa 1 MB. Quá trình băm sử dụng `scrypt` bất đồng bộ nên không gây nghẽn các yêu cầu khác. |
+| **Thiết lập tài khoản Host** | Mật khẩu tài khoản `admin` lần đầu tiên yêu cầu biến môi trường `APP_PASSWORD` hoặc mã thiết lập dùng một lần lấy từ console của máy chủ. |
+| **Bảo vệ phiên làm việc (Session)** | Cookie phiên `fintrack_session` được ký điện tử bằng **HMAC-SHA256** (sử dụng `APP_SESSION_SECRET` hoặc `data/.session_secret`), cờ `HttpOnly`, `SameSite=lax`, thời hạn 7 ngày, bị thu hồi ngay lập tức khi đăng xuất hoặc đổi mật khẩu (`tokenVersion`). |
+| **Khóa PIN ứng dụng** | Nhập mã PIN (hoặc mật khẩu tài khoản) sẽ cấp một cookie `HttpOnly` thời hạn ngắn (`fintrack_unlock`, 12 giờ, gắn liền với mã băm PIN và phiên làm việc). Việc đăng nhập **không** tự động mở khóa PIN. Mã PIN và mật khẩu **tuyệt đối không lưu trong localStorage / sessionStorage**; dữ liệu thừa từ các phiên bản cũ sẽ tự động bị xóa khi tải trang. |
+| **Chống CSRF & Tiêu đề bảo mật** | Từ chối các lệnh gọi API làm thay đổi dữ liệu đến từ các trang web khác (`Sec-Fetch-Site: cross-site / same-site`). Thiết lập CSP nghiêm ngặt không có `unsafe-eval` trong môi trường production, `frame-ancestors 'none'`, HSTS, `nosniff`. |
+| **Sao lưu mã hóa** | Mã hóa chuẩn AES-256-GCM với `APP_BACKUP_KEY` hoặc `data/.backup_key`; máy chủ sẽ từ chối tạo bản sao lưu nếu thiếu khóa riêng thay vì dùng khóa mặc định có sẵn. |
+| **Cách ly dữ liệu (Data Isolation)** | Máy chủ trích xuất `userId` tuyệt đối từ chữ ký phiên đã được xác thực (theo nguyên lý Zero Trust Client). Cơ chế làm sạch chống Path Traversal (`replace(/[^a-zA-Z0-9_-]/g, '')`) ngăn chặn truy cập tệp tin trái phép. |
+| **Phân quyền hệ thống tệp** | Thư mục `data/` và `data/users/` được tạo / thắt chặt quyền **`0700`**, và mọi tệp dữ liệu được ghi với quyền **`0600`** (chỉ người dùng hệ điều hành máy chủ mới có quyền truy cập). Tệp `users.json` nếu bị lỗi cấu trúc sẽ không bao giờ bị ghi đè tự động. |
+| **Bảo mật khi đẩy lên Git** | `.gitignore` loại trừ hoàn toàn `data/*.json` (ngoại trừ tệp template), `data/users/`, `data/secure-backups/`, `data/.session_secret`, `data/.backup_key`, `data/.host_setup_code` và `.env`. Khi push mã nguồn lên GitHub, **toàn bộ dữ liệu tài chính, tài khoản người dùng và các khóa bí mật đều được giữ lại trên máy cục bộ của bạn và tuyệt đối không bao giờ bị rò rỉ**. |
 
 ---
 
-## 3. Technology Stack
+## 3. Ngăn Xếp Công Nghệ (Tech Stack)
 
-| Component | Technology |
+| Thành phần | Công nghệ sử dụng |
 |---|---|
 | **Framework** | **Next.js 15** (App Router), **React 19**, JavaScript (JSX) |
-| **Styling & UI** | **Tailwind CSS v4**, **Lucide React** (icons), Canvas-Confetti |
-| **Data Visualization** | **Recharts** |
-| **Spreadsheet Processing** | **SheetJS (xlsx)** |
-| **Authentication & Crypto** | Node.js Built-in `crypto` (scrypt, HMAC-SHA256, timingSafeEqual) |
-| **State Management** | React Context (`src/context/AppContext.jsx`) |
-| **Storage Engine** | Document-based JSON files on the server disk (atomic writes via `writeJsonAtomic` to prevent corruption) |
+| **Giao diện & Định kiểu** | **Tailwind CSS v4**, **Lucide React** (icon), Canvas-Confetti |
+| **Trực quan hóa dữ liệu** | **Recharts** |
+| **Xử lý bảng tính** | **SheetJS (xlsx)** |
+| **Xác thực & Mật mã học** | Mô-đun `crypto` tích hợp sẵn của Node.js (scrypt, HMAC-SHA256, timingSafeEqual) |
+| **Quản lý trạng thái** | React Context (`src/context/AppContext.jsx`) |
+| **Cơ chế lưu trữ** | Tệp tin JSON dạng tài liệu trên ổ đĩa máy chủ (ghi nguyên tử thông qua `writeJsonAtomic` để chống hỏng dữ liệu) |
 
-### Source Tree
+### Cấu Trúc Mã Nguồn (Source Tree)
 ```
 src/
 ├── app/
 │   ├── api/
 │   │   ├── auth/
-│   │   │   ├── login/route.js     # Authentication, Host initialization, Rate limiting
-│   │   │   ├── register/route.js  # Guest registration, User ID & isolated data provisioning
-│   │   │   ├── me/route.js        # Active session verification
-│   │   │   ├── password/route.js  # Change password (revokes other sessions)
-│   │   │   ├── account/route.js   # Delete guest account and its data
-│   │   │   ├── google/            # Google sign-in: start, callback, status, unlink
-│   │   │   └── logout/route.js    # Sign out, session cookie invalidation
-│   │   └── storage/route.js       # User-isolated data read/write, PIN unlock, conflict resolution
+│   │   │   ├── login/route.js     # Xác thực, khởi tạo Host, giới hạn tần suất (Rate limiting)
+│   │   │   ├── register/route.js  # Đăng ký tài khoản Khách, cấp User ID & dữ liệu cách ly
+│   │   │   ├── me/route.js        # Xác thực phiên làm việc hiện tại
+│   │   │   ├── password/route.js  # Đổi mật khẩu (thu hồi các phiên làm việc khác)
+│   │   │   ├── account/route.js   # Xóa tài khoản khách và dữ liệu liên quan
+│   │   │   └── logout/route.js    # Đăng xuất, hủy bỏ cookie phiên
+│   │   └── storage/route.js       # Đọc/ghi dữ liệu cách ly theo người dùng, mở khóa PIN, giải quyết xung đột
 │   ├── page.jsx, layout.jsx, globals.css
 │   ├── error.jsx, global-error.jsx, loading.jsx, not-found.jsx
 │   └── manifest.js, robots.js, icon.svg, apple-icon.png, favicon.ico
-├── components/                    # UI Views: DashboardView, TransactionsView, BudgetsView,
+├── components/                    # Các màn hình UI: DashboardView, TransactionsView, BudgetsView,
 │                                  # WhatIfSimulatorView, BillsView, ReportsView, WalletsView, SettingsView,
 │                                  # Navigation, AuthModal, QuickAddModal, BankStatementModal...
-├── context/AppContext.jsx         # Global state management, user data hydration, realtime sync
+├── context/AppContext.jsx         # Quản lý trạng thái toàn cục, nạp dữ liệu người dùng, đồng bộ thời gian thực
 ├── lib/
-│   ├── auth-server.js             # Server-side auth, scrypt hashing, HMAC session signing, user registry
-│   ├── request-security.js        # Client IP, local-request detection, rate limiting, body size limits
-│   ├── google-oauth.js            # Google OAuth/OIDC: PKCE, ID token (JWKS) verification
-│   ├── registration.js            # Sign-up switch and rate limits shared by password and Google sign-up
-│   ├── storage-validation.js      # Server-side snapshot validation (storage + register)
-│   ├── user-data.js               # Per-user data file resolution
-│   ├── secure-backup.js           # AES-256-GCM encrypted backups
-│   ├── backup-validation.js       # Backup import validation
-│   ├── security-logger.js         # Structured security audit log
-│   ├── bank-statement-parser.js   # Automated bank statement parsing engine
-│   ├── i18n.js                    # Bilingual dictionary (Vietnamese / English)
-│   ├── utils.js                   # Financial calculations, balance reconciliation, currency formatting
-│   └── mock-data.js               # Initial schema definitions and seed data
-└── middleware.js                  # CSRF (Sec-Fetch-Site) guard, auth perimeter, security headers
-scripts/reset-password.mjs         # Reset a forgotten password from the server machine
-tests/                             # node:test unit tests
+│   ├── auth-server.js             # Xác thực phía máy chủ, băm scrypt, ký phiên HMAC, danh bạ người dùng
+│   ├── request-security.js        # IP máy khách, phát hiện yêu cầu cục bộ, giới hạn tần suất, giới hạn kích thước body
+│   ├── registration.js            # Bật/tắt đăng ký (ALLOW_REGISTRATION) và giới hạn tần suất đăng ký
+│   ├── storage-validation.js      # Xác thực tính hợp lệ của snapshot dữ liệu phía máy chủ (storage + register)
+│   ├── user-data.js               # Phân giải đường dẫn tệp dữ liệu riêng cho từng người dùng
+│   ├── secure-backup.js           # Sao lưu mã hóa chuẩn AES-256-GCM
+│   ├── backup-validation.js       # Xác thực tệp sao lưu trước khi nhập
+│   ├── security-logger.js         # Nhật ký kiểm toán bảo mật có cấu trúc (audit log)
+│   ├── bank-statement-parser.js   # Bộ máy phân tích sao kê ngân hàng tự động
+│   ├── i18n.js                    # Từ điển song ngữ (Tiếng Việt / Tiếng Anh)
+│   ├── utils.js                   # Các phép tính tài chính, đối soát số dư, định dạng tiền tệ
+│   └── mock-data.js               # Định nghĩa schema ban đầu và dữ liệu mẫu khởi tạo
+└── middleware.js                  # Lớp bảo vệ CSRF (Sec-Fetch-Site), ranh giới xác thực, tiêu đề bảo mật
+scripts/reset-password.mjs         # Đặt lại mật khẩu bị quên trực tiếp trên máy chủ
+tests/                             # Các bài kiểm thử đơn vị node:test
 data/
-├── database.template.json         # Clean schema template (tracked in Git)
-├── database.json                  # Legacy host data, only read once to migrate into users/admin.json (in .gitignore)
-├── users.json                     # User registry with scrypt password hashes (in .gitignore)
-├── .session_secret                # HMAC signing key (in .gitignore)
-├── .backup_key                    # Backup encryption key (in .gitignore)
-├── .host_setup_code               # One-time host setup code, deleted after use (in .gitignore)
-├── secure-backups/                # Host's encrypted backups (in .gitignore)
-└── users/                         # User-isolated storage directory (in .gitignore)
-    ├── admin.json                 # Host profile & financial database
-    ├── usr_<id>.json              # Guest isolated data stores
-    └── usr_<id>/secure-backups/   # Each guest's encrypted backups
+├── database.template.json         # Tệp schema mẫu sạch (được theo dõi trong Git)
+├── database.json                  # Dữ liệu host cũ, chỉ đọc một lần duy nhất để di chuyển sang users/admin.json (trong .gitignore)
+├── users.json                     # Danh bạ người dùng kèm mã băm mật khẩu scrypt (trong .gitignore)
+├── .session_secret                # Khóa ký HMAC (trong .gitignore)
+├── .backup_key                    # Khóa mã hóa sao lưu (trong .gitignore)
+├── .host_setup_code               # Mã thiết lập Host dùng một lần, tự xóa sau khi dùng (trong .gitignore)
+├── secure-backups/                # Các bản sao lưu mã hóa của Host (trong .gitignore)
+└── users/                         # Thư mục lưu trữ dữ liệu cách ly theo người dùng (trong .gitignore)
+    ├── admin.json                 # Hồ sơ & cơ sở dữ liệu tài chính của Host
+    ├── usr_<id>.json              # Kho dữ liệu cách ly của từng tài khoản Khách
+    └── usr_<id>/secure-backups/   # Các bản sao lưu mã hóa của từng tài khoản Khách
 ```
 
 ---
 
-## 4. Installation & Getting Started
+## 4. Cài Đặt & Bắt Đầu Sử Dụng
 
-### Prerequisites
-* **Node.js 18.18+** to build and run; **Node.js 22.15+** to run the unit tests (`npm test`). Node 22 LTS is recommended and is what CI uses.
-* Operating System: Linux / macOS / Windows (WSL2).
+### Yêu Cầu Hệ Thống
+* **Node.js 18.18+** để build và chạy ứng dụng; **Node.js 22.15+** để chạy các bài kiểm thử đơn vị (`npm test`). Khuyến nghị sử dụng phiên bản Node 22 LTS (phiên bản được sử dụng trong CI).
+* Hệ điều hành: Linux / macOS / Windows (WSL2).
 
-### Clone & Install
+### Tải Về & Cài Đặt
 ```bash
 git clone https://github.com/vietnamlm05-bit/final-web-app.git
 cd final-web-app
 npm install
-cp .env.example .env   # optional: APP_PASSWORD, APP_SESSION_SECRET, APP_BACKUP_KEY, ALLOW_REGISTRATION...
+cp .env.example .env   # tùy chọn: APP_PASSWORD, APP_SESSION_SECRET, APP_BACKUP_KEY, ALLOW_REGISTRATION...
 ```
 
-### Running with Dual Links (Recommended)
-The project includes an automated startup script that launches the production build alongside secure internet tunneling:
+### Chạy Với Cơ Chế Liên Kết Kép (Khuyến Nghị)
+Dự án tích hợp sẵn tập lệnh khởi động tự động giúp build bản production đồng thời thiết lập đường hầm mạng (tunneling) bảo mật ra internet:
 
 ```bash
 ./start.sh
 ```
 
-Upon successful startup, the terminal presents two URLs (the script prints this in Vietnamese without accents; translated here). Both open the same app: the split is only a convention for who uses which link.
+Sau khi khởi động thành công, màn hình terminal sẽ hiển thị 2 đường link truy cập (cả hai liên kết đều trỏ đến cùng một ứng dụng, việc phân chia chỉ là quy ước chỉ định đối tượng sử dụng):
 ```text
 ==================================================================
-FinTrack Pro has launched successfully with Multi-User Isolation!
+FinTrack Pro da khoi chay thanh cong voi co che Cach ly Da nguoi dung!
 
-👉 LINK 1 (HOST / LOCAL ACCESS):
+👉 LINK 1 (HOST / TRUY CẬP CỤC BỘ):
    http://localhost:3000
-   * Sign in using username: admin
-   * First-time setup: choose your password in the login modal and enter the SETUP CODE printed here.
+   * Đăng nhập với tên người dùng: admin
+   * Thiết lập lần đầu: chọn mật khẩu trong hộp thoại đăng nhập và điền MÃ THIẾT LẬP (SETUP CODE) được in tại đây.
 
-👉 LINK 2 (GUEST / REMOTE ACCESS):
-   https://<your-subdomain>.ngrok-free.dev (or Cloudflare Tunnel URL)
-   * Guests open this link and click "Create Guest Account" to sign up.
-   * Each guest is granted an isolated User ID and independent financial store.
+👉 LINK 2 (GUEST / TRUY CẬP TỪ XA):
+   https://<ten-mien-ngrok-cua-ban>.ngrok-free.dev (hoặc URL Cloudflare Tunnel)
+   * Khách mở liên kết này và nhấn "Tạo tài khoản Khách" để đăng ký.
+   * Mỗi khách được cấp một User ID riêng biệt và kho lưu trữ tài chính độc lập.
 ==================================================================
 ```
 
-### Stopping Services
+### Dừng Dịch Vụ
 ```bash
 ./stop.sh
 ```
 
-### Alternative Run Modes
-* **Local Only (No public tunnel):**
+### Các Chế Độ Chạy Khác
+* **Chỉ chạy cục bộ (Không mở tunnel công khai):**
   ```bash
   NO_TUNNEL=1 ./start.sh
   ```
-* **Development Mode:**
+* **Chế độ phát triển (Development):**
   ```bash
   npm run dev
   ```
 
-### Sign in with Google (optional)
-Each Google account can be linked to exactly one FinTrack account (matched by Google's stable account id, not the e-mail).
-- **Sign in with Google** – for accounts already linked in *Settings → Account → Link Google*.
-- **Sign up with Google** – creates a new guest account bound to that Google account (respects `ALLOW_REGISTRATION` and the sign-up rate limits). It has no password until one is set in Settings.
-- **Unlink** – allowed only when the account also has a password, so nobody locks themselves out.
-
-Setup:
-1. Google Cloud Console → *APIs & Services → Credentials → Create credentials → OAuth client ID → Web application*.
-2. *Authorized redirect URIs*: every address you open the app on + `/api/auth/google/callback`, e.g. `http://localhost:3000/api/auth/google/callback` and `https://<NGROK_DOMAIN>/api/auth/google/callback`. Random `trycloudflare.com` addresses change on every start, so use a fixed domain for Google sign-in.
-3. *OAuth consent screen*: while in "Testing", add the Google accounts allowed to sign in as test users.
-4. Put `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env` and restart. The Google buttons appear automatically.
-
-Only the Google buttons depend on Google Cloud Console: username + password sign-in, sign-up, the App PIN and the host setup code work without it. Google only redirects back to `https://` addresses or `http://localhost`, so the buttons are hidden (with an explanation in Settings) when the app is opened on a LAN address such as `http://192.168.x.x`.
-
-Security: authorization code flow with PKCE, `state` and `nonce` kept in a short-lived signed httpOnly cookie, ID token signature checked against Google's JWKS plus issuer / audience / expiry / nonce.
-
-### Quality Checks
+### Kiểm Tra Chất Lượng Mã Nguồn
 ```bash
-npm run lint    # ESLint (next/core-web-vitals)
-npm test        # node:test unit tests: balances & merging, bills, statement parser, validation, encrypted backups, rate limiting
-npm run build
+npm run lint    # Kiểm tra mã nguồn với ESLint (next/core-web-vitals)
+npm test        # Chạy kiểm thử đơn vị node:test: số dư & hợp nhất dữ liệu, hóa đơn, bộ đọc sao kê, xác thực, sao lưu mã hóa, giới hạn tần suất
+npm run build   # Build bản phát hành production
 ```
-The same checks run on GitHub Actions for every push / pull request (`.github/workflows/ci.yml`).
+Các bước kiểm tra này cũng được tự động thực thi trên GitHub Actions sau mỗi lần push hoặc tạo pull request (`.github/workflows/ci.yml`).
 
-### Deployment Note
-Data lives in JSON files under `data/`, so the app needs a **persistent disk**: your own machine (with `start.sh` tunnels), a VPS or a Docker volume. Serverless hosts such as Vercel only offer a temporary `/tmp`, so data would be lost on every restart or redeploy.
+### Lưu Ý Về Triển Khai (Deployment)
+Dữ liệu được lưu trữ trong các tệp JSON thuộc thư mục `data/`, do đó ứng dụng yêu cầu **ổ đĩa lưu trữ cố định (persistent disk)**: máy tính cá nhân của bạn (kèm tunnel qua `start.sh`), máy chủ VPS hoặc Docker volume. Các nền tảng Serverless như Vercel chỉ cung cấp thư mục `/tmp` tạm thời, dẫn đến dữ liệu sẽ bị mất sau mỗi lần khởi động lại hoặc triển khai lại mã nguồn.
 
 ---
 
-## 5. Data Management & Backups
+## 5. Quản Lý Dữ Liệu & Sao Lưu
 
-- **Atomic Writes:** During writes, data is flushed to a temporary `.tmp` file prior to renaming (`fs.rename`), guarding against database corruption in the event of abrupt server termination or power loss.
-- **Realtime Multi-Device Sync:** The application monitors snapshot versioning. In the event of simultaneous edits across devices, the server triggers conflict resolution (`HTTP 409`) and initiates three-way merging (`mergeSnapshots`), safeguarding all balances and transactions.
-- **Offline Edits:** Changes made while the server is unreachable stay on the device (marked *Offline*) and are pushed and merged automatically when the connection returns; signing out with unsynced changes asks for confirmation first.
-- **JSON Backups:** Download a complete JSON snapshot from *Settings* (data & backup section) or the profile menu, and restore it from the same places. Older backup formats are accepted (balances are rebuilt from history, numbers stored as text are converted).
-- **Encrypted Server Backups:** *Settings → Secure Backups* keeps up to 20 AES-256-GCM encrypted snapshots per account on the server; restoring one first saves a safety backup of the current data.
+- **Ghi dữ liệu nguyên tử (Atomic Writes):** Trong quá trình ghi, dữ liệu được xả vào một tệp tạm `.tmp` trước khi đổi tên thay thế tệp cũ (`fs.rename`), bảo vệ cơ sở dữ liệu không bị hỏng hóc ngay cả khi máy chủ bị tắt đột ngột hoặc mất điện.
+- **Đồng bộ thời gian thực trên nhiều thiết bị:** Ứng dụng theo dõi phiên bản snapshot. Khi xảy ra chỉnh sửa đồng thời trên nhiều thiết bị khác nhau, máy chủ sẽ kích hoạt cơ chế giải quyết xung đột (`HTTP 409`) và thực hiện hợp nhất 3 chiều (`mergeSnapshots`), bảo toàn trọn vẹn số dư và tất cả các giao dịch.
+- **Chỉnh sửa ngoại tuyến (Offline):** Các thay đổi được thực hiện khi mất kết nối máy chủ sẽ được lưu lại trên thiết bị (được đánh dấu trạng thái *Ngoại tuyến*) và tự động đẩy lên, hợp nhất khi có mạng trở lại; nếu người dùng đăng xuất khi còn thay đổi chưa đồng bộ, hệ thống sẽ hiển thị cảnh báo xác nhận.
+- **Sao lưu định dạng JSON:** Tải xuống bản snapshot JSON đầy đủ từ mục *Cài đặt* (phần dữ liệu & sao lưu) hoặc từ menu tài khoản, và khôi phục trực tiếp tại các vị trí này. Hệ thống hỗ trợ tương thích ngược với các định dạng sao lưu cũ hơn (tự động tính lại số dư từ lịch sử giao dịch, chuyển đổi các số bị lưu dưới dạng chuỗi văn bản).
+- **Sao lưu mã hóa trên máy chủ:** Mục *Cài đặt → Sao lưu bảo mật* lưu trữ tối đa 20 bản snapshot mã hóa chuẩn AES-256-GCM cho mỗi tài khoản trên máy chủ; trước khi khôi phục một bản sao lưu bất kỳ, hệ thống sẽ tự động tạo một bản sao lưu an toàn cho dữ liệu hiện tại.

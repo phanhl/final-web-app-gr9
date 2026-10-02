@@ -36,9 +36,6 @@ export const AppProvider = ({ children }) => {
     const [dataLoadError, setDataLoadError] = useState(false);
     // Message shown on the sign-in screen (e.g. session expired)
     const [authNotice, setAuthNotice] = useState('');
-    // Google Sign-In availability (server has GOOGLE_CLIENT_ID/SECRET) and the result of a return from Google
-    const [googleAuth, setGoogleAuth] = useState({ enabled: false, configured: false, reason: null, signupEnabled: false });
-    const googleResultRef = useRef(null);
     const [wallets, setWallets] = useState(INITIAL_WALLETS);
     const [transactions, setTransactions] = useState(INITIAL_TRANSACTIONS);
     const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
@@ -554,21 +551,6 @@ export const AppProvider = ({ children }) => {
         let isSubscribed = true;
         async function checkAuthAndLoad() {
             purgeStoredCredentials();
-            // Back from Google: remember ?google=<result>&reason=<code> and clean the address bar
-            try {
-                const params = new URLSearchParams(window.location.search);
-                if (params.has('google')) {
-                    googleResultRef.current = { result: params.get('google'), reason: params.get('reason') || '' };
-                    params.delete('google');
-                    params.delete('reason');
-                    const qs = params.toString();
-                    window.history.replaceState(null, '', `${window.location.pathname}${qs ? `?${qs}` : ''}${window.location.hash}`);
-                }
-            } catch {}
-            fetch('/api/auth/google/status', { cache: 'no-store' })
-                .then((r) => r.json())
-                .then((g) => isSubscribed && setGoogleAuth({ enabled: Boolean(g.enabled), configured: Boolean(g.configured), reason: g.reason || null, signupEnabled: Boolean(g.signupEnabled) }))
-                .catch(() => {});
             try {
                 const authRes = await fetch('/api/auth/me', { cache: 'no-store' });
                 const authData = await authRes.json().catch(() => ({ authenticated: false }));
@@ -646,7 +628,6 @@ export const AppProvider = ({ children }) => {
             finally {
                 if (isSubscribed) {
                     setAuthLoading(false);
-                    showGoogleResultRef.current();
                 }
             }
         }
@@ -671,14 +652,8 @@ export const AppProvider = ({ children }) => {
         setServerSyncStatus('offline');
     };
 
-    // The login response sets httpOnly session + unlock cookies, so the password is never kept in the browser
-    const handleLoginSuccess = async (loginUser) => {
-        // The login response only carries id/username/role: load the full profile (password / Google link state)
-        let user = loginUser;
-        try {
-            const me = await (await fetch('/api/auth/me', { cache: 'no-store' })).json();
-            if (me.authenticated && me.user?.id === loginUser.id) user = me.user;
-        } catch {}
+    // The login response sets an httpOnly session cookie, so the password is never kept in the browser
+    const handleLoginSuccess = async (user) => {
         currentUserRef.current = user;
         setCurrentUser(user);
         setAuthLoading(true);
@@ -797,10 +772,7 @@ export const AppProvider = ({ children }) => {
                 body: JSON.stringify({ currentPassword, newPassword }),
             });
             const result = await res.json().catch(() => ({}));
-            if (res.ok && result.success) {
-                setCurrentUser((u) => (u ? { ...u, hasPassword: true } : u));
-                return { success: true };
-            }
+            if (res.ok && result.success) return { success: true };
             return { success: false, error: result.error || `HTTP ${res.status}` };
         } catch (e) {
             return { success: false, error: e.message };
@@ -822,61 +794,6 @@ export const AppProvider = ({ children }) => {
             }
             clearLocalUserData(uid);
             resetSessionState();
-            return { success: true };
-        } catch (e) {
-            return { success: false, error: e.message };
-        }
-    };
-
-    // Human-readable outcome of a Google sign-in / link round trip
-    const googleMessage = (result, reason) => {
-        const en = language === 'en';
-        if (result === 'linked') return en ? 'Your Google account is now linked. You can sign in with Google next time.' : 'Đã liên kết tài khoản Google. Lần sau bạn có thể đăng nhập bằng Google.';
-        if (result === 'signup') return en ? 'Your account was created with Google. Set a password in Settings if you also want to sign in without Google.' : 'Đã tạo tài khoản bằng Google. Bạn có thể đặt mật khẩu trong Cài đặt nếu muốn đăng nhập cả khi không dùng Google.';
-        if (result === 'login') return '';
-        const messages = {
-            cancelled: en ? 'Google sign-in was cancelled.' : 'Bạn đã hủy đăng nhập Google.',
-            not_linked: en ? 'This Google account is not linked to any FinTrack account yet. Sign in with your password and link it in Settings, or use "Sign up with Google".' : 'Tài khoản Google này chưa liên kết với tài khoản FinTrack nào. Hãy đăng nhập bằng mật khẩu rồi liên kết trong Cài đặt, hoặc chọn "Đăng ký bằng Google".',
-            already_linked: en ? 'This Google account is already linked to another FinTrack account.' : 'Tài khoản Google này đã được liên kết với một tài khoản FinTrack khác.',
-            expired: en ? 'The Google sign-in took too long or was opened in another browser. Please try again.' : 'Phiên đăng nhập Google đã hết hạn hoặc được mở ở trình duyệt khác. Vui lòng thử lại.',
-            state: en ? 'The Google response could not be verified. Please try again.' : 'Không xác minh được phản hồi từ Google. Vui lòng thử lại.',
-            session: en ? 'Please sign in to your FinTrack account before linking Google.' : 'Vui lòng đăng nhập tài khoản FinTrack trước khi liên kết Google.',
-            disabled: en ? 'Google sign-in is not configured on this server.' : 'Máy chủ chưa cấu hình đăng nhập Google.',
-            registration_disabled: en ? 'Creating new accounts is turned off on this server.' : 'Máy chủ đang tắt chức năng tạo tài khoản mới.',
-            rate_limited: en ? 'Too many new accounts were created recently. Please try again later.' : 'Đã tạo quá nhiều tài khoản trong thời gian ngắn, vui lòng thử lại sau.',
-        };
-        return messages[reason] || (en ? 'Google sign-in failed. Please try again.' : 'Đăng nhập Google không thành công. Vui lòng thử lại.');
-    };
-    const showGoogleResultRef = useRef(() => {});
-    showGoogleResultRef.current = () => {
-        const pending = googleResultRef.current;
-        if (!pending) return;
-        googleResultRef.current = null;
-        const message = googleMessage(pending.result, pending.reason);
-        if (!message) return;
-        if (!currentUserRef.current) {
-            setAuthNotice(message);
-            return;
-        }
-        showConfirm({
-            title: pending.result === 'error' ? (language === 'en' ? 'Google account' : 'Tài khoản Google') : (language === 'en' ? 'Done' : 'Thành công'),
-            message,
-            confirmText: 'OK',
-            cancelText: null,
-            variant: pending.result === 'error' ? 'danger' : 'info',
-        });
-    };
-    // Full-page navigations: Google needs a top-level redirect, not a fetch
-    const startGoogleAuth = (mode) => {
-        window.location.assign(`/api/auth/google/start?mode=${encodeURIComponent(mode)}`);
-    };
-    const unlinkGoogle = async () => {
-        try {
-            const res = await fetch('/api/auth/google/unlink', { method: 'POST' });
-            const result = await res.json().catch(() => ({}));
-            if (await handleAuthFailure(res)) return { success: false };
-            if (!res.ok || !result.success) return { success: false, error: result.error || `HTTP ${res.status}` };
-            setCurrentUser((u) => (u ? { ...u, googleLinked: false, googleEmail: '' } : u));
             return { success: true };
         } catch (e) {
             return { success: false, error: e.message };
@@ -2031,9 +1948,6 @@ export const AppProvider = ({ children }) => {
             handleLoginSuccess,
             changePassword,
             deleteAccount,
-            googleAuth,
-            startGoogleAuth,
-            unlinkGoogle,
             showConfirm,
         }}>
       {authLoading ? (
@@ -2052,8 +1966,6 @@ export const AppProvider = ({ children }) => {
           isHostPasswordSet={isHostPasswordSet}
           language={language}
           notice={authNotice}
-          googleAuth={googleAuth}
-          onGoogle={startGoogleAuth}
         />
       ) : dataLoadError && !isPinLocked ? (
         <div className="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 p-6 text-center" role="alert">

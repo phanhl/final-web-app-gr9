@@ -44,10 +44,6 @@ export async function DELETE(req) {
             return NextResponse.json({ success: false, error: 'Mật khẩu không chính xác' }, { status: 403 });
         }
 
-        if (!sessionUser.hasPassword) {
-            return NextResponse.json({ success: false, code: 'NO_PASSWORD', error: 'Tài khoản đăng nhập bằng Google: hãy đặt mật khẩu trong Cài đặt trước khi xóa tài khoản.' }, { status: 400 });
-        }
-
         const deleted = await withUsersLock(async () => {
             const users = await getUsers();
             const user = users.find(u => u.id === sessionUser.id);

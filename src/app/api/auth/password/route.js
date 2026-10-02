@@ -48,15 +48,14 @@ export async function POST(req) {
         if (newPassword.length < 8 || newPassword.length > 256) {
             return NextResponse.json({ success: false, error: 'Mật khẩu mới phải có từ 8 đến 256 ký tự' }, { status: 400 });
         }
-        if (sessionUser.hasPassword && newPassword === currentPassword) {
+        if (newPassword === currentPassword) {
             return NextResponse.json({ success: false, error: 'Mật khẩu mới phải khác mật khẩu hiện tại' }, { status: 400 });
         }
 
         const updated = await withUsersLock(async () => {
             const users = await getUsers();
             const user = users.find(u => u.id === sessionUser.id);
-            // Accounts created with Google have no password yet: they may set one without a current password
-            if (!user || (user.hasPassword && !(await verifyPassword(currentPassword, user.salt, user.passwordHash)))) {
+            if (!user || !(await verifyPassword(currentPassword, user.salt, user.passwordHash))) {
                 return null;
             }
             const { salt, hash } = await hashPassword(newPassword);
