@@ -10,6 +10,19 @@
 #   NO_TUNNEL=1: chi chay local, khong mo tunnel
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$DIR"
+# Doc bien tu .env cho chinh script nay (Next.js tu doc .env cho ung dung); bien dat san trong shell duoc uu tien
+env_from_file() {
+  local name="$1" value
+  [ -n "${!name:-}" ] || [ ! -f .env ] && return
+  value="$(sed -n "s/^${name}=//p" .env | tail -1 | tr -d '\r')"
+  value="${value%\"}"; value="${value#\"}"; value="${value%\'}"; value="${value#\'}"
+  [ -n "$value" ] && export "$name=$value"
+}
+env_from_file PORT
+env_from_file NO_TUNNEL
+env_from_file NGROK_DOMAIN
+env_from_file NGROK_BIN
+env_from_file CLOUDFLARED_BIN
 PORT="${PORT:-3000}"
 
 find_bin() {

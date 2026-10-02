@@ -74,7 +74,7 @@ describe('MySQL store', { skip }, () => {
         await db.closePool();
         const pool = await db.getPool(); // runs migrate() again on a fresh pool
         const [rows] = await pool.query('SELECT version FROM schema_migrations');
-        assert.deepEqual(rows.map((r) => r.version), [db.SCHEMA_VERSION]);
+        assert.deepEqual(rows.map((r) => r.version), db.loadMigrations().map((m) => m.version));
     });
 
     test('a full snapshot round-trips exactly (typed columns + extra fields)', async () => {

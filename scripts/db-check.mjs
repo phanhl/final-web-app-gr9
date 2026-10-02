@@ -5,7 +5,7 @@
  * start.sh runs it before starting the app so a missing database is reported clearly.
  */
 import './env.mjs';
-import { getPool, getDbConfig, closePool, SCHEMA_VERSION } from '../src/lib/db.js';
+import { getPool, getDbConfig, closePool, getSchemaVersion } from '../src/lib/db.js';
 
 try {
     const cfg = getDbConfig();
@@ -15,7 +15,7 @@ try {
         (SELECT COUNT(*) FROM users) AS users,
         (SELECT COUNT(*) FROM transactions) AS transactions,
         (SELECT COUNT(*) FROM secure_backups) AS backups`);
-    console.log(`MySQL ${version.v} at ${cfg.host}:${cfg.port}/${cfg.database} - schema v${SCHEMA_VERSION}, ${counts.users} accounts, ${counts.transactions} transactions, ${counts.backups} encrypted backups`);
+    console.log(`MySQL ${version.v} at ${cfg.host}:${cfg.port}/${cfg.database} - schema v${getSchemaVersion()}, ${counts.users} accounts, ${counts.transactions} transactions, ${counts.backups} encrypted backups`);
 } catch (err) {
     const cfg = (() => { try { return getDbConfig(); } catch { return {}; } })();
     console.error(`Cannot use MySQL at ${cfg.host}:${cfg.port}/${cfg.database}: ${err.code || ''} ${err.message}`);

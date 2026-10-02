@@ -1,15 +1,15 @@
+import fs from 'fs';
+import path from 'path';
 import mysql from 'mysql2/promise';
 
 /**
- * MySQL connection pool and schema migrations.
+ * MySQL connection pool and schema migrations (the tables themselves are in db/migrations/*.sql).
  *
  * Configuration (first match wins):
  *   DATABASE_URL=mysql://user:password@host:3306/database
  *   or MYSQL_HOST, MYSQL_PORT, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE
  *
  * Design notes:
- * - InnoDB + utf8mb4. Identifiers use a binary collation (exact match); usernames use the default
- *   case-insensitive collation so "Admin" and "admin" cannot both exist.
  * - Every row belongs to a user. Read-check-write sequences run in transactions that lock the user's
  *   user_state row (SELECT ... FOR UPDATE), so concurrent requests for one user are serialized.
  * - Money is DECIMAL(19,4); mysql2 is configured to return DECIMAL as JS numbers.
@@ -39,213 +39,45 @@ export function getDbConfig() {
     };
 }
 
-const ID = 'VARCHAR(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin';
-const TABLE_OPTIONS = 'ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci';
+// Schema changes live in db/migrations/NNN_short_name.sql (applied in order, each once).
+// Never edit a migration that has shipped: add a new file.
+const MIGRATIONS_DIR = path.join(process.cwd(), 'db', 'migrations');
+const MIGRATION_FILE = /^(\d+)_([a-z0-9_]+)\.sql$/;
 
-/** Ordered schema migrations. Never edit a shipped migration: append a new one. */
-const MIGRATIONS = [
-    {
-        version: 1,
-        name: 'initial schema',
-        statements: [
-            `CREATE TABLE IF NOT EXISTS users (
-                id                  VARCHAR(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
-                username            VARCHAR(64) NOT NULL,
-                role                ENUM('host', 'guest') NOT NULL,
-                display_name        VARCHAR(100) NULL,
-                password_salt       VARCHAR(64) NULL,
-                password_hash       VARCHAR(128) NULL,
-                has_password        TINYINT(1) NOT NULL DEFAULT 0,
-                token_version       INT UNSIGNED NOT NULL DEFAULT 1,
-                created_at          VARCHAR(40) NOT NULL,
-                password_changed_at VARCHAR(40) NULL,
-                host_marker         TINYINT AS (IF(role = 'host', 1, NULL)) STORED,
-                PRIMARY KEY (id),
-                UNIQUE KEY users_username (username),
-                UNIQUE KEY users_single_host (host_marker),
-                CONSTRAINT users_password_set CHECK (has_password = 0 OR (password_salt IS NOT NULL AND password_hash IS NOT NULL)),
-                CONSTRAINT users_token_version CHECK (token_version >= 1)
-            ) ${TABLE_OPTIONS}`,
+let migrationsCache;
 
-            // One row per user: sync version, settings and the App PIN
-            `CREATE TABLE IF NOT EXISTS user_state (
-                user_id          VARCHAR(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
-                updated_at       VARCHAR(40) NOT NULL,
-                current_month    VARCHAR(20) NULL,
-                planner          JSON NULL,
-                simulator_config JSON NULL,
-                user_profile     JSON NULL,
-                pin_enabled      TINYINT(1) NOT NULL DEFAULT 0,
-                pin_salt         VARCHAR(64) NULL,
-                pin_hash         VARCHAR(128) NULL,
-                PRIMARY KEY (user_id),
-                CONSTRAINT user_state_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-                CONSTRAINT user_state_pin CHECK (pin_enabled = 0 OR (pin_salt IS NOT NULL AND pin_hash IS NOT NULL))
-            ) ${TABLE_OPTIONS}`,
+/** Read the migration files: [{ version, name, statements }] sorted by version */
+export function loadMigrations() {
+    if (migrationsCache) return migrationsCache;
+    const migrations = [];
+    for (const file of fs.readdirSync(MIGRATIONS_DIR)) {
+        const match = MIGRATION_FILE.exec(file);
+        if (!match) continue;
+        const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, file), 'utf8');
+        // Statements end with ";" at the end of a line; "--" comment lines are dropped
+        const statements = sql
+            .split('\n')
+            .filter((line) => !line.trim().startsWith('--'))
+            .join('\n')
+            .split(/;\s*$/m)
+            .map((statement) => statement.trim())
+            .filter(Boolean);
+        migrations.push({ version: Number(match[1]), name: match[2].replace(/_/g, ' '), statements });
+    }
+    migrations.sort((x, y) => x.version - y.version);
+    if (migrations.length === 0) throw new Error(`No schema migrations found in ${MIGRATIONS_DIR}`);
+    migrations.forEach((m, i) => {
+        if (i > 0 && m.version === migrations[i - 1].version) throw new Error(`Two migrations share version ${m.version}`);
+    });
+    migrationsCache = migrations;
+    return migrations;
+}
 
-            // Entity tables: typed columns for what the app relies on, "extra" (JSON) keeps any other field
-            // so nothing the client sends is lost; "position" preserves the client's list order.
-            `CREATE TABLE IF NOT EXISTS wallets (
-                user_id         VARCHAR(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
-                id              ${ID} NOT NULL,
-                position        INT UNSIGNED NOT NULL,
-                name            TEXT NULL,
-                type            ENUM('CASH', 'BANK', 'CREDIT', 'SAVINGS') NULL,
-                balance         DECIMAL(19,4) NOT NULL,
-                initial_balance DECIMAL(19,4) NOT NULL DEFAULT 0,
-                currency        VARCHAR(16) NULL,
-                credit_limit    DECIMAL(19,4) NULL,
-                interest_rate   DECIMAL(9,4) NULL,
-                bank_name       VARCHAR(255) NULL,
-                account_number  VARCHAR(64) NULL,
-                color           VARCHAR(64) NULL,
-                icon            VARCHAR(64) NULL,
-                created_at      VARCHAR(40) NULL,
-                extra           JSON NULL,
-                PRIMARY KEY (user_id, id),
-                CONSTRAINT wallets_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-                CONSTRAINT wallets_credit_limit CHECK (credit_limit IS NULL OR credit_limit >= 0)
-            ) ${TABLE_OPTIONS}`,
-
-            `CREATE TABLE IF NOT EXISTS categories (
-                user_id  VARCHAR(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
-                id       ${ID} NOT NULL,
-                position INT UNSIGNED NOT NULL,
-                name     TEXT NULL,
-                type     ENUM('INCOME', 'EXPENSE') NULL,
-                icon     VARCHAR(64) NULL,
-                color    VARCHAR(64) NULL,
-                extra    JSON NULL,
-                PRIMARY KEY (user_id, id),
-                CONSTRAINT categories_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-            ) ${TABLE_OPTIONS}`,
-
-            // Transactions reference wallets of the same user. NO ACTION (not CASCADE) because MySQL does not
-            // allow CHECK constraints on columns used by cascading foreign keys; deletes run in explicit order.
-            `CREATE TABLE IF NOT EXISTS transactions (
-                user_id        VARCHAR(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
-                id             ${ID} NOT NULL,
-                position       INT UNSIGNED NOT NULL,
-                type           ENUM('INCOME', 'EXPENSE', 'TRANSFER') NOT NULL,
-                amount         DECIMAL(19,4) NOT NULL,
-                fee            DECIMAL(19,4) NULL,
-                date           VARCHAR(40) NULL,
-                wallet_id      ${ID} NULL,
-                wallet_name    TEXT NULL,
-                to_wallet_id   ${ID} NULL,
-                to_wallet_name TEXT NULL,
-                category_id    ${ID} NULL,
-                category_name  TEXT NULL,
-                note           TEXT NULL,
-                tags           JSON NULL,
-                bill_id        ${ID} NULL,
-                receipt_image  MEDIUMTEXT NULL,
-                created_at     VARCHAR(40) NULL,
-                extra          JSON NULL,
-                PRIMARY KEY (user_id, id),
-                KEY transactions_by_date (user_id, date),
-                KEY transactions_by_wallet (user_id, wallet_id),
-                KEY transactions_by_to_wallet (user_id, to_wallet_id),
-                CONSTRAINT transactions_wallet FOREIGN KEY (user_id, wallet_id) REFERENCES wallets(user_id, id),
-                CONSTRAINT transactions_to_wallet FOREIGN KEY (user_id, to_wallet_id) REFERENCES wallets(user_id, id),
-                CONSTRAINT transactions_amount CHECK (amount > 0),
-                CONSTRAINT transactions_fee CHECK (fee IS NULL OR fee >= 0),
-                CONSTRAINT transactions_transfer CHECK (type <> 'TRANSFER' OR (wallet_id IS NOT NULL AND to_wallet_id IS NOT NULL AND wallet_id <> to_wallet_id))
-            ) ${TABLE_OPTIONS}`,
-
-            `CREATE TABLE IF NOT EXISTS budgets (
-                user_id       VARCHAR(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
-                id            ${ID} NOT NULL,
-                position      INT UNSIGNED NOT NULL,
-                category_id   ${ID} NULL,
-                category_name TEXT NULL,
-                amount        DECIMAL(19,4) NULL,
-                month         VARCHAR(20) NULL,
-                extra         JSON NULL,
-                PRIMARY KEY (user_id, id),
-                CONSTRAINT budgets_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-                CONSTRAINT budgets_amount CHECK (amount IS NULL OR amount >= 0)
-            ) ${TABLE_OPTIONS}`,
-
-            `CREATE TABLE IF NOT EXISTS bills (
-                user_id              VARCHAR(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
-                id                   ${ID} NOT NULL,
-                position             INT UNSIGNED NOT NULL,
-                name                 TEXT NULL,
-                amount               DECIMAL(19,4) NULL,
-                category_id          ${ID} NULL,
-                category_name        TEXT NULL,
-                wallet_id            ${ID} NULL,
-                due_day              TINYINT UNSIGNED NULL,
-                frequency            ENUM('MONTHLY', 'QUARTERLY', 'YEARLY') NULL,
-                status               VARCHAR(32) NULL,
-                last_paid_date       VARCHAR(40) NULL,
-                last_payment_tx_id   ${ID} NULL,
-                reminder_days_before SMALLINT NULL,
-                note                 TEXT NULL,
-                extra                JSON NULL,
-                PRIMARY KEY (user_id, id),
-                CONSTRAINT bills_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-                CONSTRAINT bills_amount CHECK (amount IS NULL OR amount >= 0),
-                CONSTRAINT bills_due_day CHECK (due_day IS NULL OR due_day BETWEEN 1 AND 31)
-            ) ${TABLE_OPTIONS}`,
-
-            `CREATE TABLE IF NOT EXISTS goals (
-                user_id        VARCHAR(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
-                id             ${ID} NOT NULL,
-                position       INT UNSIGNED NOT NULL,
-                name           TEXT NULL,
-                target_amount  DECIMAL(19,4) NULL,
-                current_amount DECIMAL(19,4) NULL,
-                deadline       VARCHAR(40) NULL,
-                wallet_id      ${ID} NULL,
-                color          VARCHAR(64) NULL,
-                icon           VARCHAR(64) NULL,
-                created_at     VARCHAR(40) NULL,
-                extra          JSON NULL,
-                PRIMARY KEY (user_id, id),
-                CONSTRAINT goals_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-                CONSTRAINT goals_amounts CHECK ((target_amount IS NULL OR target_amount >= 0) AND (current_amount IS NULL OR current_amount >= 0))
-            ) ${TABLE_OPTIONS}`,
-
-            `CREATE TABLE IF NOT EXISTS goal_history (
-                user_id   VARCHAR(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
-                goal_id   ${ID} NOT NULL,
-                id        ${ID} NOT NULL,
-                position  INT UNSIGNED NOT NULL,
-                date      VARCHAR(40) NULL,
-                amount    DECIMAL(19,4) NULL,
-                type      ENUM('DEPOSIT', 'WITHDRAW') NULL,
-                wallet_id ${ID} NULL,
-                tx_id     ${ID} NULL,
-                note      TEXT NULL,
-                extra     JSON NULL,
-                PRIMARY KEY (user_id, goal_id, id),
-                CONSTRAINT goal_history_goal FOREIGN KEY (user_id, goal_id) REFERENCES goals(user_id, id) ON DELETE CASCADE
-            ) ${TABLE_OPTIONS}`,
-
-            // Encrypted (AES-256-GCM) snapshots; the blob is opaque to the database
-            `CREATE TABLE IF NOT EXISTS secure_backups (
-                id         VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
-                user_id    VARCHAR(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
-                created_at VARCHAR(40) NOT NULL,
-                size       INT UNSIGNED NOT NULL,
-                data       LONGBLOB NOT NULL,
-                PRIMARY KEY (id),
-                KEY secure_backups_by_user (user_id, created_at),
-                CONSTRAINT secure_backups_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-            ) ${TABLE_OPTIONS}`,
-
-            `CREATE TABLE IF NOT EXISTS app_meta (
-                \`key\`  VARCHAR(64) NOT NULL,
-                value  TEXT NOT NULL,
-                PRIMARY KEY (\`key\`)
-            ) ${TABLE_OPTIONS}`,
-        ],
-    },
-];
-
-export const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
+/** Latest schema version (the highest migration number) */
+export function getSchemaVersion() {
+    const migrations = loadMigrations();
+    return migrations[migrations.length - 1].version;
+}
 
 // A database that hangs (network trouble, paused server) must fail fast enough for the app to answer
 // "temporarily unavailable" instead of leaving the request waiting forever
@@ -292,10 +124,10 @@ async function migrate(pool) {
                 version    INT UNSIGNED NOT NULL PRIMARY KEY,
                 name       VARCHAR(200) NOT NULL,
                 applied_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
-            ) ${TABLE_OPTIONS}`);
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci`);
             const [rows] = await conn.query('SELECT version FROM schema_migrations');
             const applied = new Set(rows.map((r) => r.version));
-            for (const m of MIGRATIONS) {
+            for (const m of loadMigrations()) {
                 if (applied.has(m.version)) continue;
                 // MySQL commits DDL implicitly, so a migration is not one atomic step: statements are written
                 // to be re-runnable (IF NOT EXISTS) and the version row is recorded only after all of them.

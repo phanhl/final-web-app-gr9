@@ -2,6 +2,15 @@
 # Script dung may chu FinTrack Pro va cac duong truyen
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$DIR"
+# Doc bien tu .env cho chinh script nay (Next.js tu doc .env cho ung dung); bien dat san trong shell duoc uu tien
+env_from_file() {
+  local name="$1" value
+  [ -n "${!name:-}" ] || [ ! -f .env ] && return
+  value="$(sed -n "s/^${name}=//p" .env | tail -1 | tr -d '\r')"
+  value="${value%\"}"; value="${value#\"}"; value="${value%\'}"; value="${value#\'}"
+  [ -n "$value" ] && export "$name=$value"
+}
+env_from_file PORT
 PORT="${PORT:-3000}"
 
 for f in .server.pid .ngrok.pid .cloudflared.pid; do
