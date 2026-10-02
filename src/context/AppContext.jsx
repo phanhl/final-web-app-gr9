@@ -580,6 +580,8 @@ export const AppProvider = ({ children }) => {
                     currentUserRef.current = authData.user;
                     setCurrentUser(authData.user);
 
+                    // Không tự khôi phục PIN.
+                    // Sau mỗi lần reload/mở lại app, appPinRef phải bắt đầu rỗng.
 
                     let serverData = null;
                     let locked = false;
@@ -680,6 +682,9 @@ export const AppProvider = ({ children }) => {
         currentUserRef.current = user;
         setCurrentUser(user);
         setAuthLoading(true);
+
+        // Không dùng mật khẩu tài khoản làm App PIN.
+        // App PIN phải được nhập riêng sau khi đăng nhập nếu PIN protection đang bật.
         appPinRef.current = '';
 
         try {
