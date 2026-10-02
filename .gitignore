@@ -40,6 +40,8 @@ data/*.json
 data/users/
 data/users.json
 data/.session_secret
+data/.backup_key
+data/secure-backups/
 data/database.json.*
 !data/database.template.json
 

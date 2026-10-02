@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useApp } from '@/context/AppContext';
 import { KeyRound, Sun, Moon, Monitor, Check, Palette, Globe, ShieldCheck, ShieldAlert, Lock, Unlock, Download, Upload, Database, Server, CheckCircle2, AlertCircle } from 'lucide-react';
 import { LANGUAGES } from '@/lib/i18n';
@@ -10,6 +10,8 @@ export const SettingsView = () => {
         security, updateSecuritySettings,
         userProfile, updateUserProfile,
         exportDatabaseJSON, importDatabaseJSON,
+        listSecureBackups, createSecureBackup,
+        restoreSecureBackup, deleteSecureBackup,
         showConfirm
     } = useApp();
 
@@ -20,6 +22,111 @@ export const SettingsView = () => {
     const [profileName, setProfileName] = useState(userProfile?.name || 'Admin');
     const [profileEmail, setProfileEmail] = useState(userProfile?.email || 'admin@fintrack.vn');
     const [profileSaved, setProfileSaved] = useState(false);
+
+    const [secureBackups, setSecureBackups] = useState([]);
+    const [secureBackupLoading, setSecureBackupLoading] = useState(false);
+
+    const refreshSecureBackups = useCallback(async () => {
+        setSecureBackupLoading(true);
+        const result = await listSecureBackups();
+        if (result.success) {
+            setSecureBackups(result.backups || []);
+        }
+        setSecureBackupLoading(false);
+    }, [listSecureBackups]);
+
+    useEffect(() => {
+        refreshSecureBackups();
+    }, [refreshSecureBackups]);
+
+    const handleCreateSecureBackup = async () => {
+        setSecureBackupLoading(true);
+        const result = await createSecureBackup();
+        if (result.success) {
+            await refreshSecureBackups();
+            showConfirm({
+                title: language === 'en' ? 'Backup Created' : 'Tạo sao lưu thành công',
+                message: language === 'en' ? 'Secure backup created successfully.' : 'Đã tạo bản sao lưu an toàn thành công.',
+                confirmText: 'OK',
+                cancelText: null,
+                variant: 'info',
+            });
+        } else {
+            showConfirm({
+                title: language === 'en' ? 'Backup Failed' : 'Tạo sao lưu thất bại',
+                message: result.error || (language === 'en' ? 'Failed to create secure backup.' : 'Thao tác tạo bản sao lưu thất bại.'),
+                confirmText: 'OK',
+                cancelText: null,
+                variant: 'danger',
+            });
+        }
+        setSecureBackupLoading(false);
+    };
+
+    const handleRestoreSecureBackup = (backup) => {
+        const dateStr = new Date(backup.createdAt).toLocaleString(language === 'en' ? 'en-GB' : 'vi-VN');
+        showConfirm({
+            title: language === 'en' ? 'Restore Secure Backup' : 'Khôi phục sao lưu an toàn',
+            message: language === 'en'
+                ? `Restore backup from ${dateStr}?\n\nA safety backup of your current data will be created automatically before restoring.`
+                : `Khôi phục bản sao lưu ngày ${dateStr}?\n\nHệ thống sẽ tự động tạo một bản sao lưu an toàn của dữ liệu hiện tại trước khi khôi phục.`,
+            confirmText: language === 'en' ? 'Restore Now' : 'Khôi phục ngay',
+            cancelText: language === 'en' ? 'Cancel' : 'Hủy',
+            variant: 'warning',
+            onConfirm: async () => {
+                setSecureBackupLoading(true);
+                const result = await restoreSecureBackup(backup.id);
+                if (result.success) {
+                    await refreshSecureBackups();
+                    showConfirm({
+                        title: language === 'en' ? 'Restored Successfully' : 'Khôi phục thành công',
+                        message: language === 'en' ? 'Secure backup restored successfully.' : 'Đã khôi phục bản sao lưu an toàn thành công.',
+                        confirmText: 'OK',
+                        cancelText: null,
+                        variant: 'info',
+                    });
+                } else {
+                    showConfirm({
+                        title: language === 'en' ? 'Restore Failed' : 'Khôi phục thất bại',
+                        message: result.error || (language === 'en' ? 'Failed to restore secure backup.' : 'Khôi phục thất bại.'),
+                        confirmText: 'OK',
+                        cancelText: null,
+                        variant: 'danger',
+                    });
+                }
+                setSecureBackupLoading(false);
+            },
+        });
+    };
+
+    const handleDeleteSecureBackup = (backup) => {
+        const dateStr = new Date(backup.createdAt).toLocaleString(language === 'en' ? 'en-GB' : 'vi-VN');
+        showConfirm({
+            title: language === 'en' ? 'Delete Backup' : 'Xóa bản sao lưu',
+            message: language === 'en'
+                ? `Permanently delete secure backup from ${dateStr}? This action cannot be undone.`
+                : `Xóa vĩnh viễn bản sao lưu an toàn ngày ${dateStr}? Thao tác này không thể hoàn tác.`,
+            confirmText: language === 'en' ? 'Delete Permanently' : 'Xóa vĩnh viễn',
+            cancelText: language === 'en' ? 'Cancel' : 'Hủy',
+            variant: 'danger',
+            onConfirm: async () => {
+                setSecureBackupLoading(true);
+                const result = await deleteSecureBackup(backup.id);
+                if (result.success) {
+                    await refreshSecureBackups();
+                } else {
+                    showConfirm({
+                        title: language === 'en' ? 'Delete Failed' : 'Xóa thất bại',
+                        message: result.error || (language === 'en' ? 'Failed to delete secure backup.' : 'Xóa bản sao lưu thất bại.'),
+                        confirmText: 'OK',
+                        cancelText: null,
+                        variant: 'danger',
+                    });
+                }
+                setSecureBackupLoading(false);
+            },
+        });
+    };
 
     const handleSaveProfile = (e) => {
         e.preventDefault();
@@ -449,6 +556,85 @@ export const SettingsView = () => {
             />
           </label>
         </div>
+      </div>
+
+      {/* 6. SECURE ENCRYPTED BACKUPS */}
+      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <Database className="w-5 h-5 text-emerald-500" />
+              <h3 className="text-base font-bold text-slate-800 dark:text-white">
+                {language === 'en' ? 'Secure Backups' : 'Sao Lưu An Toàn'}
+              </h3>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              {language === 'en'
+                ? 'Encrypted AES-256-GCM backups stored securely on the application server.'
+                : 'Bản sao lưu được mã hóa AES-256-GCM và lưu riêng biệt trên máy chủ của ứng dụng.'}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            disabled={secureBackupLoading}
+            onClick={handleCreateSecureBackup}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
+          >
+            <Database className="w-4 h-4" />
+            <span>
+              {secureBackupLoading
+                ? '...'
+                : (language === 'en' ? 'Create Secure Backup' : 'Tạo Bản Sao Lưu An Toàn')}
+            </span>
+          </button>
+        </div>
+
+        {secureBackups.length === 0 ? (
+          <div className="py-8 text-center text-xs text-slate-400">
+            {language === 'en' ? 'No secure backups yet.' : 'Chưa có bản sao lưu an toàn nào.'}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {secureBackups.map((backup) => (
+              <div
+                key={backup.id}
+                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
+              >
+                <div>
+                  <div className="text-xs font-semibold text-slate-800 dark:text-white">
+                    {new Date(backup.createdAt).toLocaleString(
+                      language === 'en' ? 'en-GB' : 'vi-VN'
+                    )}
+                  </div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    {(backup.size / 1024).toFixed(1)} KB
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={secureBackupLoading}
+                    onClick={() => handleRestoreSecureBackup(backup)}
+                    className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-300 dark:hover:bg-blue-900/60 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {language === 'en' ? 'Restore' : 'Khôi phục'}
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={secureBackupLoading}
+                    onClick={() => handleDeleteSecureBackup(backup)}
+                    className="px-3 py-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-900/60 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {language === 'en' ? 'Delete' : 'Xóa'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>);
 };

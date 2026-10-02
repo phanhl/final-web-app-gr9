@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server';
 import { recomputeWalletBalances } from '@/lib/utils';
+import {
+    encryptSecureBackup,
+    decryptSecureBackup,
+    isValidSecureBackupId,
+} from '@/lib/secure-backup';
+import { validateBackupData } from '@/lib/backup-validation';
 import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
@@ -380,7 +386,17 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export async function GET(req) {
     try {
+        const url = new URL(req.url);
         const target = await resolveStorageTarget();
+
+        if (url.searchParams.get('action') === 'secureBackups') {
+            const current = await readDatabase(target);
+            const authError = checkAuth(req, current, target.user);
+            if (authError) return authError;
+            const backups = await listSecureBackups(target);
+            return NextResponse.json({ success: true, backups }, { headers: NO_CACHE_HEADERS });
+        }
+
         let data = await readDatabase(target);
         const authError = checkAuth(req, data, target.user);
         if (authError)
@@ -397,6 +413,168 @@ export async function GET(req) {
         return NextResponse.json({ success: false, error: error.message || 'Không đọc được dữ liệu' }, { status: 500, headers: NO_CACHE_HEADERS });
     }
 }
+const MAX_SECURE_BACKUPS = 20;
+
+function getSecureBackupDir(target) {
+    if (target?.user && target.user.role === 'guest') {
+        return path.join(USERS_DIR, target.user.id, 'secure-backups');
+    }
+    return path.join(DATA_DIR, 'secure-backups');
+}
+
+async function atomicWriteBuffer(filePath, buffer) {
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
+    const tmpFile = `${filePath}.${process.pid}.${Date.now()}.${crypto.randomBytes(3).toString('hex')}.tmp`;
+    await fs.writeFile(tmpFile, buffer, { mode: 0o600 });
+    await fs.rename(tmpFile, filePath);
+}
+
+async function listSecureBackups(target) {
+    const dir = getSecureBackupDir(target);
+    await fs.mkdir(dir, { recursive: true });
+    const files = await fs.readdir(dir).catch(() => []);
+    const backups = [];
+
+    for (const file of files) {
+        if (!isValidSecureBackupId(file)) continue;
+        const filePath = path.join(dir, file);
+        try {
+            const stat = await fs.stat(filePath);
+            if (!stat.isFile()) continue;
+            backups.push({
+                id: file,
+                createdAt: (stat.birthtimeMs ? stat.birthtime : stat.mtime).toISOString(),
+                size: stat.size,
+            });
+        } catch {
+            // Skip deleted or inaccessible file
+        }
+    }
+
+    backups.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return backups;
+}
+
+async function pruneSecureBackups(target) {
+    const backups = await listSecureBackups(target);
+    if (backups.length <= MAX_SECURE_BACKUPS) return;
+    const stale = backups.slice(MAX_SECURE_BACKUPS);
+    const dir = getSecureBackupDir(target);
+    for (const b of stale) {
+        await fs.unlink(path.join(dir, b.id)).catch(() => {});
+    }
+}
+
+async function createSecureBackupFile(target, data) {
+    const dir = getSecureBackupDir(target);
+    await fs.mkdir(dir, { recursive: true });
+    const backupId = `backup-${Date.now()}-${crypto.randomUUID()}.ftbk`;
+    const filePath = path.join(dir, backupId);
+    const encrypted = encryptSecureBackup(data);
+    await atomicWriteBuffer(filePath, encrypted);
+    await pruneSecureBackups(target);
+    const stat = await fs.stat(filePath);
+    return {
+        id: backupId,
+        createdAt: (stat.birthtimeMs ? stat.birthtime : stat.mtime).toISOString(),
+        size: stat.size,
+    };
+}
+
+async function readSecureBackup(target, backupId) {
+    if (!isValidSecureBackupId(backupId)) {
+        throw new Error('Invalid Secure Backup ID');
+    }
+    const dir = getSecureBackupDir(target);
+    const filePath = path.join(dir, backupId);
+    const encrypted = await fs.readFile(filePath);
+    return decryptSecureBackup(encrypted);
+}
+
+async function deleteSecureBackupFile(target, backupId) {
+    if (!isValidSecureBackupId(backupId)) {
+        throw new Error('Invalid Secure Backup ID');
+    }
+    const dir = getSecureBackupDir(target);
+    const filePath = path.join(dir, backupId);
+    await fs.unlink(filePath);
+}
+
+async function handleCreateSecureBackup(req, target) {
+    const current = await readDatabase(target);
+    const authError = checkAuth(req, current, target.user);
+    if (authError) return authError;
+
+    const source = current || (target.user ? getDefaultUserData(target.user.username) : getDefaultData());
+    const snapshot = {
+        backupVersion: 1,
+        createdAt: new Date().toISOString(),
+        ...pickDataFields(source),
+        wallets: recomputeWalletBalances(source.wallets || [], source.transactions || []),
+    };
+
+    const backup = await createSecureBackupFile(target, snapshot);
+    return NextResponse.json({ success: true, backup }, { headers: NO_CACHE_HEADERS });
+}
+
+async function handleRestoreSecureBackup(req, target, backupId) {
+    const current = await readDatabase(target);
+    const authError = checkAuth(req, current, target.user);
+    if (authError) return authError;
+
+    let backupData;
+    try {
+        backupData = await readSecureBackup(target, backupId);
+    } catch (error) {
+        return NextResponse.json({ success: false, error: error.message }, { status: 400, headers: NO_CACHE_HEADERS });
+    }
+
+    const validationErrors = validateBackupData(backupData);
+    if (validationErrors.length > 0) {
+        return NextResponse.json({ success: false, error: 'Invalid Secure Backup format', details: validationErrors }, { status: 400, headers: NO_CACHE_HEADERS });
+    }
+
+    let safetyBackup = null;
+    if (current) {
+        const safetySnapshot = {
+            backupVersion: 1,
+            createdAt: new Date().toISOString(),
+            ...pickDataFields(current),
+            wallets: recomputeWalletBalances(current.wallets || [], current.transactions || []),
+        };
+        safetyBackup = await createSecureBackupFile(target, safetySnapshot).catch(() => null);
+    }
+
+    const restoredWallets = recomputeWalletBalances(backupData.wallets, backupData.transactions);
+    const restoredData = {
+        ...pickDataFields(backupData),
+        wallets: restoredWallets,
+        security: normalizeSecurity(current?.security),
+        updatedAt: new Date().toISOString(),
+    };
+
+    await persist(target.filePath, restoredData);
+    return NextResponse.json({
+        success: true,
+        message: 'Secure backup restored successfully',
+        updatedAt: restoredData.updatedAt,
+        safetyBackup
+    }, { headers: NO_CACHE_HEADERS });
+}
+
+async function handleDeleteSecureBackup(req, target, backupId) {
+    const current = await readDatabase(target);
+    const authError = checkAuth(req, current, target.user);
+    if (authError) return authError;
+
+    try {
+        await deleteSecureBackupFile(target, backupId);
+    } catch (error) {
+        return NextResponse.json({ success: false, error: error.message }, { status: 404, headers: NO_CACHE_HEADERS });
+    }
+    return NextResponse.json({ success: true }, { headers: NO_CACHE_HEADERS });
+}
+
 async function handleUpdateSecurity(req, payload, target) {
     const current = await readDatabase(target);
     const authError = checkAuth(req, current, target.user);
@@ -437,7 +615,12 @@ export async function POST(req) {
         return NextResponse.json({ success: false, error: 'JSON không hợp lệ' }, { status: 400 });
     }
     const isSecurityUpdate = payload && payload.action === 'updateSecurity';
-    if (!isSecurityUpdate) {
+    const isSecureBackupAction = payload && (
+        payload.action === 'createSecureBackup' ||
+        payload.action === 'restoreSecureBackup' ||
+        payload.action === 'deleteSecureBackup'
+    );
+    if (!isSecurityUpdate && !isSecureBackupAction) {
         const validationError = validatePayload(payload);
         if (validationError) {
             return NextResponse.json({ success: false, error: validationError }, { status: 400 });
@@ -447,6 +630,12 @@ export async function POST(req) {
         const target = await resolveStorageTarget();
         if (isSecurityUpdate)
             return handleUpdateSecurity(req, payload, target);
+        if (payload?.action === 'createSecureBackup')
+            return handleCreateSecureBackup(req, target);
+        if (payload?.action === 'restoreSecureBackup')
+            return handleRestoreSecureBackup(req, target, payload.backupId);
+        if (payload?.action === 'deleteSecureBackup')
+            return handleDeleteSecureBackup(req, target, payload.backupId);
         let current = null;
         let corrupt = false;
         try {

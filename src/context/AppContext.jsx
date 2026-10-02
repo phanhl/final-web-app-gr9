@@ -1566,6 +1566,116 @@ export const AppProvider = ({ children }) => {
             return false;
         }
     };
+
+    // Secure encrypted backup API helpers
+    const listSecureBackups = useCallback(async () => {
+        try {
+            const res = await fetch('/api/storage?action=secureBackups', {
+                cache: 'no-store',
+                headers: getApiHeaders(),
+            });
+            if (await handleAuthFailure(res)) {
+                return { success: false, backups: [] };
+            }
+            const result = await res.json();
+            if (!res.ok) {
+                return {
+                    success: false,
+                    backups: [],
+                    error: result.error || 'Failed to fetch secure backups',
+                };
+            }
+            return {
+                success: true,
+                backups: result.backups || [],
+            };
+        } catch (error) {
+            return {
+                success: false,
+                backups: [],
+                error: error.message,
+            };
+        }
+    }, [getApiHeaders, handleAuthFailure]);
+
+    const createSecureBackup = useCallback(async () => {
+        try {
+            const res = await fetch('/api/storage', {
+                method: 'POST',
+                headers: getApiHeaders({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify({ action: 'createSecureBackup' }),
+            });
+            if (await handleAuthFailure(res)) {
+                return { success: false, error: 'Unauthorized' };
+            }
+            const result = await res.json();
+            return {
+                success: res.ok && result.success,
+                backup: result.backup,
+                error: result.error,
+            };
+        } catch (error) {
+            return {
+                success: false,
+                error: error.message,
+            };
+        }
+    }, [getApiHeaders, handleAuthFailure]);
+
+    const restoreSecureBackup = useCallback(async (backupId) => {
+        try {
+            const res = await fetch('/api/storage', {
+                method: 'POST',
+                headers: getApiHeaders({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify({ action: 'restoreSecureBackup', backupId }),
+            });
+            if (await handleAuthFailure(res)) {
+                return { success: false, error: 'Unauthorized' };
+            }
+            const result = await res.json();
+            if (!res.ok || !result.success) {
+                return {
+                    success: false,
+                    error: result.error || 'Failed to restore secure backup',
+                };
+            }
+            // Synchronize server data to local React state after restore
+            await syncDataFromServer();
+            return {
+                success: true,
+                safetyBackup: result.safetyBackup,
+            };
+        } catch (error) {
+            return {
+                success: false,
+                error: error.message,
+            };
+        }
+    }, [getApiHeaders, handleAuthFailure, syncDataFromServer]);
+
+    const deleteSecureBackup = useCallback(async (backupId) => {
+        try {
+            const res = await fetch('/api/storage', {
+                method: 'POST',
+                headers: getApiHeaders({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify({ action: 'deleteSecureBackup', backupId }),
+            });
+            if (await handleAuthFailure(res)) {
+                return { success: false, error: 'Unauthorized' };
+            }
+            const result = await res.json();
+            return {
+                success: res.ok && result.success,
+                error: result.error,
+            };
+        } catch (error) {
+            return {
+                success: false,
+                error: error.message,
+            };
+        }
+    }, [getApiHeaders, handleAuthFailure]);
+
     return (<AppContext.Provider value={{
             wallets,
             transactions,
@@ -1660,6 +1770,10 @@ export const AppProvider = ({ children }) => {
             clearAllData,
             exportDatabaseJSON,
             importDatabaseJSON,
+            listSecureBackups,
+            createSecureBackup,
+            restoreSecureBackup,
+            deleteSecureBackup,
             security,
             isPinLocked,
             pinUnlockError,
