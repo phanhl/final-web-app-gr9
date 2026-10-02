@@ -194,7 +194,7 @@ export function translateTag(tag, lang = 'vi') {
     return clean;
 }
 
-// Dịch các ghi chú do hệ thống tự sinh (thanh toán hóa đơn, nạp/rút hũ, chuyển khoản...). Ghi chú người dùng tự nhập giữ nguyên.
+// Translate system-generated transaction notes (bill payments, goal deposits/withdrawals, transfers...). User-defined custom notes are preserved.
 const NOTE_PATTERNS = [
     [/^Thanh toán hóa đơn: (.+)$/, (m) => `Bill payment: ${translateBillName(m[1], 'en')}`],
     [/^Tích lũy vào hũ: (.+)$/, (m) => `Saved to goal: ${m[1]}`],
@@ -210,7 +210,7 @@ export function translateNote(note, lang = 'vi') {
     if (!note || lang !== 'en')
         return note || '';
     let text = String(note);
-    // Hậu tố khi xóa ví có giao dịch chuyển khoản
+    // Suffix when deleting wallet that has transfer transactions
     let suffix = '';
     const deleted = text.match(/^(.*) \((từ|sang) ví đã xóa: (.*)\)$/);
     if (deleted) {
@@ -2352,7 +2352,7 @@ export const TRANSLATIONS = {
 };
 export function translate(lang, key, fallback) {
     const dictionary = TRANSLATIONS[lang] || TRANSLATIONS.vi;
-    // Dùng hasOwnProperty: chuỗi rỗng là bản dịch hợp lệ (VD: tiếng Anh không cần tiền tố "Còn")
+    // Use hasOwnProperty: empty string is a valid translation (e.g., English requires no prefix)
     if (dictionary && Object.prototype.hasOwnProperty.call(dictionary, key) && typeof dictionary[key] === 'string') {
         return dictionary[key];
     }

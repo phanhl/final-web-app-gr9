@@ -46,7 +46,7 @@ export const TransactionsView = () => {
             setSelectedMonth(availableMonths[currentIndex - 1]);
         }
     };
-    // Auto-filter when navigated from Trung tâm Cảnh báo
+    // Auto-filter when navigated from Alert Center
     useEffect(() => {
         if (navTargetCategoryId) {
             setSelectedCategory(navTargetCategoryId);
@@ -66,7 +66,7 @@ export const TransactionsView = () => {
     const filteredTransactions = useMemo(() => {
         const todayKey = getLocalDateString();
         return transactions.filter((tx) => {
-            // Never show transactions from the future (chưa đến ngày thì không có giao dịch)
+            // Never show transactions from the future (no transactions exist before their date arrives)
             if (toLocalDateKey(tx.date) > todayKey)
                 return false;
             // Month filter (applied when no custom date range is specified)
@@ -465,7 +465,7 @@ export const TransactionsView = () => {
         </div>
       </div>
 
-      {/* 2.5. CHARTS: THU - CHI & PHÂN BỔ CHI TIÊU TRONG SỔ GIAO DỊCH */}
+      {/* 2.5. CHARTS: INCOME - EXPENSE & SPENDING ALLOCATION IN TRANSACTION LOG */}
       {showCharts && (<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Bar Chart: Thu - Chi */}
           <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -571,7 +571,7 @@ export const TransactionsView = () => {
               </div>
 
               <div className="flex items-center gap-1.5">
-                {/* Toggle Khoản chi / Khoản thu */}
+                {/* Toggle Expense / Income */}
                 <div className="flex items-center p-0.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-[11px] font-semibold border border-slate-200 dark:border-slate-700">
                   <button type="button" onClick={() => setPieType('EXPENSE')} className={`px-2 py-0.5 rounded-lg transition-all cursor-pointer ${pieType === 'EXPENSE'
                 ? 'bg-rose-500 text-white shadow-xs'
@@ -1064,7 +1064,7 @@ const EditTransactionModal = ({ isOpen, onClose, transaction, }) => {
             setTags(transaction.tags || []);
             setReceiptImage(transaction.receiptImage);
         }
-        // Chỉ nạp lại form khi đổi giao dịch được sửa (theo id), không reset khi ví được đồng bộ nền
+        // Only reload form when edited transaction ID changes; do not reset on background wallet sync
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [transaction?.id, isOpen]);
     if (!isOpen || !transaction)

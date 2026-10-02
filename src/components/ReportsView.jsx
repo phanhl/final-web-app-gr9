@@ -352,7 +352,7 @@ export const ReportsView = () => {
               </div>
 
               <div className="flex items-center gap-1.5">
-                {/* Toggle Khoản chi / Khoản thu */}
+                {/* Toggle Expense / Income */}
                 <div className="flex items-center p-0.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-[11px] font-semibold border border-slate-200 dark:border-slate-700">
                   <button type="button" onClick={() => setPieType('EXPENSE')} className={`px-2 py-0.5 rounded-lg transition-all cursor-pointer ${pieType === 'EXPENSE'
             ? 'bg-rose-500 text-white shadow-xs'
@@ -576,7 +576,7 @@ export const ReportsView = () => {
         </div>
       </div>
 
-      {/* 5. CHART 3: PHÂN TÍCH XU HƯỚNG DÒNG TIỀN & TÍCH LŨY (AREA CHART) */}
+      {/* 5. CHART 3: CASH FLOW & ACCUMULATION TREND ANALYSIS (AREA CHART) */}
       <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
         <div className="flex items-center justify-between mb-4">
           <div>

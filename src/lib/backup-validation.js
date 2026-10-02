@@ -57,12 +57,12 @@ function isValidNumber(value, { positive = false } = {}) {
 export function validateBackupData(data) {
     const errors = [];
 
-    // 1. Backup phải là object
+    // 1. Backup must be an object
     if (!isPlainObject(data)) {
         return ['File backup phải là một JSON object hợp lệ.'];
     }
 
-    // 2. Các field bắt buộc phải tồn tại và là array
+    // 2. Required fields must exist and be arrays
     for (const field of REQUIRED_ARRAY_FIELDS) {
         if (!Array.isArray(data[field])) {
             errors.push(`Thiếu hoặc sai định dạng trường "${field}".`);
@@ -73,7 +73,7 @@ export function validateBackupData(data) {
         return errors;
     }
 
-    // 3. Các field array nếu có thì phải là array
+    // 3. Optional array fields must be arrays if provided
     for (const field of OPTIONAL_ARRAY_FIELDS) {
         if (
             data[field] !== undefined &&
@@ -83,7 +83,7 @@ export function validateBackupData(data) {
         }
     }
 
-    // 4. Kiểm tra wallets
+    // 4. Validate wallets
     const walletIds = new Set();
 
     for (let i = 0; i < data.wallets.length; i++) {
@@ -106,8 +106,8 @@ export function validateBackupData(data) {
 
         walletIds.add(wallet.id);
 
-        // Backup cũ có thể chưa có initialBalance,
-        // nên cho phép dùng balance làm fallback.
+        // Legacy backups may lack initialBalance,
+        // fallback to balance.
         const startingBalance =
             wallet.initialBalance !== undefined
                 ? wallet.initialBalance
@@ -120,7 +120,7 @@ export function validateBackupData(data) {
         }
     }
 
-    // 5. Kiểm tra transactions
+    // 5. Validate transactions
     const transactionIds = new Set();
 
     for (let i = 0; i < data.transactions.length; i++) {
@@ -232,7 +232,7 @@ export function validateBackupData(data) {
         }
     }
 
-    // 6. Planner nếu có thì phải là object
+    // 6. Planner must be an object if provided
     if (
         data.planner !== undefined &&
         !isPlainObject(data.planner)
@@ -240,7 +240,7 @@ export function validateBackupData(data) {
         errors.push('Trường "planner" phải là object.');
     }
 
-    // 7. Simulator config nếu có thì phải là object
+    // 7. Simulator config must be an object if provided
     if (
         data.simulatorConfig !== undefined &&
         !isPlainObject(data.simulatorConfig)

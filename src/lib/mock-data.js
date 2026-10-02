@@ -1,5 +1,5 @@
 export const DEFAULT_CATEGORIES = [
-    // Khoản chi
+    // Expense categories
     { id: 'cat-food', name: 'Ăn uống', type: 'EXPENSE', icon: 'Utensils', color: '#f97316' },
     { id: 'cat-transport', name: 'Di chuyển & Xe', type: 'EXPENSE', icon: 'Car', color: '#0ea5e9' },
     { id: 'cat-shopping', name: 'Mua sắm', type: 'EXPENSE', icon: 'ShoppingBag', color: '#ec4899' },
@@ -10,7 +10,7 @@ export const DEFAULT_CATEGORIES = [
     { id: 'cat-education', name: 'Giáo dục & Khóa học', type: 'EXPENSE', icon: 'GraduationCap', color: '#06b6d4' },
     { id: 'cat-invest-exp', name: 'Đầu tư & Tích lũy', type: 'EXPENSE', icon: 'TrendingUp', color: '#6366f1' },
     { id: 'cat-other-exp', name: 'Chi phí khác', type: 'EXPENSE', icon: 'MoreHorizontal', color: '#64748b' },
-    // Khoản thu
+    // Income categories
     { id: 'cat-salary', name: 'Lương chính', type: 'INCOME', icon: 'Briefcase', color: '#10b981' },
     { id: 'cat-bonus', name: 'Thưởng & Làm thêm', type: 'INCOME', icon: 'Gift', color: '#f59e0b' },
     { id: 'cat-invest-inc', name: 'Lợi nhuận đầu tư', type: 'INCOME', icon: 'Coins', color: '#3b82f6' },
@@ -76,7 +76,7 @@ export const INITIAL_WALLETS = [
         id: 'wal-credit',
         name: 'VPBank Cashback StepUp',
         type: 'CREDIT',
-        balance: 4680000, // Dư nợ hiện tại
+        balance: 4680000, // Current debt balance
         initialBalance: 0,
         bankName: 'VPBank',
         accountNumber: '•••• 5824',
@@ -103,10 +103,10 @@ export const INITIAL_WALLETS = [
 ];
 export const INITIAL_PLANNER = {
     monthlyIncome: 32000000,
-    needsPercent: 50, // 16,000,000đ
-    wantsPercent: 25, // 8,000,000đ
-    savingsPercent: 15, // 4,800,000đ
-    emergencyPercent: 10, // 3,200,000đ
+    needsPercent: 50, // 16,000,000 VND
+    wantsPercent: 25, // 8,000,000 VND
+    savingsPercent: 15, // 4,800,000 VND
+    emergencyPercent: 10, // 3,200,000 VND
     notes: 'Quy tắc phân bổ 4 quỹ: 50% thiết yếu, 25% hưởng thụ, 15% tích lũy đầu tư, 10% quỹ dự phòng khẩn cấp & rủi ro phát sinh',
 };
 export const INITIAL_BUDGETS = [
@@ -298,7 +298,7 @@ export const INITIAL_GOALS = [
     },
 ];
 export const INITIAL_TRANSACTIONS = [
-    // Tháng 9 / 2026
+    // September 2026
     {
         id: 'tx-001',
         type: 'INCOME',
@@ -342,7 +342,7 @@ export const INITIAL_TRANSACTIONS = [
     {
         id: 'tx-004',
         type: 'EXPENSE',
-        amount: 3250000, // Đã làm Mua sắm vượt ngân sách 3,000,000đ -> 108%
+        amount: 3250000, // Pushes Shopping budget over 3,000,000 VND -> 108%
         categoryId: 'cat-shopping',
         categoryName: 'Mua sắm',
         walletId: 'wal-credit',
@@ -394,7 +394,7 @@ export const INITIAL_TRANSACTIONS = [
     {
         id: 'tx-008',
         type: 'EXPENSE',
-        amount: 1100000, // Tổng ăn uống = 1450k + 850k + 1250k + 1100k = 4,650,000 / 5,500,000 = 84.5% (>80% ALERT!)
+        amount: 1100000, // Total dining = 1450k + 850k + 1250k + 1100k = 4,650,000 / 5,500,000 = 84.5% (>80% ALERT!)
         categoryId: 'cat-food',
         categoryName: 'Ăn uống',
         walletId: 'wal-tcb',
@@ -456,7 +456,7 @@ export const INITIAL_TRANSACTIONS = [
         tags: ['Freelance', 'Thu nhập phụ'],
         createdAt: '2026-09-04T16:00:00',
     },
-    // Tháng 8 / 2026 (để biểu đồ so sánh có dữ liệu đa tháng trực quan)
+    // August 2026 (provides multi-month comparison data for analytics)
     {
         id: 'tx-013',
         type: 'INCOME',

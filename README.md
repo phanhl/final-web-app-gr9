@@ -1,179 +1,172 @@
-# FinTrack Pro - Hệ Thống Quản Lý Chi Tiêu & Mô Phỏng Tài Chính Đa Người Dùng
+# FinTrack Pro - Multi-User Expense Management & Financial Simulation System
 
-Ứng dụng quản lý tài chính cá nhân toàn diện: ghi nhận thu chi nhiều ví, ngân sách thông minh, hóa đơn định kỳ, mục tiêu tích lũy, nhập sao kê ngân hàng tự động và **mô phỏng tài chính What-If**. 
+A comprehensive personal finance management web application: multi-wallet income and expense tracking, smart budgets, recurring bills, savings goals, automated bank statement import, and **What-If financial simulation**.
 
-Hệ thống hỗ trợ **Đa người dùng (Multi-User Isolation)** với cơ chế bảo mật nghiêm ngặt: Host và Khách truy cập qua 2 đường link riêng, tài khoản được cấp `User ID` độc lập, dữ liệu cá nhân được lưu trữ an toàn trên máy chủ và **hoàn toàn không bị đẩy lên GitHub khi commit mã nguồn**. Giao diện song ngữ **Tiếng Việt / English**, hỗ trợ chế độ **Sáng / Tối**.
-
----
-
-## 🌟 1. Tính năng nổi bật
-
-### 🔐 Tài khoản & Phân quyền Đa người dùng (Mới)
-- **Bắt buộc xác thực:** Màn hình chào đón và form Đăng nhập / Đăng ký hiện đại (Glassmorphism), ngăn chặn truy cập trái phép.
-- **Tài khoản Chủ sở hữu (Host):** Tài khoản `admin` giữ trọn vẹn toàn bộ dữ liệu tài chính thật của bạn (các ví thẻ, ngân hàng, lịch sử chi tiêu). Mật khẩu được tự thiết lập ở lần đăng nhập đầu tiên.
-- **Tài khoản Khách (Guest):** Khách mở link online, chọn tab **"Tạo Tài Khoản Khách"** để tự đăng ký. Hệ thống cấp một `User ID` riêng biệt (`usr_...`) với kho dữ liệu mẫu độc lập 100%. Khách không thể xem hay chỉnh sửa dữ liệu của Host và ngược lại.
-- **Quản lý phiên:** Tích hợp huy hiệu phân quyền (Host / Khách) trên thanh điều hướng và nút **Đăng xuất (Sign Out)** an toàn.
-
-### 💳 Quản lý Ví & Tài sản
-- **4 loại ví chuyên biệt:** Tiền mặt, Tài khoản ngân hàng, Thẻ tín dụng (hạn mức, ngày sao kê, dư nợ riêng), Sổ tiết kiệm (kỳ hạn, lãi suất).
-- Tự động tính toán **Số dư khả dụng** và **Tổng tài sản ròng**; dư nợ thẻ tín dụng được tách riêng để không gây ảo tưởng tài chính.
-- **Chuyển khoản nội bộ** giữa các ví (hỗ trợ phí giao dịch) và **Thanh toán dư nợ thẻ tín dụng**.
-- **Đối soát số dư:** Tính năng *"Tính lại số dư"* tự động đối chiếu số dư ban đầu với toàn bộ lịch sử thu chi.
-
-### 📝 Ghi chép & Nhập nhanh giao dịch
-- Quản lý khoản chi, khoản thu, chuyển tiền; phân loại theo danh mục, nhãn (tags), ghi chú và đính kèm **ảnh chứng từ** (tự nén ảnh trước khi lưu).
-- **Nhập nhanh (Quick Add Modal):** Mở tức thì ở mọi màn hình, hỗ trợ các nút cộng nhanh số tiền tiện lợi.
-- Kiểm tra số dư thông minh: Cảnh báo chi âm quỹ, ngăn chặn chi vượt hạn mức thẻ, chặn ghi ngày tương lai.
-
-### 📥 Nhập sao kê ngân hàng tự động (Smart Statement Parser)
-- Tải file **Excel (.xlsx, .xls)** hoặc **CSV**. Tự động nhận diện cấu trúc hơn 15 ngân hàng Việt Nam (Techcombank, Vietcombank, MB Bank, ACB, VPBank, BIDV, VietinBank, TPBank, VIB, Agribank, Sacombank, Timo, Cake, MoMo...).
-- Tự động đối chiếu tránh trùng lặp giao dịch, gợi ý danh mục chi tiêu theo nội dung chuyển khoản.
-
-### 🎯 Ngân sách & Hũ mục tiêu tích lũy
-- Thiết lập hạn mức chi cho từng danh mục, tự động cảnh báo **tiệm cận 80%** (vàng) và **vượt 100%** (đỏ).
-- Phân bổ thu nhập theo mô hình hũ chi tiêu kèm quỹ khẩn cấp.
-- **Mục tiêu tài chính:** Nạp/rút tiền trực tiếp từ ví, hiệu ứng pháo hoa chúc mừng khi hoàn thành mục tiêu.
-
-### ⏰ Hóa đơn định kỳ
-- Quản lý tiền điện, nước, internet, thuê nhà theo chu kỳ **Tháng / Quý / Năm**.
-- Tự động tính đúng ngày đến hạn theo lịch thực tế, đếm ngược ngày và cảnh báo hóa đơn đến hạn / quá hạn.
-- Nút **"Thanh toán ngay"** tự động tạo giao dịch chi tương ứng và trừ tiền trong ví.
-
-### 🔮 Mô phỏng tài chính What-If
-- Thử nghiệm các kịch bản tài chính tương lai: thanh trượt cắt giảm chi tiêu (0–50%), tích lũy thêm mỗi tháng, biến động lãi suất đầu tư, nghĩa vụ trả nợ vay.
-- Dự phóng dòng tiền theo các mốc **6 / 12 / 24 / 36 tháng** với biểu đồ so sánh trực quan giữa thực tế (Baseline) và kịch bản mô phỏng.
-
-### 📊 Báo cáo & Xuất dữ liệu
-- Biểu đồ phân tích cơ cấu chi tiêu, xu hướng dòng tiền thu - chi qua các tháng.
-- Xuất file **Excel đa trang tính** (giao dịch, ví, ngân sách, chỉ số tổng hợp) và file **CSV UTF-8** theo ngôn ngữ được chọn.
+The system features **Multi-User Isolation** with strict security architecture: Host and Guest access via separate URLs, independent `User ID` provisioning, and secure server-side data storage that is **completely excluded from Git commits**. Features a bilingual interface (**Vietnamese / English**) and **Light / Dark mode**.
 
 ---
 
-## 🔒 2. Kiến trúc bảo mật nghiêm ngặt
+## 🌟 1. Key Features
 
-FinTrack Pro được trang bị hệ thống bảo mật 6 tầng:
+### 🔐 Multi-User Accounts & Access Control
+- **Mandatory Authentication:** Modern Glassmorphism welcome screen and Login / Register modal, preventing unauthorized access.
+- **Host Account:** Dedicated `admin` account holding complete real financial records (wallets, bank accounts, transaction history). Password is set upon first login.
+- **Guest Accounts:** Guests visit online links and click **"Create Guest Account"** to register. The system generates an isolated `User ID` (`usr_...`) pre-populated with a clean sample dataset. Guests cannot view or modify Host data, and vice versa.
+- **Session Management:** Role badges (Host / Guest) integrated into the top navigation bar with a secure **Sign Out** button.
 
-| Tầng bảo mật | Giải pháp kỹ thuật |
+### 💳 Wallets & Asset Management
+- **4 Specialized Wallet Types:** Cash, Bank Accounts, Credit Cards (credit limit, statement cycle, isolated debt balance), and Savings Accounts (tenor, interest rate).
+- Automatic calculation of **Available Balance** and **Net Worth**; credit card debt is strictly isolated to prevent financial distortion.
+- **Internal Transfers** between wallets (with optional transaction fees) and **Credit Card Debt Settlement**.
+- **Balance Reconciliation:** One-click *"Recalculate Balance"* verifies initial balance against entire transaction history.
+
+### 📝 Transaction Tracking & Quick Entry
+- Manage expenses, incomes, and transfers; categorize by tags, notes, and attach **receipt images** (automatically compressed before saving).
+- **Quick Add Modal:** Instantly accessible from any screen, featuring fast amount increment buttons (+50k, +100k, +500k, etc.).
+- Smart validation: Overdraft alerts, credit limit enforcement, and prevention of future-dated transactions.
+
+### 📥 Automated Bank Statement Parser
+- Upload **Excel (.xlsx, .xls)** or **CSV** files. Automatically recognizes statement layouts of over 15 Vietnamese banks (Techcombank, Vietcombank, MB Bank, ACB, VPBank, BIDV, VietinBank, TPBank, VIB, Agribank, Sacombank, Timo, Cake, MoMo, etc.).
+- Duplicate transaction detection and intelligent expense category suggestions based on transfer descriptions.
+
+### 🎯 Budgets & Savings Goals
+- Set spending caps per category, with automated warning thresholds: **approaching 80%** (amber) and **exceeded 100%** (red).
+- Allocate income according to multi-jar envelope budgeting principles with an emergency fund.
+- **Financial Goals:** Deposit/withdraw funds directly to/from wallets, complete with celebratory confetti animations upon goal attainment.
+
+### ⏰ Recurring Bills & Subscriptions
+- Track electricity, water, internet, and rent on **Monthly / Quarterly / Yearly** cycles.
+- Accurate calendar due-date calculation, countdown timers, and visual alerts for upcoming or overdue bills.
+- **"Pay Now"** button instantly creates the corresponding expense transaction and deducts funds from the designated wallet.
+
+### 🔮 What-If Financial Simulation
+- Experiment with future financial projections: expense reduction sliders (0–50%), monthly savings deposits, investment market scenarios, and external loan amortization.
+- Multi-horizon projections (**6 / 12 / 24 / 36 months**) with interactive charts comparing baseline growth against simulated scenarios.
+
+### 📊 Reports & Data Export
+- Visual analytics for expense distribution, monthly cash flow trends, and net income trajectory.
+- Export to **Multi-sheet Excel (.xlsx)** (transactions, wallets, budgets, executive summary) and language-localized **UTF-8 CSV**.
+
+---
+
+## 🔒 2. Strict Security Architecture
+
+FinTrack Pro is built on a 6-layer defense-in-depth model:
+
+| Security Layer | Technical Implementation |
 |---|---|
-| **Mã hóa mật khẩu** | Mật khẩu được băm một chiều bằng thuật toán **`scrypt`** kết hợp chuỗi muối ngẫu nhiên 16-byte (`salt`). Không lưu mật khẩu thô. So sánh mật khẩu bằng `crypto.timingSafeEqual` chống tấn công đo thời gian (Timing Attack). |
-| **Chống Brute-Force** | Tự động giới hạn tốc độ (Rate Limiting): Nhập sai mật khẩu quá **5 lần / IP** sẽ bị khóa tạm thời trong 15 phút (`HTTP 429`). |
-| **Bảo vệ phiên** | Cookie phiên `fintrack_session` được ký số **HMAC-SHA256** với khóa bí mật riêng (`.session_secret`), gắn cờ `HttpOnly` (chống XSS) và `SameSite=lax` (chống CSRF). |
-| **Cô lập dữ liệu** | Server tự trích xuất `userId` từ chữ ký phiên làm việc (Zero Trust Client). Bộ lọc chống Path Traversal (`replace(/[^a-zA-Z0-9_-]/g, '')`) ngăn chặn đọc lén file. |
-| **Phân quyền hệ thống tệp** | Thư mục `data/` và `data/users/` được thiết lập quyền Linux **`chmod 700`**, các file dữ liệu **`chmod 600`** (chỉ có tài khoản hệ điều hành của bạn mới có quyền truy cập). |
-| **Bảo mật tuyệt đối khi Git** | File `.gitignore` loại trừ hoàn toàn `data/*.json`, `data/users/`, `data/users.json`, `data/.session_secret`. Khi push code lên GitHub, **toàn bộ dữ liệu tài chính và tài khoản được giữ lại trên máy, không bao giờ bị rò rỉ**. |
+| **Password Hashing** | One-way hashing using **`scrypt`** combined with a cryptographically secure 16-byte random `salt`. Raw passwords are never stored. Verified via `crypto.timingSafeEqual` to thwart timing attacks. |
+| **Brute-Force Mitigation** | Built-in rate limiting: more than **5 failed attempts / IP** triggers a 15-minute temporary lockout (`HTTP 429`). |
+| **Session Protection** | Session cookie `fintrack_session` is cryptographically signed using **HMAC-SHA256** with an independent secret (`.session_secret`), flagged with `HttpOnly` (XSS protection) and `SameSite=lax` (CSRF prevention). |
+| **Data Isolation** | The server extracts `userId` strictly from the verified session signature (Zero Trust Client). Path Traversal sanitizer (`replace(/[^a-zA-Z0-9_-]/g, '')`) prevents unauthorized file access. |
+| **Filesystem Permissions** | Directories `data/` and `data/users/` are enforced with Linux permissions **`chmod 700`**, and data files with **`chmod 600`** (accessible exclusively by the host OS user). |
+| **Git Privacy** | `.gitignore` strictly excludes `data/*.json`, `data/users/`, `data/users.json`, and `data/.session_secret`. When pushing code to GitHub, **all financial records and user accounts remain local on your machine and are never leaked**. |
 
 ---
 
-## 💻 3. Công nghệ sử dụng
+## 💻 3. Technology Stack
 
-| Thành phần | Công nghệ |
+| Component | Technology |
 |---|---|
 | **Framework** | **Next.js 15** (App Router), **React 19**, JavaScript (JSX) |
-| **Giao diện** | **Tailwind CSS v4**, **Lucide React** (icons), Canvas-Confetti |
-| **Biểu đồ** | **Recharts** |
-| **Xử lý bảng tính** | **SheetJS (xlsx)** |
-| **Xác thực & Mã hóa** | Node.js Built-in `crypto` (scrypt, HMAC-SHA256, timingSafeEqual) |
-| **Quản trị trạng thái** | React Context (`src/context/AppContext.jsx`) |
-| **Lưu trữ** | Document-based JSON Server Disk (Ghi nguyên tử `atomicWriteJSON` chống hỏng file) |
+| **Styling & UI** | **Tailwind CSS v4**, **Lucide React** (icons), Canvas-Confetti |
+| **Data Visualization** | **Recharts** |
+| **Spreadsheet Processing** | **SheetJS (xlsx)** |
+| **Authentication & Crypto** | Node.js Built-in `crypto` (scrypt, HMAC-SHA256, timingSafeEqual) |
+| **State Management** | React Context (`src/context/AppContext.jsx`) |
+| **Storage Engine** | Document-based JSON Server Disk (Atomic writes `atomicWriteJSON` to prevent corruption) |
 
-### Cấu trúc mã nguồn
+### Source Tree
 ```
 src/
 ├── app/
 │   ├── api/
 │   │   ├── auth/
-│   │   │   ├── login/route.js     # Đăng nhập, khởi tạo pass Host, giới hạn sai mật khẩu (Rate Limit)
-│   │   │   ├── register/route.js  # Đăng ký tài khoản khách, cấp User ID và dữ liệu riêng
-│   │   │   ├── me/route.js        # Kiểm tra phiên đăng nhập hiện tại
-│   │   │   └── logout/route.js    # Đăng xuất, xóa cookie phiên
-│   │   └── storage/route.js       # Đọc/ghi dữ liệu theo từng User ID, chống ghi đè xung đột
+│   │   │   ├── login/route.js     # Authentication, Host initialization, Rate limiting
+│   │   │   ├── register/route.js  # Guest registration, User ID & isolated data provisioning
+│   │   │   ├── me/route.js        # Active session verification
+│   │   │   └── logout/route.js    # Sign out, session cookie invalidation
+│   │   └── storage/route.js       # User-isolated data read/write, conflict resolution
 │   ├── page.jsx, layout.jsx, not-found.jsx, globals.css
-├── components/                    # Các view giao diện: DashboardView, TransactionsView, BudgetsView,
+│├── components/                    # UI Views: DashboardView, TransactionsView, BudgetsView,
 │                                  # WhatIfSimulatorView, BillsView, ReportsView, WalletsView, SettingsView,
 │                                  # Navigation, AuthModal, QuickAddModal, BankStatementModal...
-├── context/AppContext.jsx         # Quản lý state toàn cục, nạp dữ liệu theo User, đồng bộ realtime
+├── context/AppContext.jsx         # Global state management, user data hydration, realtime sync
 ├── lib/
-│   ├── auth-server.js             # Thư viện xử lý băm mật khẩu, ký phiên HMAC, quản lý users
-│   ├── bank-statement-parser.js   # Bộ phân tích sao kê ngân hàng tự động
-│   ├── i18n.js                    # Từ điển song ngữ Việt / Anh
-│   ├── utils.js                   # Xử lý tính toán số dư, định dạng tiền tệ, merge dữ liệu
-│   └── mock-data.js               # Cấu trúc dữ liệu mặc định ban đầu
-└── middleware.js                  # Điều hướng các request ứng dụng
+│   ├── auth-server.js             # Server-side auth, scrypt hashing, HMAC session signing, user registry
+│   ├── bank-statement-parser.js   # Automated bank statement parsing engine
+│   ├── i18n.js                    # Bilingual dictionary (Vietnamese / English)
+│   ├── utils.js                   # Financial calculations, balance reconciliation, currency formatting
+│   └── mock-data.js               # Initial schema definitions and seed data
+└── middleware.js                  # Application request routing & redirects
 data/
-├── database.template.json         # Tệp mẫu cấu trúc dữ liệu trắng (được theo dõi trên Git)
-├── database.json                  # Dữ liệu tài chính của Host (được bảo vệ, nằm trong .gitignore)
-├── users.json                     # Danh sách tài khoản đã mã hóa (nằm trong .gitignore)
-├── .session_secret                # Khóa bí mật ký session (nằm trong .gitignore)
-└── users/                         # Thư mục lưu dữ liệu riêng của từng người dùng (nằm trong .gitignore)
-    ├── admin.json                 # Dữ liệu của Host
-    └── usr_<id>.json              # Dữ liệu độc lập của từng Khách
+├── database.template.json         # Clean schema template (tracked in Git)
+├── database.json                  # Host financial data (protected, in .gitignore)
+├── users.json                     # Encrypted user credentials registry (in .gitignore)
+├── .session_secret                # HMAC signing key (in .gitignore)
+└── users/                         # User-isolated storage directory (in .gitignore)
+    ├── admin.json                 # Host profile & financial database
+    └── usr_<id>.json              # Guest isolated data stores
 ```
 
 ---
 
-## 🚀 4. Cài đặt & Vận hành
+## 🚀 4. Installation & Getting Started
 
-### Yêu cầu hệ thống
-* **Node.js 18.18+** (Khuyên dùng bản LTS Node 20 hoặc Node 22).
-* Hệ điều hành: Linux / macOS / Windows (WSL2).
+### Prerequisites
+* **Node.js 18.18+** (LTS Node 20 or Node 22 recommended).
+* Operating System: Linux / macOS / Windows (WSL2).
 
-### Cài đặt ban đầu
+### Clone & Install
 ```bash
 git clone https://github.com/vietnamlm05-bit/final-web-app.git
 cd final-web-app
 npm install
 ```
 
-### Chạy ứng dụng với 2 đường link (Khuyên dùng)
-Hệ thống tích hợp sẵn script tự động hóa khởi chạy máy chủ production kèm đường truyền ra Internet:
+### Running with Dual Links (Recommended)
+The project includes an automated startup script that launches the production build alongside secure internet tunneling:
 
 ```bash
 ./start.sh
 ```
 
-Sau khi khởi chạy thành công, terminal sẽ hiển thị 2 đường link:
+Upon successful startup, the terminal presents two dedicated URLs:
 ```text
 ==================================================================
-FinTrack Pro da duoc khoi chay thanh cong voi he thong Da nguoi dung!
+FinTrack Pro has launched successfully with Multi-User Isolation!
 
-👉 LINK 1 (DÀNH CHO BẠN / HOST):
+👉 LINK 1 (HOST / LOCAL ACCESS):
    http://localhost:3000
-   * Đăng nhập bằng tài khoản: admin
-   * Nếu là lần đầu: tự đặt mật khẩu ngay trên form đăng nhập.
+   * Sign in using username: admin
+   * First-time setup: establish your master password directly in the login modal.
 
-👉 LINK 2 (DÀNH CHO KHÁCH / TRUY CẬP ONLINE):
-   https://<domain-cua-ban>.ngrok-free.dev (hoặc link Cloudflare Tunnel)
-   * Khách mở link, chọn "Tạo Tài Khoản Khách" để đăng ký.
-   * Mỗi khách có User ID riêng và quản lý chi tiêu hoàn toàn độc lập với Host.
+👉 LINK 2 (GUEST / REMOTE ACCESS):
+   https://<your-subdomain>.ngrok-free.dev (or Cloudflare Tunnel URL)
+   * Guests open this link and click "Create Guest Account" to sign up.
+   * Each guest is granted an isolated User ID and independent financial store.
 ==================================================================
 ```
 
-### Dừng dịch vụ
+### Stopping Services
 ```bash
 ./stop.sh
 ```
 
-### Tùy chọn khác
-* **Chỉ chạy Local (không mở tunnel online):**
+### Alternative Run Modes
+* **Local Only (No public tunnel):**
   ```bash
   NO_TUNNEL=1 ./start.sh
   ```
-* **Chế độ phát triển (Development):**
+* **Development Mode:**
   ```bash
   npm run dev
   ```
 
 ---
 
-## 🗄️ 5. Quản lý Dữ liệu & Sao lưu
+## 🗄️ 5. Data Management & Backups
 
-- **Ghi dữ liệu nguyên tử (Atomic Write):** Khi có giao dịch mới, server ghi ra file tạm `.tmp` rồi mới đổi tên (`fs.rename`), ngăn chặn triệt để nguy cơ tệp dữ liệu bị hỏng khi mất điện đột ngột.
-- **Đồng bộ thời gian thực đa thiết bị:** Ứng dụng tự động kiểm tra biến động dữ liệu. Nếu 2 thiết bị cùng sửa đổi, server kích hoạt cơ chế giải quyết xung đột (HTTP 409) và tự động hợp nhất 3 chiều (`mergeSnapshots`), bảo toàn toàn bộ số dư và giao dịch.
-- **Sao lưu thủ công:** Bạn có thể vào mục hồ sơ tài khoản và bấm **"Sao lưu dữ liệu"** để tải về tệp JSON dự phòng bất cứ lúc nào.
-
----
-
-## 📚 6. Tài liệu tham khảo
-
-- [`PROJECT_CHEAT_SHEET.md`](PROJECT_CHEAT_SHEET.md): Bảng tra cứu nhanh sơ đồ màn hình và file mã nguồn tương ứng.
-- [`TRACKING_CHANGES.md`](TRACKING_CHANGES.md): Nhật ký chi tiết lịch sử nâng cấp và vá lỗi qua từng phiên bản.
+- **Atomic Writes:** During writes, data is flushed to a temporary `.tmp` file prior to renaming (`fs.rename`), guarding against database corruption in the event of abrupt server termination or power loss.
+- **Realtime Multi-Device Sync:** The application monitors snapshot versioning. In the event of simultaneous edits across devices, the server triggers conflict resolution (`HTTP 409`) and initiates three-way merging (`mergeSnapshots`), safeguarding all balances and transactions.
+- **Manual Backups:** Download complete JSON snapshots at any time via Account Profile $\rightarrow$ **"Backup Data"**.

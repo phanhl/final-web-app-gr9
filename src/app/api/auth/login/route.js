@@ -11,8 +11,8 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-const FAIL_WINDOW_MS = 15 * 60 * 1000; // 15 phút
-const MAX_FAILS_PER_IP = 5; // Tối đa 5 lần thử sai
+const FAIL_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+const MAX_FAILS_PER_IP = 5; // Maximum 5 failed attempts
 const loginFailedAttempts = new Map(); // ip -> { count, first }
 
 function getClientIp(req) {
@@ -65,7 +65,7 @@ export async function POST(req) {
             return NextResponse.json({ success: false, error: 'Tài khoản không tồn tại. Nếu bạn là khách, vui lòng bấm "Tạo tài khoản"' }, { status: 401 });
         }
 
-        // Trường hợp tài khoản Host lần đầu tiên đăng nhập chưa có mật khẩu
+        // Host account first-time login without an established password
         if (user.role === 'host' && !user.hasPassword) {
             if (password.length < 6) {
                 return NextResponse.json({ success: false, error: 'Mật khẩu khởi tạo cho Host phải có ít nhất 6 ký tự' }, { status: 400 });
@@ -76,7 +76,7 @@ export async function POST(req) {
             user.hasPassword = true;
             await saveUsers(users);
         } else {
-            // Kiểm tra mật khẩu bình thường
+            // Standard password verification
             const valid = verifyPassword(password, user.salt, user.passwordHash);
             if (!valid) {
                 recordLoginFailure(ip);
@@ -84,7 +84,7 @@ export async function POST(req) {
             }
         }
 
-        // Đăng nhập thành công -> xóa đếm số lần sai
+        // Successful login -> reset failed attempt counter
         loginFailedAttempts.delete(ip);
 
         const sessionPayload = {

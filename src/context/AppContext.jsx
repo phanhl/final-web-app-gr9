@@ -237,7 +237,7 @@ export const AppProvider = ({ children }) => {
             // ignore
         }
     }, []);
-    // Đồng bộ thuộc tính lang của trang (trình đọc màn hình, dịch tự động của trình duyệt)
+    // Synchronize html lang attribute (screen readers, browser auto-translation)
     useEffect(() => {
         if (typeof document !== 'undefined')
             document.documentElement.lang = language === 'en' ? 'en' : 'vi';
@@ -279,9 +279,9 @@ export const AppProvider = ({ children }) => {
     const lastServerUpdatedAtRef = useRef(null);
     const isSavingRef = useRef(false);
     const lastSavedDataSignatureRef = useRef('');
-    // Bản server gần nhất mà state local dựa vào (dùng làm base khi merge xung đột)
+    // Most recent server snapshot acting as base for conflict resolution
     const lastServerSnapshotRef = useRef(null);
-    // Khóa PIN bảo vệ /api/storage (server chỉ trả về pinEnabled/hasPin, không bao giờ trả mã PIN)
+    // PIN protection for /api/storage (server exposes pinEnabled/hasPin only, never the PIN)
     const [security, setSecurity] = useState({ pinEnabled: false, hasPin: false });
     const appPinRef = useRef('');
     const [isPinLocked, setIsPinLocked] = useState(false);
@@ -302,7 +302,7 @@ export const AppProvider = ({ children }) => {
 
         return headers;
     }, []);
-    // 401 do thiếu/sai PIN -> hiện màn hình khóa
+    // 401 due to missing/invalid PIN -> trigger lock screen
     const handleAuthFailure = useCallback(async (res) => {
         if (res.status !== 401)
             return false;
@@ -364,7 +364,7 @@ export const AppProvider = ({ children }) => {
             lastServerSnapshotRef.current = d;
         }
         // Update signature to match current server payload so auto-save won't echo back.
-        // Với dữ liệu local (chưa có trên server) thì KHÔNG cập nhật để auto-save đẩy lên server.
+        // For local unsaved data, do NOT update signature so auto-save flushes to server.
         if (fromServer) {
             lastSavedDataSignatureRef.current = computeDataSignature(d);
         }
@@ -390,7 +390,7 @@ export const AppProvider = ({ children }) => {
             if (res.ok) {
                 const result = await res.json();
                 if (isSavingRef.current) {
-                    // Đang lưu thay đổi local -> lần lưu đó sẽ tự merge với server
+                    // Currently saving local mutations -> that save operation handles server merge
                     return false;
                 }
                 if (result.success && result.data) {
@@ -421,7 +421,7 @@ export const AppProvider = ({ children }) => {
             return null;
         }
     };
-    // Áp dữ liệu server; nếu bản local có thay đổi chưa đẩy lên (VD: sửa khi offline) thì merge rồi để auto-save đẩy lên
+    // Apply server state; if local has pending offline modifications, merge and schedule auto-save
     const applyInitialData = useCallback((serverData, localData) => {
         if (serverData) {
             applyServerData(serverData, true);
@@ -471,7 +471,7 @@ export const AppProvider = ({ children }) => {
             return { success: false, error: err.message };
         }
     };
-    // Bật/tắt khóa PIN hoặc đổi mã PIN. Gửi riêng (action) để không đụng tới dữ liệu tài chính.
+    // Enable/disable PIN or change PIN code. Sent as isolated action to avoid touching financial data.
     const updateSecuritySettings = async ({ pinEnabled, pinCode }) => {
         const cleanPin = pinCode !== undefined && pinCode !== null ? String(pinCode).trim() : '';
         if (cleanPin && !/^\d{4,8}$/.test(cleanPin)) {
@@ -501,7 +501,7 @@ export const AppProvider = ({ children }) => {
             return { success: false, error: e.message };
         }
     };
-    // Kiểm tra đăng nhập và nạp dữ liệu ban đầu theo User ID
+    // Verify session authentication and hydrate initial user data by User ID
     useEffect(() => {
         let isSubscribed = true;
         async function checkAuthAndLoad() {
@@ -582,14 +582,14 @@ export const AppProvider = ({ children }) => {
         setCurrentUser(user);
         setAuthLoading(true);
 
-        // Xóa sạch dữ liệu cache cũ trên localStorage để tạo tài khoản mới hoàn toàn sạch
+        // Clear stale localStorage cache for clean new account state
         try {
             localStorage.removeItem('quan_ly_chi_tieu_data_v2');
             localStorage.removeItem('fintrack_user_profile');
             localStorage.removeItem(`quan_ly_chi_tieu_data_v2_${user.id}`);
         } catch (e) {}
 
-        // Đặt lại state về trạng thái rỗng trước khi nạp dữ liệu cá nhân của user
+        // Reset state to empty before hydrating user-isolated personal store
         setWallets([]);
         setTransactions([]);
         setBudgets([]);
@@ -676,7 +676,7 @@ export const AppProvider = ({ children }) => {
                     return;
                 if (res.ok) {
                     const result = await res.json();
-                    // Có thay đổi local đang chờ lưu -> không áp dữ liệu server để tránh ghi đè (sẽ merge khi lưu)
+                    // Local changes pending save -> do not apply server data to prevent overwriting (will merge upon saving)
                     if (isSavingRef.current)
                         return;
                     if (result.success && result.data) {
@@ -742,8 +742,8 @@ export const AppProvider = ({ children }) => {
         simulatorConfig,
     });
     /**
-     * Đẩy dữ liệu lên server kèm baseUpdatedAt. Nếu thiết bị khác vừa lưu (409),
-     * merge 3 chiều (base = bản server cũ, local, remote) rồi thử lại thay vì ghi đè mất dữ liệu.
+     * Push data to server with baseUpdatedAt. If another device just saved (409),
+     * execute 3-way merge (base = old server version, local, remote) and retry instead of overwriting lost data.
      */
     const pushToServer = async (initialData) => {
         let data = initialData;
@@ -887,7 +887,7 @@ export const AppProvider = ({ children }) => {
         });
         return Array.from(set).sort((a, b) => b.localeCompare(a));
     }, [transactions, currentMonth]);
-    // Validate chung cho mọi giao dịch: số tiền hợp lệ & không ở tương lai
+    // Common validation for all transactions: valid amount & no future dates
     const validateTxBasics = (amount, date) => {
         const num = Number(amount);
         if (!Number.isFinite(num) || num <= 0) {
@@ -901,7 +901,7 @@ export const AppProvider = ({ children }) => {
         }
         return null;
     };
-    // Add Transaction - trả về giao dịch đã tạo (truthy) hoặc false nếu bị từ chối
+    // Add Transaction - returns created transaction (truthy) or false if rejected
     const addTransaction = (tx) => {
         const txDate = tx.date ? normalizeSaveDate(tx.date) : normalizeSaveDate();
         const basicError = validateTxBasics(tx.amount, txDate);
@@ -969,7 +969,7 @@ export const AppProvider = ({ children }) => {
                 skipped++;
                 return;
             }
-            // Danh mục phải tồn tại và đúng loại thu/chi, nếu không thì dùng danh mục mặc định
+            // Category must exist and match transaction type (income/expense); otherwise fallback to default category
             const foundCat = categories.find((c) => c.id === tx.categoryId && c.type === tx.type);
             const cat = foundCat || (tx.type === 'INCOME' ? defaultIncCat : defaultExpCat);
             newTxList.push({
@@ -996,15 +996,15 @@ export const AppProvider = ({ children }) => {
         let newBalance = (Number(targetWallet.balance) || 0) + importDelta;
         let newInitialBalance = Number(targetWallet.initialBalance) || 0;
         if (balanceAdjustmentMode === 'SET_EXACT' && exactClosingBalance !== null && exactClosingBalance !== '' && !isNaN(Number(exactClosingBalance))) {
-            // Chốt đúng số dư cuối kỳ của sao kê; phần chênh lệch đưa vào số dư ban đầu
-            // để "số dư ban đầu + lịch sử giao dịch" vẫn luôn khớp với số dư hiện tại
+            // Set exact closing balance from statement; allocate discrepancy into initialBalance
+            // so "initialBalance + transaction history" always reconciles with current balance
             const exact = Number(exactClosingBalance);
             newInitialBalance += exact - newBalance;
             newBalance = exact;
         }
         setWallets((prev) => prev.map((w) => (w.id === targetWallet.id ? { ...w, balance: newBalance, initialBalance: newInitialBalance } : w)));
         setTransactions((prev) => [...newTxList, ...prev]);
-        // Chuyển sang tháng của giao dịch mới nhất (không phụ thuộc thứ tự dòng trong file)
+        // Switch to the month of the latest transaction (independent of row order in file)
         const latestDate = newTxList.reduce((max, t) => (t.date > max ? t.date : max), '');
         const latestTxMonth = latestDate.slice(0, 7);
         if (/^\d{4}-\d{2}$/.test(latestTxMonth)) {
@@ -1050,7 +1050,7 @@ export const AppProvider = ({ children }) => {
         const sourceW = wallets.find((w) => w.id === newTx.walletId);
         if (sourceW)
             newTx.walletName = sourceW.name;
-        // Hoàn tác giao dịch cũ rồi áp dụng giao dịch mới
+        // Rollback previous transaction then apply updated transaction
         const rolledBack = applyTxToWallets(wallets, oldTx, -1);
         if (newTx.type === 'EXPENSE' || newTx.type === 'TRANSFER') {
             const rolledSource = rolledBack.find((w) => w.id === newTx.walletId);
@@ -1072,12 +1072,12 @@ export const AppProvider = ({ children }) => {
             return;
         setWallets((prevWallets) => applyTxToWallets(prevWallets, oldTx, -1));
         setTransactions((prev) => prev.filter((t) => t.id !== id));
-        // Xóa giao dịch thanh toán hóa đơn -> hóa đơn quay về chưa thanh toán (tiền đã hoàn vào ví)
+        // Deleting bill payment transaction -> revert bill to unpaid (funds restored to wallet)
         setBills((prev) => prev.map((b) => (b.lastPaymentTxId === id || (oldTx.billId && b.id === oldTx.billId && b.status === 'PAID'
             && toLocalDateKey(oldTx.date) === String(b.lastPaidDate || '').slice(0, 10))
             ? { ...b, status: 'UNPAID', lastPaidDate: undefined, lastPaymentTxId: undefined }
             : b)));
-        // Xóa giao dịch nạp/rút hũ -> hoàn tác số tiền trong hũ mục tiêu
+        // Deleting goal deposit/withdraw transaction -> revert amount in target goal
         setGoals((prev) => prev.map((g) => {
             const item = (g.history || []).find((h) => h.txId === id);
             if (!item)
@@ -1108,8 +1108,8 @@ export const AppProvider = ({ children }) => {
         if (!oldWallet)
             return;
         const merged = { ...oldWallet, ...updated };
-        // Số dư = số dư ban đầu + lịch sử. Khi người dùng chỉnh số dư (hoặc đổi loại ví),
-        // điều chỉnh số dư ban đầu để công thức trên vẫn đúng -> không bị lệch khi tính lại.
+        // Balance = initial balance + history. When user adjusts balance (or wallet type),
+        // adjust initialBalance so the formula remains consistent without discrepancies upon recalculation.
         const effect = sumWalletTxEffect(merged, transactions);
         if (updated.balance !== undefined) {
             merged.balance = Number(updated.balance) || 0;
@@ -1120,7 +1120,7 @@ export const AppProvider = ({ children }) => {
             merged.balance = merged.initialBalance + effect;
         }
         setWallets((prev) => prev.map((w) => (w.id === id ? merged : w)));
-        // Đồng bộ tên ví hiển thị trong các giao dịch
+        // Sync wallet name displayed in transactions
         if (updated.name && updated.name !== oldWallet.name) {
             setTransactions((prev) => prev.map((t) => {
                 if (t.walletId === id)
@@ -1134,8 +1134,8 @@ export const AppProvider = ({ children }) => {
     const deleteWallet = (id) => {
         const deleted = wallets.find((w) => w.id === id);
         setWallets((prev) => prev.filter((w) => w.id !== id));
-        // Xóa giao dịch của ví bị xóa. Riêng giao dịch chuyển khoản với ví KHÁC thì chuyển thành
-        // thu/chi của ví còn lại để số dư ví đó không bị thay đổi (tiền thực tế đã đi/đến).
+        // Delete transactions belonging to removed wallet. For transfers with ANOTHER wallet, convert
+        // to income/expense on the remaining wallet so its balance remains accurate (funds physically moved).
         setTransactions((prev) => prev.flatMap((tx) => {
             if (tx.type === 'TRANSFER' && (tx.walletId === id || tx.toWalletId === id)) {
                 if (tx.walletId === id && tx.toWalletId && tx.toWalletId !== id) {
@@ -1185,7 +1185,7 @@ export const AppProvider = ({ children }) => {
             tags: ['Chuyển khoản nội bộ'],
         });
     };
-    // Thanh toán dư nợ thẻ tín dụng từ 1 ví tài sản (chuyển khoản nội bộ, không tính là chi tiêu)
+    // Pay credit card balance from an asset wallet (internal transfer, not counted as expense)
     const payCreditCard = (creditWalletId, fromWalletId, amount, note) => {
         const creditW = wallets.find((w) => w.id === creditWalletId);
         if (!creditW || creditW.type !== 'CREDIT') {
@@ -1234,7 +1234,7 @@ export const AppProvider = ({ children }) => {
     const deleteBill = (id) => {
         setBills((prev) => prev.filter((b) => b.id !== id));
     };
-    // billOrId: id hoặc chính object hóa đơn (dùng khi hóa đơn vừa tạo chưa có trong state `bills`)
+    // billOrId: id or the bill object itself (used when bill is newly created and not yet in `bills` state)
     const payBill = (billOrId, walletId, customPaidDate) => {
         const bill = typeof billOrId === 'object' && billOrId ? billOrId : bills.find((b) => b.id === billOrId);
         if (!bill)
@@ -1249,7 +1249,7 @@ export const AppProvider = ({ children }) => {
         const paidDate = customPaidDate || getLocalDateString();
         const now = new Date();
         const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-        // 1. Ghi giao dịch trước (đã validate số dư, ngày) - chỉ đánh dấu PAID khi ghi thành công
+        // 1. Record transaction first (balance and date validated) - only mark PAID when successful
         const createdTx = addTransaction({
             type: 'EXPENSE',
             amount: bill.amount,
@@ -1264,7 +1264,7 @@ export const AppProvider = ({ children }) => {
         });
         if (!createdTx)
             return false;
-        // 2. Mark bill as PAID, nhớ id giao dịch để có thể hoàn tác
+        // 2. Mark bill as PAID, save transaction ID for rollback capability
         setBills((prev) => prev.map((b) => b.id === billId
             ? {
                 ...b,
@@ -1276,8 +1276,8 @@ export const AppProvider = ({ children }) => {
             : b));
         return true;
     };
-    // Tìm giao dịch đã trừ tiền cho lần thanh toán gần nhất của hóa đơn.
-    // Hóa đơn thanh toán từ bản cũ không có lastPaymentTxId -> dò theo billId / nội dung / số tiền / ngày.
+    // Find transaction that deducted funds for the latest bill payment.
+    // Legacy bill records lack lastPaymentTxId -> locate by billId / narrative / amount / date.
     const findBillPaymentTx = (bill) => {
         if (!bill)
             return null;
@@ -1294,7 +1294,7 @@ export const AppProvider = ({ children }) => {
             && Number(t.amount) === Number(bill.amount)
             && (t.billId === bill.id || t.note === `Thanh toán hóa đơn: ${bill.name}`)) || null;
     };
-    // Đánh dấu hóa đơn chưa thanh toán; tùy chọn xóa giao dịch thanh toán đã ghi (hoàn tiền vào ví)
+    // Mark bill as unpaid; optionally delete recorded payment transaction (refund funds to wallet)
     const unpayBill = (billId, revertTransaction = false) => {
         const bill = bills.find((b) => b.id === billId);
         if (!bill)
@@ -1306,7 +1306,7 @@ export const AppProvider = ({ children }) => {
         setBills((prev) => prev.map((b) => b.id === billId ? { ...b, status: 'UNPAID', lastPaidDate: undefined, lastPaymentTxId: undefined } : b));
         return { success: true, refunded: Boolean(paymentTx), amount: paymentTx ? Number(paymentTx.amount) : 0 };
     };
-    // Hóa đơn định kỳ: tự chuyển về UNPAID khi sang kỳ thanh toán mới (tháng / quý / năm)
+    // Recurring bills: automatically revert to UNPAID upon entering a new billing cycle (month / quarter / year)
     useEffect(() => {
         if (!mounted)
             return;
@@ -1347,7 +1347,7 @@ export const AppProvider = ({ children }) => {
         const wallet = wallets.find((w) => w.id === walletId);
         if (!goal || !wallet)
             return false;
-        // Ghi giao dịch trước (đã validate số dư) - chỉ cộng vào hũ khi ghi thành công
+        // Record transaction first (balance validated) - only credit goal upon success
         const createdTx = addTransaction({
             type: 'EXPENSE',
             amount,
@@ -1441,7 +1441,7 @@ export const AppProvider = ({ children }) => {
         setPlanner(defaultData.planner);
         setCurrentMonth('2026-09');
         setSimulatorConfig(INITIAL_SIMULATOR_CONFIG);
-        // Auto-save sẽ đẩy dữ liệu mặc định lên server (có kiểm tra xung đột)
+        // Auto-save will push default data to server (with conflict detection)
     };
     const clearAllData = () => {
         setWallets([
@@ -1494,7 +1494,7 @@ export const AppProvider = ({ children }) => {
         try {
             const data = JSON.parse(jsonStr);
 
-            // Bước 1: kiểm tra toàn bộ backup trước khi thay đổi state
+            // Step 1: validate entire backup structure before updating state
             const validationErrors = validateBackupData(data);
 
             if (validationErrors.length > 0) {
@@ -1506,8 +1506,8 @@ export const AppProvider = ({ children }) => {
                 return false;
             }
 
-            // Chuẩn hóa wallet.
-            // Không tin balance trong file backup.
+            // Normalize wallet.
+            // Do not trust raw balance in backup file.
             const importedWallets = data.wallets.map((w) => ({
                 ...w,
                 initialBalance:
@@ -1518,14 +1518,14 @@ export const AppProvider = ({ children }) => {
                     Number(w.balance) || 0,
             }));
 
-            // Tính lại số dư dựa trên initialBalance + transaction history.
+            // Recalculate balance based on initialBalance + transaction history.
             const recalculatedWallets =
                 recomputeWalletBalances(
                     importedWallets,
                     data.transactions
                 );
 
-            // Chỉ bắt đầu thay đổi state sau khi mọi validation đã pass.
+            // Only update state after all validations have passed.
             setWallets(recalculatedWallets);
             setTransactions(data.transactions);
 

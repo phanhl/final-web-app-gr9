@@ -35,7 +35,7 @@ function MainContent() {
             {activeTab === 'settings' && <SettingsView />}
           </main>
 
-          {/* Footer chỉ hiện trên desktop - bố cục lệch 2 phía: 2026 lệch trái, Next.js lệch phải */}
+          {/* Desktop-only footer - split layout: copyright left, tech stack right */}
           <footer className="hidden lg:block border-t border-slate-100 dark:border-slate-800/80 bg-white/50 dark:bg-slate-900/50 py-5 text-xs text-slate-500 dark:text-slate-400 print:hidden">
             <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
               <p className="text-left font-medium">© 2026 FinTrack Pro • {t('footer.tagline', 'Hệ thống Quản lý Chi tiêu Cá nhân & Ngân sách Thông minh')}</p>

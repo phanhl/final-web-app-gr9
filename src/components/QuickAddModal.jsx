@@ -74,8 +74,8 @@ export const QuickAddModal = () => {
       setNote('');
       setReceiptImage(undefined);
     }
-    // Chỉ khởi tạo form khi mở modal; không phụ thuộc wallets/categories để đồng bộ nền
-    // (polling từ thiết bị khác) không xóa form đang nhập dở.
+    // Only initialize form when opening modal; do not depend on wallets/categories so background sync
+    // (polling from another device) does not clear in-progress form input.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quickAddOpen, quickAddDefaultType, quickAddDefaultWalletId]);
 

@@ -9,10 +9,10 @@ import { IconHelper, getIconLabel } from './IconHelper';
 import { DEFAULT_SPENDING_ITEMS } from '@/lib/mock-data';
 export const WhatIfSimulatorView = () => {
     const { transactions, financialSummary, categories, planner, simulatorConfig, updateSimulatorConfig, t, tCategory, tWalletType, language, showConfirm, } = useApp();
-    // Khung thời gian mô phỏng
+    // Simulation timeframe
     const projectionMonths = simulatorConfig.projectionMonths;
     const setProjectionMonths = (val) => updateSimulatorConfig({ projectionMonths: val });
-    // 1. CÁC KHOẢN TIÊU DÙNG CHI TIÊU CÁ NHÂN & LỰA CHỌN CẮT GIẢM
+    // 1. PERSONAL CONSUMPTION SPENDING & REDUCTION OPTIONS
     const spendingCategories = Array.isArray(simulatorConfig?.spendingCategories)
         ? simulatorConfig.spendingCategories
         : [];
@@ -24,7 +24,7 @@ export const WhatIfSimulatorView = () => {
             updateSimulatorConfig({ spendingCategories: updater });
         }
     };
-    // Modal thêm/sửa khoản chi tiêu What-If
+    // Modal to add/edit What-If spending item
     const [expenseModalOpen, setExpenseModalOpen] = useState(false);
     const [editingExpenseId, setEditingExpenseId] = useState(null);
     const [expenseSourceType, setExpenseSourceType] = useState('category');
@@ -35,7 +35,7 @@ export const WhatIfSimulatorView = () => {
     const [expenseAmount, setExpenseAmount] = useState('2000000');
     const [expenseCutPercent, setExpenseCutPercent] = useState('20');
     const [expenseApplyCut, setExpenseApplyCut] = useState(false);
-    // 2. KÊNH ĐẦU TƯ / GỬI TIẾT KIỆM
+    // 2. INVESTMENT & SAVINGS CHANNELS
     const savingsAmount = simulatorConfig?.savingsAmount ?? 0;
     const setSavingsAmount = (val) => updateSimulatorConfig({ savingsAmount: val });
     const savingsInterestRate = simulatorConfig?.savingsInterestRate ?? 5.5;
@@ -45,7 +45,7 @@ export const WhatIfSimulatorView = () => {
     const investmentRateScenario = simulatorConfig?.investmentRateScenario ?? 8.5;
     const setInvestmentRateScenario = (val) => updateSimulatorConfig({ investmentRateScenario: val });
     const [customInvestRate, setCustomInvestRate] = useState(simulatorConfig?.customInvestRate || '8.5');
-    // 3. KHOẢN VAY NGOÀI & NGHĨA VỤ TRẢ NỢ (External Loans & Debts)
+    // 3. EXTERNAL LOANS & DEBT OBLIGATIONS
     const hasExternalLoan = Boolean(simulatorConfig?.hasExternalLoan);
     const setHasExternalLoan = (val) => updateSimulatorConfig({ hasExternalLoan: val });
     const externalLoans = Array.isArray(simulatorConfig?.externalLoans) ? simulatorConfig.externalLoans : [];
@@ -62,30 +62,30 @@ export const WhatIfSimulatorView = () => {
     const [newLoanDebt, setNewLoanDebt] = useState('');
     const [newLoanPayment, setNewLoanPayment] = useState('');
     const [newLoanRate, setNewLoanRate] = useState('0');
-    // Danh sách các mục người dùng đã chọn để cắt giảm
+    // List of items selected by user for spending cuts
     const selectedCuts = useMemo(() => {
         return spendingCategories.filter((c) => c.isSelected);
     }, [spendingCategories]);
-    // Tổng mức tiêu dùng cá nhân hiện tại từ các danh mục
+    // Current total personal consumption from categories
     const totalPersonalExpense = useMemo(() => {
         return spendingCategories.reduce((sum, item) => sum + item.monthlyExpense, 0);
     }, [spendingCategories]);
-    // Thu nhập và chi tiêu cơ bản
+    // Baseline income and expenses
     const startingNetWorth = financialSummary?.totalAssets ?? 0;
     const monthlyIncome = planner?.monthlyIncome ?? 0;
     const baseMonthlyExpense = totalPersonalExpense > 0 ? totalPersonalExpense : (financialSummary?.monthlyExpense ?? 0);
     const baseMonthlySavings = Math.max(0, monthlyIncome - baseMonthlyExpense);
-    // Tổng số tiền tiết kiệm được từ các khoản cắt giảm chi tiêu đã chọn
+    // Total amount saved from selected spending reductions
     const totalCutSavings = useMemo(() => {
         return selectedCuts.reduce((sum, item) => sum + Math.round(item.monthlyExpense * (item.cutPercent / 100)), 0);
     }, [selectedCuts]);
-    // Tổng tiền trả nợ vay hàng tháng
+    // Total monthly debt payment
     const totalMonthlyDebtPayment = useMemo(() => {
         if (!hasExternalLoan)
             return 0;
         return externalLoans.reduce((sum, loan) => sum + loan.monthlyPayment, 0);
     }, [hasExternalLoan, externalLoans]);
-    // TỔNG HỢP MÔ PHỎNG CHI TIẾT TỪNG THÁNG (Month-by-Month Detailed Projection)
+    // DETAILED MONTH-BY-MONTH PROJECTION SYNTHESIS (Month-by-Month Detailed Projection)
     const detailedMonthlyProjections = useMemo(() => {
         const rows = [];
         const monthlySavingsRate = savingsInterestRate / 100 / 12;
@@ -117,9 +117,9 @@ export const WhatIfSimulatorView = () => {
                 });
                 continue;
             }
-            // 1. Kịch bản gốc (Baseline: không cắt giảm, không đầu tư thêm, không quản lý nợ riêng)
+            // 1. Baseline scenario (no cuts, no extra investments, no separate debt management)
             baselineWealth += baseMonthlySavings;
-            // 2. Tính toán trả nợ trong tháng m
+            // 2. Calculate debt payments in month m
             let monthDebtPaid = 0;
             if (hasExternalLoan) {
                 currentLoanDebts = currentLoanDebts.map((loan) => {
@@ -131,22 +131,22 @@ export const WhatIfSimulatorView = () => {
                 });
             }
             const remainingDebtTotal = hasExternalLoan ? currentLoanDebts.reduce((s, l) => s + l.remaining, 0) : 0;
-            // 3. Dòng tiền sau khi cắt giảm chi tiêu và trả nợ
+            // 3. Cash flow after spending cuts and debt payments
             const effectiveExpense = baseMonthlyExpense - totalCutSavings;
             const netCashflowBeforeAlloc = monthlyIncome - effectiveExpense - monthDebtPaid;
-            // 4. Phân bổ vào Tiết kiệm an toàn
+            // 4. Allocate into safe savings
             const actualSavingsContribution = Math.min(Math.max(0, netCashflowBeforeAlloc), savingsAmount);
             const savingsInterestMonth = (cumulativeSavingsPot + actualSavingsContribution) * monthlySavingsRate;
             cumulativeSavingsPot = cumulativeSavingsPot + actualSavingsContribution + savingsInterestMonth;
-            // 5. Phân bổ vào Đầu tư tài chính & TÍNH TOÁN LÃI / THUA LỖ
+            // 5. Allocate into financial investments & CALCULATE GAIN / LOSS
             const leftoverForInvest = Math.max(0, netCashflowBeforeAlloc - actualSavingsContribution);
             const actualInvestContribution = Math.min(leftoverForInvest, investmentAmount);
-            // Lãi hoặc Lỗ đầu tư tài chính trong tháng (Có thể ÂM nếu investmentRateScenario < 0)
+            // Financial investment profit or loss in month (may be NEGATIVE if investmentRateScenario < 0)
             const investReturnMonth = (cumulativeInvestPot + actualInvestContribution) * monthlyInvestRate;
             cumulativeInvestPot = Math.max(0, cumulativeInvestPot + actualInvestContribution + investReturnMonth);
-            // Tiền mặt giữ lại không đầu tư
+            // Retained unallocated cash
             const unallocatedCash = Math.max(0, leftoverForInvest - actualInvestContribution);
-            // Cập nhật tổng tài sản ròng What-If tại tháng m (Trừ nợ còn lại!)
+            // Update total What-If net wealth at month m (deducting remaining debt!)
             whatIfWealth = startingNetWorth + m * unallocatedCash + cumulativeSavingsPot + cumulativeInvestPot - remainingDebtTotal;
             const delta = whatIfWealth - baselineWealth;
             rows.push({
@@ -184,7 +184,7 @@ export const WhatIfSimulatorView = () => {
     ]);
     const finalRow = detailedMonthlyProjections[detailedMonthlyProjections.length - 1];
     const finalDelta = finalRow.netDelta;
-    // Kiểm tra và tìm các nhóm khoản chi bị trùng lặp danh mục hoặc tên
+    // Check and find groups of spending items duplicated by category or name
     const duplicateGroups = useMemo(() => {
         const map = new Map();
         spendingCategories.forEach((item) => {
@@ -197,7 +197,7 @@ export const WhatIfSimulatorView = () => {
         return Array.from(map.values()).filter((group) => group.length > 1);
     }, [spendingCategories]);
 
-    // Gộp tất cả các khoản chi bị trùng lặp lại thành một thẻ duy nhất (cộng dồn số tiền)
+    // Merge all duplicate spending items into a single entry (summing amounts)
     const handleMergeDuplicates = () => {
         const mergedMap = new Map();
         spendingCategories.forEach((item) => {
@@ -218,7 +218,7 @@ export const WhatIfSimulatorView = () => {
         setSpendingCategories(Array.from(mergedMap.values()));
     };
 
-    // Mở modal thêm khoản chi mới (tự động chọn danh mục khả dụng chưa có trong danh sách)
+    // Open modal to add new spending item (auto-select available category not yet in list)
     const handleOpenAddExpense = () => {
         setEditingExpenseId(null);
         const existingCatIds = new Set(
@@ -252,7 +252,7 @@ export const WhatIfSimulatorView = () => {
         setExpenseModalOpen(true);
     };
 
-    // Mở modal sửa khoản chi hiện có
+    // Open modal to edit existing spending item
     const handleOpenEditExpense = (item) => {
         setEditingExpenseId(item.id);
         const matchedCat = categories.find((c) => c.id === item.categoryId);
@@ -273,7 +273,7 @@ export const WhatIfSimulatorView = () => {
         setExpenseModalOpen(true);
     };
 
-    // Khi chọn danh mục mẫu trong dropdown
+    // When template category is selected in dropdown
     const handleCategoryChange = (catId) => {
         setSelectedCatId(catId);
         const cat = categories.find((c) => c.id === catId);
@@ -284,8 +284,8 @@ export const WhatIfSimulatorView = () => {
         }
     };
 
-    // Lưu khoản chi tiêu (thêm mới hoặc chỉnh sửa, có kiểm tra trùng lặp và hỗ trợ cộng dồn)
-    // Icon đang được trỏ chuột / focus trong bộ chọn biểu tượng (hiển thị tên để hỗ trợ người dùng)
+    // Save spending item (new or edit, with duplicate checking and merge support)
+    // Currently hovered/focused icon in picker (shows label for user guidance)
     const [hoveredIcon, setHoveredIcon] = useState(null);
     const handleSaveExpense = (e) => {
         e.preventDefault();
@@ -317,7 +317,7 @@ export const WhatIfSimulatorView = () => {
             finalCatId = `cat-custom-${Date.now()}`;
         }
 
-        // Kiểm tra xem đã có khoản chi nào trùng lặp chưa (trừ khoản chi đang sửa)
+        // Check if any duplicate spending item exists (excluding the item being edited)
         const existingDuplicate = spendingCategories.find((item) => {
             if (editingExpenseId && item.id === editingExpenseId) return false;
             const sameCatId = finalCatId !== 'custom' && item.categoryId === finalCatId;
@@ -380,7 +380,7 @@ export const WhatIfSimulatorView = () => {
         setExpenseModalOpen(false);
     };
 
-    // Xóa khoản chi tiêu
+    // Delete spending item
     const handleDeleteExpenseItem = (id, name) => {
         const msg = `${t('whatif.confirmDeleteMsg', 'Bạn có chắc chắn muốn xóa khoản chi')} "${tCategory(name)}" ${t('whatif.confirmDeleteSuffix', 'khỏi mô phỏng What-If không?')}`;
         showConfirm({
@@ -394,7 +394,7 @@ export const WhatIfSimulatorView = () => {
         });
     };
 
-    // Khôi phục về danh mục mặc định ban đầu
+    // Restore default initial categories
     const handleResetSpendingDefaults = () => {
         showConfirm({
             title: t('whatif.resetTitle', 'Khôi phục mặc định'),
@@ -406,7 +406,7 @@ export const WhatIfSimulatorView = () => {
             },
         });
     };
-    // Thêm khoản nợ vay mới
+    // Add new debt / loan
     const handleAddLoan = (e) => {
         e.preventDefault();
         if (!newLoanName.trim() || !Number(newLoanDebt) || !Number(newLoanPayment)) {
@@ -427,7 +427,7 @@ export const WhatIfSimulatorView = () => {
         setNewLoanPayment('');
         setNewLoanRate('0');
     };
-    // Xuất bảng dự phóng chi tiết ra Excel (.xlsx)
+    // Export detailed projection table to Excel (.xlsx)
     const handleExportTableExcel = () => {
         const wb = XLSX.utils.book_new();
         const tableData = detailedMonthlyProjections.map((row) => ({
@@ -536,7 +536,7 @@ export const WhatIfSimulatorView = () => {
         {/* COLUMN 1: SPENDING SURVEY & CUT SELECTIONS */}
         <div className="space-y-6 min-w-0">
           {/* ========================================================================= */}
-          {/* BƯỚC 1: MỨC TIÊU DÙNG CHI TIÊU CÁ NHÂN HIỆN TẠI (HIỆN MỨC TIÊU DÙNG TRƯỚC) */}
+          {/* STEP 1: CURRENT PERSONAL CONSUMPTION SPENDING */}
           {/* ========================================================================= */}
           <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
@@ -578,7 +578,7 @@ export const WhatIfSimulatorView = () => {
               </div>
             </div>
 
-            {/* Cảnh báo và hỗ trợ gộp nhanh nếu có khoản chi trùng lặp */}
+            {/* Duplicate warning and quick merge support */}
             {duplicateGroups.length > 0 && (
               <div className="p-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
                 <div className="flex items-center space-x-2.5 text-amber-800 dark:text-amber-200 text-xs">
@@ -685,7 +685,7 @@ export const WhatIfSimulatorView = () => {
                       </div>
                     </div>
 
-                    {/* Badge hiển thị xuống dưới */}
+                    {/* Badge displayed below */}
                     {item.isSelected && (
                       <div className="mt-2 flex items-center">
                         <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/60 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-800 inline-flex items-center gap-1.5 shadow-2xs">
@@ -1061,7 +1061,7 @@ export const WhatIfSimulatorView = () => {
             </div>
           </div>
 
-          {/* PHẦN C: KHOẢN VAY NGOÀI & NGHĨA VỤ TRẢ NỢ (External Loans & Debt Service) */}
+          {/* SECTION C: EXTERNAL LOANS & DEBT SERVICE */}
           <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center space-x-3">
@@ -1123,7 +1123,7 @@ export const WhatIfSimulatorView = () => {
         </div>
       </div>
 
-      {/* 4. BẢNG PHÂN TÍCH CỤ THỂ CHI TIẾT TỪNG THÁNG (Detailed Month-by-Month Table) */}
+      {/* 4. DETAILED MONTH-BY-MONTH ANALYSIS TABLE */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -1204,7 +1204,7 @@ export const WhatIfSimulatorView = () => {
       </div>
 
       {/* ========================================================================= */}
-      {/* MODAL: THÊM / CHỈNH SỬA KHOẢN CHI TIÊU WHAT-IF */}
+      {/* MODAL: ADD / EDIT WHAT-IF SPENDING ITEM */}
       {/* ========================================================================= */}
       {expenseModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
@@ -1372,7 +1372,7 @@ export const WhatIfSimulatorView = () => {
                         );
                       })}
                     </div>
-                    {/* Gợi ý: tên biểu tượng đang chọn + hướng dẫn */}
+                    {/* Hint: selected icon name + instructions */}
                     <div className="mt-1.5 flex items-center justify-between gap-2 text-[11px] min-h-5">
                       <span className="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-200" aria-live="polite">
                         <span
@@ -1540,7 +1540,7 @@ export const WhatIfSimulatorView = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL: THÊM KHOẢN VAY NGOÀI / NỢ CẦN TRẢ */}
+      {/* MODAL: ADD EXTERNAL LOAN / DEBT PAYABLE */}
       {/* ========================================================================= */}
       {addLoanModalOpen && (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="relative max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-6">

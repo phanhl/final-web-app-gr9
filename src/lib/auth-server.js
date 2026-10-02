@@ -22,7 +22,7 @@ const USERS_DIR = path.join(DATA_DIR, 'users');
 const SECRET_FILE = path.join(DATA_DIR, '.session_secret');
 const LEGACY_DB_FILE = path.join(DATA_DIR, 'database.json');
 const SESSION_COOKIE_NAME = 'fintrack_session';
-const SESSION_MAX_AGE = 30 * 24 * 60 * 60; // 30 ngày
+const SESSION_MAX_AGE = 30 * 24 * 60 * 60; // 30 days
 
 let sessionSecretCache = null;
 
@@ -87,7 +87,7 @@ export async function verifySessionToken(token) {
     try {
         const payload = JSON.parse(Buffer.from(dataStr, 'base64url').toString('utf-8'));
         if (payload.exp && Date.now() > payload.exp) {
-            return null; // Đã hết hạn
+            return null; // Expired
         }
         return payload;
     } catch {
@@ -166,7 +166,7 @@ export function getDefaultUserData(username = '') {
 }
 
 /**
- * Đọc danh sách tất cả tài khoản
+ * Read all user accounts
  */
 export async function getUsers() {
     await fs.mkdir(DATA_DIR, { recursive: true });
@@ -175,7 +175,7 @@ export async function getUsers() {
         const content = await fs.readFile(USERS_FILE, 'utf-8');
         return JSON.parse(content);
     } catch {
-        // Chưa có file users.json -> khởi tạo
+        // users.json not found -> initialize
         let initialUsers = [];
         let hasHostPassword = false;
         let hostHash = '';
@@ -201,12 +201,12 @@ export async function getUsers() {
         initialUsers.push(adminUser);
         await fs.writeFile(USERS_FILE, JSON.stringify(initialUsers, null, 2), 'utf-8').catch(() => {});
 
-        // Đảm bảo dữ liệu của admin có sẵn (sao chép từ database.json nếu có)
+        // Ensure admin data is initialized (copy from database.json if available)
         const adminDataFile = path.join(USERS_DIR, 'admin.json');
         try {
             await fs.access(adminDataFile);
         } catch {
-            // admin.json chưa có, copy từ database.json nếu có
+            // admin.json missing, copy from legacy database.json if available
             try {
                 const legacy = await fs.readFile(LEGACY_DB_FILE, 'utf-8');
                 await fs.writeFile(adminDataFile, legacy, 'utf-8');
@@ -220,7 +220,7 @@ export async function getUsers() {
 }
 
 /**
- * Lưu danh sách tài khoản
+ * Save user accounts
  */
 export async function saveUsers(users) {
     await fs.mkdir(DATA_DIR, { recursive: true });
@@ -230,7 +230,7 @@ export async function saveUsers(users) {
 }
 
 /**
- * Lấy đường dẫn file dữ liệu của 1 user cụ thể
+ * Get data file path for a specific user
  */
 export function getUserDataFilePath(userId) {
     const safeId = String(userId).replace(/[^a-zA-Z0-9_-]/g, '');
@@ -238,7 +238,7 @@ export function getUserDataFilePath(userId) {
 }
 
 /**
- * Đọc phiên làm việc của request hiện tại qua Cookie
+ * Retrieve active session user from request cookies
  */
 export async function getSessionUser() {
     try {
@@ -248,7 +248,7 @@ export async function getSessionUser() {
         const session = await verifySessionToken(token);
         if (!session || !session.userId) return null;
         
-        // Kiểm tra xem user còn tồn tại không
+        // Verify user still exists in registry
         const users = await getUsers();
         const user = users.find(u => u.id === session.userId);
         if (!user) return null;

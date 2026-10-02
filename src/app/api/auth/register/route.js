@@ -26,7 +26,7 @@ export async function POST(req) {
         const password = String(body.password);
         const displayName = body.displayName ? String(body.displayName).trim() : username;
 
-        // Kiểm tra định dạng username (chỉ chữ thường, số và gạch dưới, độ dài 3-20)
+        // Validate username format (lowercase letters, numbers, and underscore only, 3-20 chars)
         if (!/^[a-z0-9_]{3,20}$/.test(username)) {
             return NextResponse.json({
                 success: false,
@@ -60,13 +60,13 @@ export async function POST(req) {
         users.push(newUser);
         await saveUsers(users);
 
-        // Khởi tạo file dữ liệu cá nhân riêng biệt cho khách
+        // Initialize isolated user data store for guest
         await fs.mkdir(USERS_DIR, { recursive: true });
         const userFilePath = getUserDataFilePath(userId);
         const initialUserData = getDefaultUserData(displayName);
         await fs.writeFile(userFilePath, JSON.stringify(initialUserData, null, 2), 'utf-8');
 
-        // Tạo session cookie
+        // Create session cookie
         const sessionPayload = {
             userId: newUser.id,
             username: newUser.username,

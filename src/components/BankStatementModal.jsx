@@ -34,14 +34,14 @@ import confetti from 'canvas-confetti';
 import { IconHelper } from './IconHelper';
 
 /**
- * Hàm tìm kiếm ví ngân hàng phù hợp với sao kê đã nhận diện
+ * Search for matching bank wallet for detected statement
  */
 function findMatchingWalletForBank(bank, walletsList, detectedAccountNumber) {
     if (!bank || !Array.isArray(walletsList)) return null;
     const bCode = (bank.code || '').toLowerCase();
     const bName = (bank.name || '').toLowerCase();
 
-    // 1. Khớp theo số tài khoản nếu nhận diện được từ sao kê
+    // 1. Match by account number if recognized from statement
     if (detectedAccountNumber) {
         const cleanAcc = detectedAccountNumber.replace(/\D/g, '');
         if (cleanAcc.length >= 4) {
@@ -54,7 +54,7 @@ function findMatchingWalletForBank(bank, walletsList, detectedAccountNumber) {
         }
     }
 
-    // 2. Khớp theo bankName
+    // 2. Match by bankName
     const bankNameMatch = walletsList.find((w) => {
         if (!w.bankName) return false;
         const wbName = w.bankName.toLowerCase();
@@ -62,7 +62,7 @@ function findMatchingWalletForBank(bank, walletsList, detectedAccountNumber) {
     });
     if (bankNameMatch) return bankNameMatch;
 
-    // 3. Khớp theo tên ví (name)
+    // 3. Match by wallet name (name)
     const nameMatch = walletsList.find((w) => {
         const wName = (w.name || '').toLowerCase();
         return (
@@ -77,7 +77,7 @@ function findMatchingWalletForBank(bank, walletsList, detectedAccountNumber) {
 }
 
 /**
- * Số dư đầu kỳ = số dư cuối kỳ - (tổng thu - tổng chi) của các giao dịch trong sao kê
+ * Opening balance = closing balance - (total income - total expense) of statement transactions
  */
 function computeOpeningBalance(closingBalance, items = []) {
     if (closingBalance === null || closingBalance === undefined)
@@ -108,33 +108,33 @@ export const BankStatementModal = () => {
     const [isParsing, setIsParsing] = useState(false);
     const [parseError, setParseError] = useState(null);
 
-    // Dữ liệu sau khi parse
+    // Parsed data
     const [parsedItems, setParsedItems] = useState([]);
     const [detectedClosingBalance, setDetectedClosingBalance] = useState(null);
     const [balanceAdjustmentMode, setBalanceAdjustmentMode] = useState('NET_CHANGE'); // 'NET_CHANGE' | 'SET_EXACT'
 
-    // Nhận diện ngân hàng & trạng thái liên kết ví
+    // Bank recognition & wallet linking status
     const [detectedBank, setDetectedBank] = useState(null);
     const [detectedAccountNumber, setDetectedAccountNumber] = useState(null);
     const [detectedAccountHolder, setDetectedAccountHolder] = useState(null);
     const [walletMatchStatus, setWalletMatchStatus] = useState('MANUAL'); // 'MATCHED' | 'NOT_FOUND' | 'MANUAL'
 
-    // Modal tạo ví nhanh cho ngân hàng được nhận diện
+    // Quick-create wallet modal for recognized bank
     const [showCreateWalletModal, setShowCreateWalletModal] = useState(false);
     const [customWalletName, setCustomWalletName] = useState('');
     const [customWalletBalance, setCustomWalletBalance] = useState('0');
     const [customWalletAccNum, setCustomWalletAccNum] = useState('');
 
-    // Bộ lọc xem trước
+    // Preview filters
     const [activeFilterTab, setActiveFilterTab] = useState('ALL'); // 'ALL' | 'INCOME' | 'EXPENSE' | 'DUPLICATE' | 'SELECTED'
     const [searchFilter, setSearchFilter] = useState('');
 
-    // Trạng thái thành công
+    // Import success state
     const [importSuccessResult, setImportSuccessResult] = useState(null);
 
     const fileInputRef = useRef(null);
 
-    // Khởi tạo ví mặc định khi mở modal
+    // Initialize default wallet when modal opens
     useEffect(() => {
         if (statementModalOpen) {
             const targetWallet = statementDefaultWalletId
@@ -155,12 +155,12 @@ export const BankStatementModal = () => {
             setSearchFilter('');
             setShowCreateWalletModal(false);
         }
-        // Chỉ reset khi MỞ modal. Không phụ thuộc `wallets`: tạo ví / nạp sao kê / đồng bộ từ thiết bị khác
-        // đều làm `wallets` đổi và trước đây xóa sạch dữ liệu đã đọc + màn hình thành công.
+        // Only reset when modal OPENS. Do not depend on wallets: creating wallet / importing statement / background sync
+        // changes wallets and previously cleared parsed data + success screen.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [statementModalOpen, statementDefaultWalletId]);
 
-    // Khi người dùng đổi ví đích, cập nhật lại việc kiểm tra trùng lặp
+    // Update duplicate checks when user changes target wallet
     useEffect(() => {
         if (parsedItems.length > 0 && selectedWalletId) {
             setParsedItems(prev => checkDuplicates(prev, transactions, selectedWalletId));
@@ -169,7 +169,7 @@ export const BankStatementModal = () => {
 
     const currentWallet = wallets.find(w => w.id === selectedWalletId);
 
-    // Xử lý khi chọn file
+    // Process uploaded file
     const handleFileProcess = async (uploadedFile) => {
         if (!uploadedFile) return;
         setFile(uploadedFile);
@@ -184,7 +184,7 @@ export const BankStatementModal = () => {
             setDetectedAccountNumber(result.detectedAccountNumber);
             setDetectedAccountHolder(result.detectedAccountHolder);
 
-            // Kiểm tra phân biệt ngân hàng của sao kê và khớp ví
+            // Check detected bank and match wallet
             if (result.detectedBank) {
                 const matchedWallet = findMatchingWalletForBank(result.detectedBank, wallets, result.detectedAccountNumber);
                 if (matchedWallet) {
@@ -192,7 +192,7 @@ export const BankStatementModal = () => {
                     setWalletMatchStatus('MATCHED');
                     setParsedItems(checkDuplicates(result.transactions, transactions, matchedWallet.id));
                 } else {
-                    // Chưa có ví ngân hàng này -> YÊU CẦU TẠO VÍ!
+                    // No wallet found for this bank -> Prompt wallet creation!
                     setSelectedWalletId('');
                     setWalletMatchStatus('NOT_FOUND');
                     setCustomWalletName(`${result.detectedBank.name} ${t('bs.spendingSuffix', 'Chi tiêu')}`);
@@ -218,11 +218,11 @@ export const BankStatementModal = () => {
         }
     };
 
-    // Tạo ví ngân hàng tự động (1-Click) hoặc tùy chỉnh
+    // Quick-create bank wallet (1-Click) or custom
     const handleQuickCreateBankWallet = (customData = null) => {
         if (!detectedBank) return;
-        // Số dư ban đầu của ví mới = số dư ĐẦU KỲ của sao kê (trước các giao dịch sẽ nạp),
-        // nếu không sau khi nạp sẽ bị cộng/trừ 2 lần các giao dịch đã nằm sẵn trong số dư cuối kỳ.
+        // Initial balance of new wallet = statement OPENING balance (before transactions to import),
+        // otherwise imported transactions would double-count against closing balance.
         const initialBal = customData
             ? (Number(customData.balance) || 0)
             : Math.max(0, computeOpeningBalance(detectedClosingBalance, parsedItems));
@@ -252,7 +252,7 @@ export const BankStatementModal = () => {
             origin: { y: 0.6 },
         });
 
-        // Cập nhật lại duplicate check với ví mới tạo
+        // Re-run duplicate check with newly created wallet
         setParsedItems(prev => checkDuplicates(prev, transactions, createdWallet.id));
     };
 
@@ -264,7 +264,7 @@ export const BankStatementModal = () => {
         }
     };
 
-    // Chọn / Bỏ chọn một giao dịch
+    // Select / Deselect a single transaction
     const toggleSelectItem = (tempId) => {
         setParsedItems(prev => prev.map(item => {
             if (item.tempId === tempId) {
@@ -274,12 +274,12 @@ export const BankStatementModal = () => {
         }));
     };
 
-    // Chọn / Bỏ chọn tất cả
+    // Select / Deselect all transactions
     const toggleSelectAll = (selectVal) => {
         setParsedItems(prev => prev.map(item => ({ ...item, selected: selectVal })));
     };
 
-    // Bỏ chọn tất cả giao dịch trùng lặp
+    // Deselect all duplicate transactions
     const deselectAllDuplicates = () => {
         setParsedItems(prev => prev.map(item => {
             if (item.isDuplicate) {
@@ -289,7 +289,7 @@ export const BankStatementModal = () => {
         }));
     };
 
-    // Cập nhật danh mục cho một dòng giao dịch
+    // Update category for a transaction row
     const handleCategoryChange = (tempId, newCategoryId) => {
         const cat = categories.find(c => c.id === newCategoryId);
         if (!cat) return;
@@ -305,7 +305,7 @@ export const BankStatementModal = () => {
         }));
     };
 
-    // Thống kê tính toán rõ ràng theo bản sao kê
+    // Clear statistics calculated from statement
     const selectedItems = parsedItems.filter(item => item.selected);
     const totalSelectedIncome = selectedItems
         .filter(item => item.type === 'INCOME')
@@ -319,7 +319,7 @@ export const BankStatementModal = () => {
     const incomeCount = parsedItems.filter(item => item.type === 'INCOME').length;
     const expenseCount = parsedItems.filter(item => item.type === 'EXPENSE').length;
 
-    // Dự kiến số dư ví
+    // Projected wallet balance
     const currentBalance = currentWallet?.balance || 0;
     let projectedBalance = currentBalance;
     if (balanceAdjustmentMode === 'SET_EXACT' && detectedClosingBalance !== null) {
@@ -332,7 +332,7 @@ export const BankStatementModal = () => {
         }
     }
 
-    // Danh sách hiển thị theo bộ lọc
+    // Filtered display list
     const displayedItems = useMemo(() => {
         return parsedItems.filter(item => {
             if (activeFilterTab === 'INCOME' && item.type !== 'INCOME') return false;
@@ -351,7 +351,7 @@ export const BankStatementModal = () => {
         });
     }, [parsedItems, activeFilterTab, searchFilter]);
 
-    // Thực hiện Import
+    // Execute import
     const handleExecuteImport = () => {
         if (selectedItems.length === 0) {
             alert(t('bs.selectAtLeastOne', 'Vui lòng chọn ít nhất 1 giao dịch để nạp vào hệ thống.'));
@@ -412,7 +412,7 @@ export const BankStatementModal = () => {
                 {/* 2. BODY CONTENT */}
                 <div className="flex-1 overflow-y-auto p-6 space-y-5">
 
-                    {/* MÀN HÌNH THÔNG BÁO THÀNH CÔNG */}
+                    {/* SUCCESS NOTIFICATION SCREEN */}
                     {importSuccessResult ? (
                         <div className="py-8 text-center space-y-5 max-w-md mx-auto">
                             <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto shadow-sm">
@@ -430,7 +430,7 @@ export const BankStatementModal = () => {
                                 </p>
                             </div>
 
-                            {/* Bảng tổng kết số dư sau nạp */}
+                            {/* Balance summary table after import */}
                             <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700 text-left space-y-2.5 text-xs">
                                 <div className="flex justify-between items-center text-slate-600 dark:text-slate-300">
                                     <span>{t('bs.totalInLabel', 'Tổng tiền vào (+):')}</span>
@@ -467,10 +467,10 @@ export const BankStatementModal = () => {
                         </div>
                     ) : (
                         <>
-                            {/* BƯỚC 1: KHUNG NHẬN DIỆN NGÂN HÀNG & LIÊN KẾT VÍ TRỪ TIỀN */}
+                            {/* STEP 1: BANK RECOGNITION & WALLET LINKING */}
                             {parsedItems.length > 0 && (
                                 <div className="space-y-3">
-                                    {/* TRƯỜNG HỢP 1: ĐÃ NHẬN DIỆN VÀ KHỚP ĐƯỢC VÍ NGÂN HÀNG CÓ SẴN */}
+                                    {/* CASE 1: BANK RECOGNIZED AND MATCHED EXISTING WALLET */}
                                     {walletMatchStatus === 'MATCHED' && detectedBank && (
                                         <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-teal-950/30 border border-emerald-300 dark:border-emerald-700/60 shadow-xs">
                                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -498,7 +498,7 @@ export const BankStatementModal = () => {
                                                     </div>
                                                 </div>
 
-                                                {/* Dropdown đổi ví nếu người dùng có nhiều tài khoản cùng ngân hàng */}
+                                                {/* Dropdown to switch wallet if user has multiple accounts at the same bank */}
                                                 <div className="sm:w-60 shrink-0">
                                                     <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">
                                                         {t('bs.changeBankWallet', 'Đổi ví ngân hàng trừ tiền:')}
@@ -519,7 +519,7 @@ export const BankStatementModal = () => {
                                         </div>
                                     )}
 
-                                    {/* TRƯỜNG HỢP 2: NHẬN DIỆN ĐƯỢC NGÂN HÀNG NHƯNG CHƯA CÓ VÍ TRONG HỆ THỐNG (YÊU CẦU TẠO VÍ) */}
+                                    {/* CASE 2: BANK RECOGNIZED BUT NO WALLET EXISTS IN SYSTEM (PROMPT CREATION) */}
                                     {walletMatchStatus === 'NOT_FOUND' && detectedBank && (
                                         <div className="p-5 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/30 border-2 border-amber-300 dark:border-amber-700 shadow-md space-y-3.5 animate-in fade-in duration-300">
                                             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3.5">
@@ -554,7 +554,7 @@ export const BankStatementModal = () => {
                                                     </div>
                                                 </div>
 
-                                                {/* Nút hành động tạo ví */}
+                                                {/* Action button to create wallet */}
                                                 <div className="flex flex-col sm:items-end gap-2 shrink-0">
                                                     <button
                                                         type="button"
@@ -574,7 +574,7 @@ export const BankStatementModal = () => {
                                                 </div>
                                             </div>
 
-                                            {/* Lựa chọn gộp ví khác nếu người dùng muốn */}
+                                            {/* Option to use existing wallet if desired */}
                                             <div className="pt-2 border-t border-amber-200/60 dark:border-amber-800/40 flex items-center justify-between flex-wrap gap-2 text-[11px] text-amber-800 dark:text-amber-300">
                                                 <span>{language === 'en' ? `* Create ${detectedBank.name} wallet or choose an existing wallet to proceed.` : `* Yêu cầu tạo ví ${detectedBank.name} hoặc chỉ định một ví sẵn có để tiếp tục nạp.`}</span>
                                                 <div className="flex items-center gap-1.5">
@@ -599,7 +599,7 @@ export const BankStatementModal = () => {
                                         </div>
                                     )}
 
-                                    {/* TRƯỜNG HỢP 3: KHÔNG NHẬN DIỆN ĐƯỢC NGÂN HÀNG CỤ THỂ TỪ FILE */}
+                                    {/* CASE 3: NO SPECIFIC BANK RECOGNIZED FROM FILE */}
                                     {walletMatchStatus === 'MANUAL' && (
                                         <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                                             <div className="flex items-center gap-2.5">
@@ -626,7 +626,7 @@ export const BankStatementModal = () => {
                                 </div>
                             )}
 
-                            {/* KHI CHƯA CHỌN FILE: HƯỚNG DẪN & NÚT TẢI FILE MẪU */}
+                            {/* BEFORE FILE SELECTION: INSTRUCTIONS & SAMPLE FILE DOWNLOAD */}
                             {parsedItems.length === 0 && (
                                 <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/30 rounded-xl border border-blue-100 dark:border-blue-900/40 text-xs">
                                     <div className="flex items-center gap-2 text-blue-900 dark:text-blue-300">
@@ -646,7 +646,7 @@ export const BankStatementModal = () => {
                                 </div>
                             )}
 
-                            {/* KHUNG KÉO THẢ / CHỌN FILE */}
+                            {/* DRAG & DROP / FILE SELECTION AREA */}
                             {parsedItems.length === 0 ? (
                                 <div
                                     onDragOver={(e) => e.preventDefault()}
@@ -686,7 +686,7 @@ export const BankStatementModal = () => {
                                 </div>
                             ) : null}
 
-                            {/* BÁO LỖI NẾU CÓ */}
+                            {/* ERROR ALERT IF ANY */}
                             {parseError && (
                                 <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 flex items-start gap-3 text-xs text-rose-800 dark:text-rose-300">
                                     <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
@@ -703,12 +703,12 @@ export const BankStatementModal = () => {
                                 </div>
                             )}
 
-                            {/* BƯỚC 2: BẢNG ĐỐI SOÁT & XEM TRƯỚC MINH BẠCH */}
+                            {/* STEP 2: RECONCILIATION TABLE & TRANSPARENT PREVIEW */}
                             {parsedItems.length > 0 && (
                                 <div className="space-y-4">
-                                    {/* 4 Thẻ thống kê cộng trừ rõ ràng */}
+                                    {/* 4 Clear summary KPI cards */}
                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                        {/* Tiền vào */}
+                                        {/* Income */}
                                         <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40">
                                             <div className="flex items-center justify-between text-emerald-700 dark:text-emerald-400 mb-1">
                                                 <span className="text-[11px] font-bold">{t('bs.totalInTitle', 'Tổng Tiền Vào (+)')}</span>
@@ -722,7 +722,7 @@ export const BankStatementModal = () => {
                                             </div>
                                         </div>
 
-                                        {/* Tiền ra */}
+                                        {/* Expense */}
                                         <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/40">
                                             <div className="flex items-center justify-between text-rose-700 dark:text-rose-400 mb-1">
                                                 <span className="text-[11px] font-bold">{t('bs.totalOutTitle', 'Tổng Tiền Ra (-)')}</span>
@@ -736,7 +736,7 @@ export const BankStatementModal = () => {
                                             </div>
                                         </div>
 
-                                        {/* Biến động ròng */}
+                                        {/* Net change */}
                                         <div className="p-3.5 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/40">
                                             <div className="flex items-center justify-between text-blue-700 dark:text-blue-400 mb-1">
                                                 <span className="text-[11px] font-bold">{t('bs.netChangeTitle', 'Biến Động Ròng')}</span>
@@ -752,7 +752,7 @@ export const BankStatementModal = () => {
                                             </div>
                                         </div>
 
-                                        {/* Số dư ví sau nạp */}
+                                        {/* Projected wallet balance */}
                                         <div className="p-3.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
                                             <div className="flex items-center justify-between text-slate-700 dark:text-slate-300 mb-1">
                                                 <span className="text-[11px] font-bold">{t('bs.balanceAfterImport', 'Số Dư Sau Nạp')}</span>
@@ -767,7 +767,7 @@ export const BankStatementModal = () => {
                                         </div>
                                     </div>
 
-                                    {/* Cảnh báo trùng lặp (nếu có) */}
+                                    {/* Duplicate warning (if any) */}
                                     {duplicateCount > 0 && (
                                         <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 flex items-center justify-between flex-wrap gap-2 text-xs">
                                             <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300">
@@ -786,7 +786,7 @@ export const BankStatementModal = () => {
                                         </div>
                                     )}
 
-                                    {/* Tùy chọn khớp số dư nếu sao kê có số dư cuối */}
+                                    {/* Reconcile closing balance option if detected */}
                                     {detectedClosingBalance !== null && (
                                         <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
                                             <div className="flex items-center gap-2">
@@ -822,7 +822,7 @@ export const BankStatementModal = () => {
                                         </div>
                                     )}
 
-                                    {/* THANH ĐIỀU HƯỚNG VÀ LỌC BẢNG */}
+                                    {/* TABLE NAVIGATION & FILTER BAR */}
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
                                         {/* Tabs */}
                                         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 text-xs">
@@ -874,7 +874,7 @@ export const BankStatementModal = () => {
                                             )}
                                         </div>
 
-                                        {/* Tìm kiếm nhanh */}
+                                        {/* Quick search */}
                                         <div className="flex items-center gap-2">
                                             <input
                                                 type="text"
@@ -894,7 +894,7 @@ export const BankStatementModal = () => {
                                         </div>
                                     </div>
 
-                                    {/* BẢNG CHI TIẾT GIAO DỊCH */}
+                                    {/* DETAILED TRANSACTION TABLE */}
                                     <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-xs">
                                         <div className="max-h-72 overflow-y-auto">
                                             <table className="w-full text-left text-xs border-collapse">
@@ -940,12 +940,12 @@ export const BankStatementModal = () => {
                                                                     />
                                                                 </td>
 
-                                                                {/* Ngày */}
+                                                                {/* Date */}
                                                                 <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 font-medium">
                                                                     {formatDate(item.date, 'short', language)}
                                                                 </td>
 
-                                                                {/* Loại GD */}
+                                                                {/* Transaction Type */}
                                                                 <td className="p-3 whitespace-nowrap">
                                                                     <span
                                                                         className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -963,7 +963,7 @@ export const BankStatementModal = () => {
                                                                     </span>
                                                                 </td>
 
-                                                                {/* Số tiền */}
+                                                                {/* Amount */}
                                                                 <td
                                                                     className={`p-3 whitespace-nowrap text-right font-bold ${
                                                                         item.type === 'INCOME'
@@ -974,7 +974,7 @@ export const BankStatementModal = () => {
                                                                     {item.type === 'INCOME' ? '+' : '-'}{formatCurrency(item.amount, language)}
                                                                 </td>
 
-                                                                {/* Danh mục */}
+                                                                {/* Category */}
                                                                 <td className="p-3">
                                                                     <select
                                                                         value={item.categoryId}
@@ -991,7 +991,7 @@ export const BankStatementModal = () => {
                                                                     </select>
                                                                 </td>
 
-                                                                {/* Nội dung chi tiết */}
+                                                                {/* Detailed description */}
                                                                 <td className="p-3">
                                                                     <div className="flex items-center gap-1.5">
                                                                         <span className="text-slate-800 dark:text-slate-200 font-normal line-clamp-1" title={item.note}>
@@ -1071,7 +1071,7 @@ export const BankStatementModal = () => {
                     </div>
                 )}
 
-                {/* MODAL NHỎ: TÙY CHỈNH THÔNG TIN TẠO VÍ NGÂN HÀNG MỚI */}
+                {/* MODAL: CUSTOMIZE NEW BANK WALLET DETAILS */}
                 {showCreateWalletModal && detectedBank && (
                     <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
                         <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-4">

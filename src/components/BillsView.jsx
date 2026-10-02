@@ -23,7 +23,7 @@ export const BillsView = () => {
     const [billToPay, setBillToPay] = useState(null);
     const [payWalletId, setPayWalletId] = useState(wallets[0]?.id || '');
     const [payDate, setPayDate] = useState(getLocalDateString());
-    // Auto-scroll and auto-open Pay Modal from Trung tâm Cảnh báo
+    // Auto-scroll and auto-open Pay Modal from Alert Center
     useEffect(() => {
         if (navTargetBillId) {
             setTimeout(() => {
@@ -46,7 +46,7 @@ export const BillsView = () => {
             setBillToAutoPayId(null);
         }
     }, [billToAutoPayId, bills, wallets, setBillToAutoPayId]);
-    // Ví mặc định khi thanh toán: ví gắn với hóa đơn, nếu không có thì ví tài sản đầu tiên
+    // Default payment wallet: wallet attached to the bill, or first asset wallet
     const getDefaultPayWalletId = (bill) => {
         if (bill?.walletId && wallets.some((w) => w.id === bill.walletId))
             return bill.walletId;
@@ -101,8 +101,8 @@ export const BillsView = () => {
             note: billNote,
             reminderDaysBefore: Number(billReminderDays) || 3,
         };
-        // Trạng thái PAID chỉ được đặt bởi payBill (sau khi giao dịch chi phí ghi thành công),
-        // không bao giờ ghi thẳng từ form để tránh "đã trả" mà ví không bị trừ tiền.
+        // PAID status is only set by payBill (after expense transaction is recorded successfully),
+        // never written directly from form to avoid marked as "paid" without wallet deduction.
         let savedBill;
         if (editingBill) {
             savedBill = { ...editingBill, ...fields };
@@ -120,7 +120,7 @@ export const BillsView = () => {
         if (wantsPaid && !wasAlreadyPaid && savedBill) {
             const ok = payBill(savedBill, billPayWalletId || wallets[0]?.id, billLastPaidDate || getLocalDateString());
             if (!ok) {
-                // Hóa đơn đã được lưu (chưa thanh toán); giữ modal mở để người dùng chọn ví khác
+                // Bill is saved (unpaid); keep modal open so user can select another wallet
                 if (!editingBill)
                     setEditingBill(savedBill);
                 return;
@@ -129,7 +129,7 @@ export const BillsView = () => {
         setBillModalOpen(false);
         setEditingBill(null);
     };
-    // Đặt lại hóa đơn về chưa thanh toán, hỏi có hoàn tiền (xóa giao dịch thanh toán) hay không
+    // Reset bill to unpaid, prompt whether to refund (delete payment transaction)
     const handleResetBill = (bill) => {
         const paymentTx = findBillPaymentTx(bill);
         if (!paymentTx) {
@@ -153,7 +153,7 @@ export const BillsView = () => {
             return;
         const ok = payBill(billToPay.id, payWalletId, payDate || getLocalDateString());
         if (!ok)
-            return; // giữ modal để người dùng chọn ví / ngày khác
+            return; // Keep modal open for user to choose a different wallet/date
         setPayModalOpen(false);
         setBillToPay(null);
     };

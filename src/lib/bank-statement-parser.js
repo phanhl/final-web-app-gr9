@@ -1,7 +1,7 @@
 import * as XLSX from 'xlsx';
 
 /**
- * Danh sách cấu hình các ngân hàng phổ biến tại Việt Nam để tự động nhận diện sao kê
+ * Configuration list of popular banks in Vietnam for automatic statement recognition
  */
 export const SUPPORTED_BANKS = [
     {
@@ -133,13 +133,13 @@ export const SUPPORTED_BANKS = [
 ];
 
 /**
- * Tự động phân biệt ngân hàng và số tài khoản từ tiêu đề, nội dung bảng tính và tên file
+ * Automatically identify bank and account number from header, sheet content, and file name
  */
 export function detectBankAndAccount(file, rows = [], workbook = null) {
     const rawFileName = file?.name || '';
     const normFileName = normalizeText(rawFileName);
 
-    // Thu thập các dòng đầu file (tiêu đề, thông tin đơn vị phát hành)
+    // Collect header rows (title, issuer information)
     const headerLines = [];
     const scanLimit = Math.min(rows.length, 35);
     for (let i = 0; i < scanLimit; i++) {
@@ -157,7 +157,7 @@ export function detectBankAndAccount(file, rows = [], workbook = null) {
     const sheetNames = workbook?.SheetNames || [];
     const normSheetNames = normalizeText(sheetNames.join(' '));
 
-    // Điểm số nhận diện cho từng ngân hàng
+    // Bank recognition scoring
     let bestBank = null;
     let highestScore = 0;
 
@@ -168,17 +168,17 @@ export function detectBankAndAccount(file, rows = [], workbook = null) {
             const normKw = normalizeText(kw);
             if (!normKw) continue;
 
-            // 1. Khớp trong nội dung phần đầu file (điểm số cao nhất: 10)
+            // 1. Matches in file header text (highest weight: 10)
             if (normHeaderText.includes(normKw)) {
                 score += 10;
             }
 
-            // 2. Khớp trong tên sheet (điểm số: 5)
+            // 2. Matches in sheet name (weight: 5)
             if (normSheetNames.includes(normKw)) {
                 score += 5;
             }
 
-            // 3. Khớp trong tên file (điểm số: 4)
+            // 3. Matches in file name (weight: 4)
             if (normFileName.includes(normKw)) {
                 score += 4;
             }
@@ -190,17 +190,17 @@ export function detectBankAndAccount(file, rows = [], workbook = null) {
         }
     }
 
-    // Nhận diện số tài khoản từ metadata
+    // Detect account number from metadata
     let detectedAccountNumber = null;
     let detectedAccountHolder = null;
 
-    // Quét tìm số tài khoản
+    // Scan for account number
     const accMatches = fullHeaderText.match(/(?:s[oố]\s*t[aà]i\s*kho[aả]n|s[oố]\s*tk|account\s*no|acct\s*no|stk|a\/c\s*no)[\s:\.\-]+([0-9\s]{8,20})/i);
     if (accMatches && accMatches[1]) {
         detectedAccountNumber = accMatches[1].replace(/\s/g, '').trim();
     }
 
-    // Quét tìm tên chủ tài khoản
+    // Scan for account holder name
     const nameMatches = fullHeaderText.match(/(?:t[eê]n\s*ch[uủ]\s*t[aà]i\s*kho[aả]n|ch[uủ]\s*tk|t[eê]n\s*kh[aá]ch\s*h[aà]ng|account\s*name|customer\s*name)[\s:\.\-]+([^\n\r,;]{3,50})/i);
     if (nameMatches && nameMatches[1]) {
         detectedAccountHolder = nameMatches[1].trim();
@@ -215,8 +215,8 @@ export function detectBankAndAccount(file, rows = [], workbook = null) {
 }
 
 /**
- * Các từ khóa nhận diện cột trong bảng sao kê ngân hàng
- * Sắp xếp từ cụm từ dài/chính xác đến từ ngắn để tránh khớp nhầm
+ * Keywords for identifying columns in bank statements
+ * Ordered from specific/longer phrases to shorter ones to avoid false matches
  */
 const COLUMN_PATTERNS = {
     ref: [
@@ -260,7 +260,7 @@ const COLUMN_PATTERNS = {
 };
 
 /**
- * Chuẩn hóa chuỗi để so sánh (bỏ dấu tiếng Việt, viết thường)
+ * Normalize string for comparison (strip Vietnamese diacritics, convert to lowercase)
  */
 function normalizeText(text) {
     if (!text) return '';
@@ -274,39 +274,39 @@ function normalizeText(text) {
 }
 
 /**
- * Làm sạch và chuyển đổi chuỗi số tiền thành number
+ * Sanitize and parse amount string into a number
  */
 export function parseAmount(val) {
     if (val === null || val === undefined || val === '') return 0;
     if (typeof val === 'number') return Math.abs(val);
 
     const rawStr = String(val).trim();
-    // Bỏ qua nếu là mã tham chiếu giao dịch (ví dụ: FT26184278254010, REF123456)
+    // Ignore if transaction reference code (e.g. FT26184278254010, REF123456)
     if (/^[A-Z]{2,}\d{6,}/i.test(rawStr) || /^[A-Z]+\d+[A-Z\d\\]+$/i.test(rawStr)) {
         return 0;
     }
 
     let str = rawStr;
-    // Bỏ đơn vị tiền tệ, chữ cái, dấu ngoặc và khoảng trắng thừa
+    // Strip currency symbols, letters, parentheses, and excessive whitespace
     str = str.replace(/[₫đVNDusd$\(\)]/gi, '').trim();
 
-    // Nếu có cả dấu chấm và phẩy (ví dụ: 1.250.000,00 hoặc 1,250,000.00)
+    // If both dot and comma are present (e.g., 1.250.000,00 or 1,250,000.00)
     if (str.includes('.') && str.includes(',')) {
         if (str.lastIndexOf(',') > str.lastIndexOf('.')) {
-            // Định dạng châu Âu/VN: 1.250.000,00 -> bỏ chấm, phẩy thành chấm
+            // European/Vietnamese format: 1.250.000,00 -> strip dots, convert comma to dot
             str = str.replace(/\./g, '').replace(',', '.');
         } else {
-            // Định dạng Mỹ: 1,250,000.00 -> bỏ phẩy
+            // US format: 1,250,000.00 -> strip commas
             str = str.replace(/,/g, '');
         }
     } else if (str.includes('.')) {
-        // Chỉ có dấu chấm: nếu có nhiều hơn 1 dấu chấm (1.250.000) hoặc kết thúc bằng .xxx
+        // Dot only: multiple dots (1.250.000) or ends with 3-digit thousand block (.xxx)
         const dotCount = (str.match(/\./g) || []).length;
         if (dotCount > 1 || /\.\d{3}$/.test(str)) {
             str = str.replace(/\./g, '');
         }
     } else if (str.includes(',')) {
-        // Chỉ có dấu phẩy: nếu có nhiều hơn 1 dấu phẩy (1,250,000) hoặc kết thúc bằng ,xxx
+        // Comma only: multiple commas (1,250,000) or ends with 3-digit thousand block (,xxx)
         const commaCount = (str.match(/,/g) || []).length;
         if (commaCount > 1 || /,\d{3}$/.test(str)) {
             str = str.replace(/,/g, '');
@@ -315,7 +315,7 @@ export function parseAmount(val) {
         }
     }
 
-    // Bỏ tất cả ký tự không phải số hoặc dấu chấm
+    // Strip all non-numeric characters except decimal dot
     str = str.replace(/[^\d.]/g, '');
     const num = parseFloat(str);
     if (isNaN(num)) return 0;
@@ -323,12 +323,12 @@ export function parseAmount(val) {
 }
 
 /**
- * Chuẩn hóa ngày giao dịch thành định dạng ISO (YYYY-MM-DDTHH:mm:ss)
+ * Normalize transaction date to ISO format (YYYY-MM-DDTHH:mm:ss)
  */
 export function parseDate(val) {
     if (!val) return null;
 
-    // Trường hợp ngày của Excel (serial number)
+    // Excel date serial number handling
     if (typeof val === 'number') {
         const dateObj = XLSX.SSF.parse_date_code(val);
         if (dateObj) {
@@ -345,7 +345,7 @@ export function parseDate(val) {
 
     const str = String(val).trim();
 
-    // Regex DD/MM/YYYY hoặc DD-MM-YYYY (kèm giờ phút giây nếu có)
+    // Regex DD/MM/YYYY or DD-MM-YYYY (with optional time)
     const dmyMatch = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
     if (dmyMatch) {
         const day = dmyMatch[1].padStart(2, '0');
@@ -357,7 +357,7 @@ export function parseDate(val) {
         return `${year}-${month}-${day}T${hour}:${min}:${sec}`;
     }
 
-    // Regex YYYY/MM/DD hoặc YYYY-MM-DD
+    // Regex YYYY/MM/DD or YYYY-MM-DD
     const ymdMatch = str.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
     if (ymdMatch) {
         const year = ymdMatch[1];
@@ -384,7 +384,7 @@ function toLocalIso(d) {
 }
 
 /**
- * Tự động gán danh mục và tags dựa trên từ khóa nội dung sao kê
+ * Automatically assign category and tags based on statement narrative keywords
  */
 export function detectCategoryAndTags(note, type, categories = []) {
     const clean = normalizeText(note);
@@ -453,8 +453,8 @@ export function detectCategoryAndTags(note, type, categories = []) {
 }
 
 /**
- * Tìm kiếm hàng tiêu đề của bảng sao kê
- * Hỗ trợ quét sâu tới 100 hàng (đáp ứng các sao kê ngân hàng có phần giới thiệu dài như Techcombank)
+ * Locate statement table header row
+ * Scans up to 100 rows deep to support statements with long introductory preambles (e.g., Techcombank)
  */
 function findHeaderRow(rows) {
     let bestRowIdx = -1;
@@ -492,7 +492,7 @@ function findHeaderRow(rows) {
             }
         });
 
-        // Hàng hợp lệ phải có ít nhất Date VÀ (Debit/Credit HOẶC Amount)
+        // Valid row requires at least Date AND (Debit/Credit OR Amount)
         const hasDate = mapping.date !== undefined;
         const hasAmount = mapping.amount !== undefined || (mapping.debit !== undefined || mapping.credit !== undefined);
 
@@ -507,7 +507,7 @@ function findHeaderRow(rows) {
 }
 
 /**
- * Đọc và phân tích file sao kê ngân hàng (Excel hoặc CSV)
+ * Read and parse bank statement file (Excel or CSV)
  */
 export async function parseBankStatementFile(file, categories = []) {
     return new Promise((resolve, reject) => {
@@ -517,14 +517,14 @@ export async function parseBankStatementFile(file, categories = []) {
             try {
                 const data = new Uint8Array(e.target.result);
                 const isCsv = /\.(csv|txt)$/i.test(file.name || '') || /csv|text\/plain/i.test(file.type || '');
-                // - Excel: đọc giá trị thô -> ô ngày là số serial, tự chuyển chính xác (không bị format 'm/d/yy' kiểu Mỹ)
-                // - CSV: raw: true để SheetJS KHÔNG tự đoán ngày theo kiểu Mỹ (01/09 -> 9 tháng 1)
-                // - CSV tự decode UTF-8 (SheetJS mặc định đọc như Latin-1 -> lỗi font tiếng Việt)
+                // - Excel: read raw values -> date cells as serial numbers, parsed accurately without US m/d/yy format
+                // - CSV: raw: true to prevent SheetJS from guessing US date formats (01/09 -> Jan 9)
+                // - CSV: manual UTF-8 decoding (SheetJS defaults to Latin-1 causing font corruption)
                 const workbook = isCsv
                     ? XLSX.read(new TextDecoder('utf-8').decode(data).replace(/^\uFEFF/, ''), { type: 'string', raw: true })
                     : XLSX.read(data, { type: 'array' });
 
-                // Quét tất cả sheet, lấy sheet đầu tiên tìm được hàng tiêu đề hợp lệ
+                // Scan all sheets, select first sheet with valid header row
                 let rows = [];
                 let headerRowIdx = -1;
                 let columnMapping = null;
@@ -551,25 +551,25 @@ export async function parseBankStatementFile(file, categories = []) {
                 const parsedTransactions = [];
                 let footerClosingBalance = null;
 
-                // Duyệt qua các hàng dữ liệu từ sau hàng tiêu đề
+                // Iterate through data rows following the header
                 for (let i = headerRowIdx + 1; i < rows.length; i++) {
                     const row = rows[i];
                     if (!Array.isArray(row) || row.length === 0) continue;
 
-                    // Kiểm tra hàng trống
+                    // Check for empty row
                     const hasAnyContent = row.some(cell => cell !== '' && cell !== null && cell !== undefined);
                     if (!hasAnyContent) continue;
 
                     const normRowText = normalizeText(row.join(' '));
 
-                    // Dòng số dư cuối kỳ ở chân sao kê -> đây là nguồn số dư cuối đáng tin nhất
+                    // Footer closing balance row -> most reliable closing balance source
                     if (normRowText.includes('so du cuoi ky') || normRowText.includes('ending balance') || normRowText.includes('closing balance')) {
                         const amounts = row.map(parseAmount).filter(a => a > 0);
                         if (amounts.length > 0) footerClosingBalance = amounts[amounts.length - 1];
                         continue;
                     }
 
-                    // Bỏ qua các dòng chú thích, chân trang in ấn, tổng kết
+                    // Skip footnotes, print footers, and summary volume rows
                     if (
                         normRowText.includes('so du dau ky') ||
                         normRowText.includes('opening balance') ||
@@ -582,18 +582,18 @@ export async function parseBankStatementFile(file, categories = []) {
                         continue;
                     }
 
-                    // Lấy Ngày
+                    // Extract Date
                     const rawDate = columnMapping.date !== undefined ? row[columnMapping.date] : null;
                     const rawDateStr = String(rawDate || '').trim();
 
-                    // Xác thực ngày hợp lệ (bỏ qua dòng không phải giao dịch)
+                    // Validate date (skip non-transaction rows)
                     const isValidDate = /^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}/.test(rawDateStr) ||
                                         /^\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}/.test(rawDateStr) ||
                                         (typeof rawDate === 'number' && rawDate > 30000);
 
                     if (!isValidDate) continue;
 
-                    // Lấy Nội dung & Đối tác
+                    // Extract Description & Counterparty
                     let note = columnMapping.note !== undefined ? String(row[columnMapping.note] || '').trim() : '';
                     const partner = columnMapping.partner !== undefined ? String(row[columnMapping.partner] || '').trim() : '';
                     if (partner && !note.toLowerCase().includes(partner.toLowerCase())) {
@@ -603,11 +603,11 @@ export async function parseBankStatementFile(file, categories = []) {
                         note = 'Giao dịch ngân hàng';
                     }
 
-                    // Xác định loại (Thu / Chi) và Số tiền
+                    // Determine type (Income / Expense) and Amount
                     let type = 'EXPENSE';
                     let amount = 0;
 
-                    // Trường hợp 1: Có cột Debit (tiền ra) và Credit (tiền vào) riêng biệt
+                    // Case 1: Separate Debit (outflow) and Credit (inflow) columns
                     if (columnMapping.debit !== undefined || columnMapping.credit !== undefined) {
                         const debitVal = columnMapping.debit !== undefined ? parseAmount(row[columnMapping.debit]) : 0;
                         const creditVal = columnMapping.credit !== undefined ? parseAmount(row[columnMapping.credit]) : 0;
@@ -619,7 +619,7 @@ export async function parseBankStatementFile(file, categories = []) {
                             type = 'EXPENSE';
                             amount = debitVal;
                         } else if (columnMapping.amount !== undefined) {
-                            // Dự phòng cột Amount
+                            // Fallback to Amount column
                             const rawAmt = row[columnMapping.amount];
                             const amt = parseAmount(rawAmt);
                             if (amt > 0) {
@@ -630,7 +630,7 @@ export async function parseBankStatementFile(file, categories = []) {
                             }
                         }
                     } else if (columnMapping.amount !== undefined) {
-                        // Trường hợp 2: Chỉ có 1 cột Amount
+                        // Case 2: Single Amount column
                         const rawAmt = row[columnMapping.amount];
                         amount = parseAmount(rawAmt);
 
@@ -648,7 +648,7 @@ export async function parseBankStatementFile(file, categories = []) {
                             } else if (amtStr.startsWith('-') || (amtStr.startsWith('(') && amtStr.endsWith(')'))) {
                                 type = 'EXPENSE';
                             } else {
-                                // Nếu số dương không dấu, suy đoán theo từ khóa nội dung
+                                // If unsigned positive amount, infer type from description keywords
                                 if (/luong|thuong|nap tien|chuyen tien den|nhan tien/i.test(normalizeText(note))) {
                                     type = 'INCOME';
                                 } else {
@@ -658,10 +658,10 @@ export async function parseBankStatementFile(file, categories = []) {
                         }
                     }
 
-                    // Bỏ qua dòng có số tiền = 0
+                    // Skip rows with zero amount
                     if (amount <= 0) continue;
 
-                    // Lấy số dư (nếu có)
+                    // Extract balance (if available)
                     let rowBalance = null;
                     if (columnMapping.balance !== undefined && row[columnMapping.balance] !== '' && row[columnMapping.balance] !== null) {
                         rowBalance = parseAmount(row[columnMapping.balance]);
@@ -692,8 +692,7 @@ export async function parseBankStatementFile(file, categories = []) {
                     throw new Error('Không đọc được giao dịch hợp lệ nào từ tệp. Vui lòng kiểm tra lại định dạng tệp sao kê.');
                 }
 
-                // Số dư cuối kỳ: ưu tiên dòng "số dư cuối kỳ"; nếu không có thì lấy số dư sau GD của
-                // giao dịch MỚI NHẤT (sao kê có thể xếp tăng dần hoặc giảm dần theo ngày)
+                // Closing balance: prefer explicit footer closing balance; otherwise use balance of newest transaction (statements can be ascending or descending)
                 let detectedClosingBalance = footerClosingBalance;
                 if (detectedClosingBalance === null) {
                     const withBalance = parsedTransactions.filter(t => t.balanceAfter !== null);
@@ -705,7 +704,7 @@ export async function parseBankStatementFile(file, categories = []) {
                     }
                 }
 
-                // Nhận diện ngân hàng và thông tin tài khoản từ file
+                // Detect bank and account information from file
                 const bankInfo = detectBankAndAccount(file, rows, workbook);
 
                 resolve({
@@ -726,18 +725,18 @@ export async function parseBankStatementFile(file, categories = []) {
             reject(new Error('Không thể đọc file'));
         };
 
-        // Đọc dưới dạng ArrayBuffer cho độ tương thích nhị phân cao nhất
+        // Read as ArrayBuffer for maximum binary format compatibility
         reader.readAsArrayBuffer(file);
     });
 }
 
 /**
- * Kiểm tra và đánh dấu giao dịch trùng lặp so với dữ liệu hiện có
+ * Check and flag duplicate transactions against existing records
  */
 function toDateKey(dateStr) {
     if (!dateStr) return '';
     const s = String(dateStr);
-    // Chuỗi có múi giờ (Z / +07:00) -> quy về ngày theo giờ địa phương
+    // Timestamp with timezone offset -> normalize to local date string
     if (s.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(s)) {
         const d = new Date(s);
         if (!isNaN(d.getTime())) return toLocalIso(d).slice(0, 10);
@@ -758,14 +757,14 @@ export function checkDuplicates(parsedTransactions, existingTransactions = [], t
             const exType = existing.type;
             const exNoteNorm = normalizeText(existing.note || '');
 
-            // Nếu chỉ định ví cụ thể thì chỉ so khớp ví đó
+            // If target wallet is specified, only match against that wallet
             if (targetWalletId && existing.walletId && existing.walletId !== targetWalletId) {
                 return false;
             }
 
-            // Trùng khi cùng ngày, cùng số tiền, cùng loại Thu/Chi
+            // Duplicate when matching date, amount, and Income/Expense type
             if (exDateStr === itemDateStr && Math.abs(exAmount - itemAmount) < 1 && exType === itemType) {
-                // Nếu nội dung tương đồng hoặc ngắn
+                // If descriptions are similar or empty
                 if (!exNoteNorm || !itemNoteNorm) {
                     return exNoteNorm === itemNoteNorm;
                 }
@@ -780,13 +779,13 @@ export function checkDuplicates(parsedTransactions, existingTransactions = [], t
             ...item,
             isDuplicate: isDup,
             duplicateReason: isDup ? 'Đã có giao dịch trùng ngày, số tiền và nội dung trong hệ thống' : '',
-            selected: !isDup, // Mặc định bỏ chọn giao dịch trùng lặp để tránh nhầm lẫn!
+            selected: !isDup, // Deselect duplicates by default to prevent accidental imports
         };
     });
 }
 
 /**
- * Tạo và tải xuống file Excel mẫu sao kê chuẩn Techcombank với thông tin tài khoản
+ * Generate and download standard sample Techcombank statement Excel template
  */
 export function downloadSampleStatementTemplate() {
     const wb = XLSX.utils.book_new();
@@ -810,13 +809,13 @@ export function downloadSampleStatementTemplate() {
 
     const ws = XLSX.utils.aoa_to_sheet(sampleRows);
 
-    // Căn chỉnh độ rộng cột cho đẹp mắt
+    // Column widths formatting
     ws['!cols'] = [
-        { wch: 18 }, // Ngày
-        { wch: 45 }, // Nội dung
-        { wch: 20 }, // Tiền ra
-        { wch: 20 }, // Tiền vào
-        { wch: 20 }, // Số dư
+        { wch: 18 }, // Date
+        { wch: 45 }, // Description
+        { wch: 20 }, // Debit
+        { wch: 20 }, // Credit
+        { wch: 20 }, // Balance
     ];
 
     XLSX.utils.book_append_sheet(wb, ws, 'Sao_Ke_Techcombank');

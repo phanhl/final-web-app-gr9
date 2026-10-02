@@ -30,7 +30,7 @@ export const BudgetsView = () => {
     const [depositWalletId, setDepositWalletId] = useState(wallets[0]?.id || '');
     const [depositNote, setDepositNote] = useState('');
     const [isDepositMode, setIsDepositMode] = useState(true); // true = deposit, false = withdraw
-    // Respond to deep-link navigation from Trung tâm Cảnh báo
+    // Respond to deep-link navigation from Alert Center
     useEffect(() => {
         if (navTargetBudgetId) {
             setActiveSubTab('CATEGORY_BUDGETS');
@@ -127,7 +127,7 @@ export const BudgetsView = () => {
         }
         if (isDepositMode) {
             if (!depositToGoal(selectedGoal.id, amountNum, depositWalletId, depositNote))
-                return; // giao dịch bị từ chối (không đủ số dư...) -> giữ modal
+                return; // Transaction rejected (insufficient funds...) -> keep modal open
             // If goal reaches 100%, trigger celebration!
             if (selectedGoal.currentAmount + amountNum >= selectedGoal.targetAmount) {
                 try {
@@ -208,7 +208,7 @@ export const BudgetsView = () => {
       </div>
 
       {/* ========================================================================= */}
-      {/* SUB-TAB 1: HẠN MỨC DANH MỤC & CẢNH BÁO 80% / 100% */}
+      {/* SUB-TAB 1: CATEGORY BUDGET LIMITS & 80% / 100% ALERTS */}
       {/* ========================================================================= */}
       {activeSubTab === 'CATEGORY_BUDGETS' && (<div className="space-y-6">
           {/* Summary KPI Cards */}
@@ -662,7 +662,7 @@ export const BudgetsView = () => {
         </div>)}
 
       {/* ========================================================================= */}
-      {/* SUB-TAB 3: HŨ TIẾT KIỆM & MỤC TIÊU TÍCH LŨY (SAVINGS GOALS) */}
+      {/* SUB-TAB 3: SAVINGS POTS & ACCUMULATION GOALS (SAVINGS GOALS) */}
       {/* ========================================================================= */}
       {activeSubTab === 'SAVINGS_GOALS' && (<div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

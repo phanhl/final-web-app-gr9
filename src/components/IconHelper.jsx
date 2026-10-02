@@ -35,7 +35,7 @@ export const IconHelper = ({ name, className = 'w-5 h-5', size = 20 }) => {
     const IconComponent = iconMap[name] || CircleDot;
     return <IconComponent className={className} size={size}/>;
 };
-// Tên hiển thị của biểu tượng (dùng cho tooltip / trợ năng khi chọn icon)
+// Display name of icon (used for tooltip / accessibility when picking an icon)
 export const ICON_LABELS = {
     Utensils: { vi: 'Ăn uống', en: 'Food & Dining' },
     ShoppingBag: { vi: 'Mua sắm', en: 'Shopping' },

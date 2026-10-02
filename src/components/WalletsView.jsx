@@ -24,7 +24,7 @@ export const WalletsView = () => {
     const [walletCreditLimit, setWalletCreditLimit] = useState('');
     const [walletInterestRate, setWalletInterestRate] = useState('');
     const [walletColor, setWalletColor] = useState('#0ea5e9');
-    // Thanh toán dư nợ thẻ tín dụng
+    // Credit card balance payment
     const [payCardOpen, setPayCardOpen] = useState(false);
     const [payCardFromId, setPayCardFromId] = useState('');
     const [payCardAmount, setPayCardAmount] = useState('');
@@ -565,7 +565,7 @@ export const WalletsView = () => {
               </div>
             </div>
 
-            {/* Nhóm 3: {t('wallets.creditWallets', 'Thẻ tín dụng')} */}
+            {/* Group 3: Credit Cards */}
             <div>
               <div className="mb-3">
                 <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">

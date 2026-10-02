@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 export default function NotFound() {
-    // Trang 404 nằm ngoài AppProvider nên đọc ngôn ngữ trực tiếp từ localStorage
+    // The 404 page is outside AppProvider, so language is read directly from localStorage
     const [lang, setLang] = useState('vi');
     useEffect(() => {
         try {

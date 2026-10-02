@@ -12,12 +12,12 @@ import {
 } from '@/lib/auth-server';
 
 let inMemoryData = null;
-// Chuỗi promise tuần tự hóa các thao tác ghi để 2 request POST không ghi xen kẽ vào cùng 1 file
+// Promise chain to serialize write operations so concurrent POST requests do not interleave into the same file
 let writeQueue = Promise.resolve();
 let lastCorruptBackup = { fingerprint: '', path: '' };
 const MAX_PAYLOAD_BYTES = 20 * 1024 * 1024;
 const ARRAY_FIELDS = ['wallets', 'transactions', 'categories', 'budgets', 'bills', 'goals'];
-// Chỉ lưu các trường dữ liệu đã biết; trường lạ từ client (isReset, security...) bị bỏ qua
+// Only persist recognized data fields; unknown client fields (isReset, security...) are ignored
 const DATA_FIELDS = [...ARRAY_FIELDS, 'planner', 'currentMonth', 'userProfile', 'simulatorConfig'];
 const PIN_PATTERN = /^\d{4,8}$/;
 const NO_CACHE_HEADERS = {
@@ -71,7 +71,7 @@ function getDefaultData() {
     };
 }
 /**
- * Ghi file nguyên tử: ghi ra file tạm rồi rename, tránh để lại database.json bị cắt dở khi tiến trình chết giữa chừng
+ * Atomic file write: write to temporary file then rename, preventing truncated files if process aborts
  */
 async function atomicWriteJSON(filePath, data) {
     await fs.mkdir(path.dirname(filePath), { recursive: true });
@@ -85,7 +85,7 @@ async function persist(filePath, data) {
         inMemoryData = null;
     }
     catch (fsErr) {
-        // Chỉ chấp nhận lưu tạm trong RAM trên môi trường không có ổ đĩa ghi được (Vercel)
+        // Fallback to in-memory storage only on read-only serverless filesystems (e.g., Vercel)
         if (!process.env.VERCEL)
             throw fsErr;
         console.warn('Filesystem write not available, keeping in memory:', fsErr);
@@ -93,8 +93,8 @@ async function persist(filePath, data) {
     }
 }
 /**
- * Đọc DB theo target. Trả về null nếu file chưa tồn tại.
- * Nếu file tồn tại nhưng hỏng -> ném lỗi (KHÔNG ghi đè, để còn khôi phục thủ công).
+ * Read DB according to target. Returns null if file does not exist.
+ * Throws on corrupt file (DO NOT overwrite, to allow manual recovery).
  */
 async function readDatabase(target) {
     const filePath = target.filePath;
@@ -117,8 +117,8 @@ async function readDatabase(target) {
         return JSON.parse(content);
     }
     catch (parseErr) {
-        // Sao lưu bản hỏng để có thể cứu dữ liệu, tuyệt đối không ghi đè bằng dữ liệu mẫu.
-        // Mỗi phiên bản file hỏng chỉ sao lưu 1 lần (client poll liên tục).
+        // Back up corrupt file to preserve data, never overwrite with template data.
+        // Back up each corrupt version only once during client polling.
         const stat = await fs.stat(filePath).catch(() => null);
         const fingerprint = `${stat?.mtimeMs}:${stat?.size}`;
         if (lastCorruptBackup.fingerprint !== fingerprint) {
@@ -271,7 +271,7 @@ function pickDataFields(source) {
     return out;
 }
 // -------------------------------------------------------------
-// PIN: lưu dạng băm scrypt + salt, so sánh constant-time, giới hạn số lần nhập sai
+// PIN: hashed using scrypt + salt, constant-time comparison, rate-limited failed attempts
 // -------------------------------------------------------------
 function hashPin(pin, salt = crypto.randomBytes(16).toString('hex')) {
     const hash = crypto.scryptSync(String(pin), salt, 32).toString('hex');
@@ -289,7 +289,7 @@ function safeEqualString(a, b) {
     const hb = crypto.createHash('sha256').update(String(b)).digest();
     return crypto.timingSafeEqual(ha, hb);
 }
-/** Chuẩn hóa phần security trong DB: chuyển PIN dạng plaintext cũ sang dạng băm */
+/** Normalize security schema in DB: migrate legacy plaintext PIN to hashed form */
 function normalizeSecurity(security) {
     const sec = security && typeof security === 'object' ? security : {};
     let { pinSalt, pinHash } = sec;
@@ -340,14 +340,14 @@ function recordFailure(ip) {
         globalFails.count++;
 }
 /**
- * Kiểm tra quyền truy cập. PIN chỉ nhận qua header x-app-pin (không nhận qua URL để không lọt vào log).
- * Trả về null nếu hợp lệ, hoặc NextResponse lỗi.
+ * Access control check. PIN is only accepted via x-app-pin header (omitted from URL to prevent log leakage).
+ * Returns null if authorized, or error NextResponse.
  */
 function checkAuth(req, currentData, user) {
     const envPin = process.env.APP_PIN;
     const sec = normalizeSecurity(currentData?.security);
 
-    // Nếu người dùng đã xác thực qua phiên làm việc (Guest hoặc Host):
+    // If user is authenticated via session (Guest or Host):
     if (user) {
         if (!sec.pinEnabled) {
             return null;
@@ -393,7 +393,7 @@ export async function GET(req) {
     }
     catch (error) {
         console.error('API /api/storage GET Error:', error);
-        // Không trả dữ liệu mẫu ở đây: client sẽ giữ nguyên bản local thay vì bị ghi đè bởi dữ liệu giả
+        // Do not return fallback sample data here: client retains its local state rather than being overwritten with dummy data
         return NextResponse.json({ success: false, error: error.message || 'Không đọc được dữ liệu' }, { status: 500, headers: NO_CACHE_HEADERS });
     }
 }
@@ -419,7 +419,7 @@ async function handleUpdateSecurity(req, payload, target) {
     if (next.pinEnabled && !next.pinHash) {
         return NextResponse.json({ success: false, code: 'PIN_NOT_SET', error: 'Cần đặt mã PIN trước khi bật khóa' }, { status: 400 });
     }
-    // Không đổi updatedAt: thay đổi bảo mật không phải thay đổi dữ liệu nên không gây xung đột đồng bộ
+    // Preserve updatedAt: security updates do not constitute data changes and avoid sync conflicts
     const dataToSave = { ...(current || (target.user ? getDefaultUserData(target.user.username) : getDefaultData())), security: next };
     await persist(target.filePath, dataToSave);
     return NextResponse.json({ success: true, security: publicSecurity(next) }, { headers: NO_CACHE_HEADERS });
@@ -458,16 +458,16 @@ export async function POST(req) {
             corrupt = true;
         }
         if (corrupt && !process.env.APP_PIN && req.headers.get('x-forwarded-for')) {
-            // DB hỏng -> không còn biết cấu hình PIN. Chỉ cho phép khôi phục từ máy chủ (không qua tunnel),
-            // hoặc khi PIN được đặt bằng biến môi trường APP_PIN.
+            // Corrupt DB -> PIN configuration unavailable. Only allow restoration from host machine (not via public tunnel),
+            // or when APP_PIN env var is defined.
             return NextResponse.json({ success: false, error: 'Dữ liệu bị hỏng (đã sao lưu). Hãy khôi phục từ máy chủ.' }, { status: 503 });
         }
-        // DB hỏng đã được sao lưu -> cho phép client ghi lại bản đầy đủ của mình
+        // Corrupt DB backed up -> permit client to rewrite its complete authoritative snapshot
         const authError = checkAuth(req, current, target.user);
         if (authError)
             return authError;
-        // Optimistic concurrency: client phải gửi updatedAt của bản server mà nó đang dựa vào.
-        // Nếu server đã có bản mới hơn (thiết bị khác vừa lưu) -> 409 để client tự merge rồi gửi lại.
+        // Optimistic concurrency: client must transmit baseUpdatedAt of its active server snapshot.
+        // If server is newer (another device saved) -> 409 to trigger client-side 3-way merge.
         if (current?.updatedAt && payload.baseUpdatedAt !== current.updatedAt) {
             return NextResponse.json({ success: false, conflict: true, data: toClientData(current) }, { status: 409, headers: NO_CACHE_HEADERS });
         }

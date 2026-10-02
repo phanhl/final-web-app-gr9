@@ -162,7 +162,7 @@ export function getLocalDateString(d = new Date()) {
 }
 
 /**
- * Trích xuất YYYY-MM-DD theo giờ địa phương, không bị lùi ngày do UTC
+ * Extracts YYYY-MM-DD in local time, preventing UTC date rollback.
  */
 export function toLocalDateKey(dateStr) {
     if (!dateStr) return '';
@@ -179,8 +179,8 @@ export function toLocalDateKey(dateStr) {
 }
 
 /**
- * Chuyển đổi timestamp thành định dạng YYYY-MM-DDTHH:mm cho input datetime-local
- * Giữ nguyên chính xác giờ địa phương của người dùng, không bị lệch múi giờ.
+ * Converts a timestamp into YYYY-MM-DDTHH:mm format for datetime-local inputs.
+ * Preserves user's local time without timezone shifts.
  */
 export function toLocalDateTimeInput(dateInput) {
     if (!dateInput) {
@@ -220,8 +220,8 @@ export function toLocalDateTimeInput(dateInput) {
 }
 
 /**
- * Chuẩn hóa giá trị từ input datetime-local hoặc date picker để lưu trữ theo giờ địa phương
- * Định dạng: 'YYYY-MM-DDTHH:mm:ss' (Local ISO, không gắn Z để tránh bị lùi múi giờ)
+ * Normalizes values from datetime-local input or date picker for local time storage.
+ * Format: 'YYYY-MM-DDTHH:mm:ss' (Local ISO, without trailing Z to avoid timezone shifts)
  */
 export function normalizeSaveDate(dateInput) {
     if (!dateInput) {
@@ -312,7 +312,7 @@ export function calculateFinancialSummary(wallets, transactions, monthStr = '202
     const totalSavings = wallets
         .filter((w) => w.type === 'SAVINGS')
         .reduce((sum, w) => sum + w.balance, 0);
-    // Net assets (Tổng tài sản) = Tiền mặt + Ngân hàng + Tiết kiệm - Dư nợ thẻ
+    // Net assets = Cash + Bank + Savings - Credit Card Debt
     const totalAssets = availableBalance + totalSavings - totalCreditDebt;
     // Monthly transactions - strictly up to today (no future transactions exist)
     const todayKey = getLocalDateString();
@@ -400,7 +400,7 @@ export function exportToExcel(transactions, budgets, wallets, summary, filename 
     const L = (vi, en) => (lang === 'en' ? en : vi);
     const tr = (fn, v) => (v ? fn(v, lang) : v);
     const wb = XLSX.utils.book_new();
-    // Sheet 1: Danh sách giao dịch
+    // Sheet 1: Transaction list
     const txData = transactions.map((t, idx) => ({
         [L('STT', 'No.')]: idx + 1,
         [L('Mã GD', 'Tx ID')]: t.id,
@@ -415,7 +415,7 @@ export function exportToExcel(transactions, budgets, wallets, summary, filename 
     }));
     const wsTx = XLSX.utils.json_to_sheet(txData);
     XLSX.utils.book_append_sheet(wb, wsTx, L('Sổ Giao Dịch', 'Transactions'));
-    // Sheet 2: Tổng hợp tài sản & Ví
+    // Sheet 2: Asset summary & wallets
     const walletData = wallets.map((w) => ({
         [L('Tên Ví / Tài khoản', 'Wallet / Account')]: tr(translateWalletName, w.name),
         [L('Loại ví', 'Wallet type')]: w.type === 'CASH' ? L('Tiền mặt', 'Cash') : w.type === 'BANK' ? L('Ngân hàng', 'Bank') : w.type === 'CREDIT' ? L('Thẻ tín dụng', 'Credit card') : L('Sổ tiết kiệm', 'Savings'),
@@ -426,7 +426,7 @@ export function exportToExcel(transactions, budgets, wallets, summary, filename 
     }));
     const wsWallets = XLSX.utils.json_to_sheet(walletData);
     XLSX.utils.book_append_sheet(wb, wsWallets, L('Tài Khoản & Ví', 'Accounts & Wallets'));
-    // Sheet 3: Báo cáo ngân sách
+    // Sheet 3: Budget report
     const budgetStatuses = calculateBudgetStatuses(budgets, transactions, monthStr);
     const budgetData = budgetStatuses.map((bs) => ({
         [L('Danh mục', 'Category')]: tr(translateCategory, bs.budget.categoryName),
@@ -438,7 +438,7 @@ export function exportToExcel(transactions, budgets, wallets, summary, filename 
     }));
     const wsBudgets = XLSX.utils.json_to_sheet(budgetData);
     XLSX.utils.book_append_sheet(wb, wsBudgets, L('Theo Dõi Ngân Sách', 'Budget Tracking'));
-    // Sheet 4: Chỉ số tài chính tổng quan
+    // Sheet 4: Financial KPIs summary
     const metric = L('Chỉ tiêu', 'Metric');
     const value = L('Giá trị (₫)', 'Value (₫)');
     const kpiData = [
@@ -564,11 +564,11 @@ export function formatWalletOptionLabel(wallet, language = 'vi') {
     return `${wallet.name} (${formatCurrency(wallet.balance, language)})`;
 }
 
-// Giới hạn số tiền 1 giao dịch: 999 tỷ (an toàn với Number.MAX_SAFE_INTEGER)
+// Single transaction upper bound: 999 billion (safe with Number.MAX_SAFE_INTEGER)
 export const MAX_TX_AMOUNT = 999_999_999_999;
 
 /**
- * Sinh ID duy nhất, không bị trùng khi nhiều thao tác xảy ra trong cùng 1 mili-giây
+ * Generate unique ID, avoiding collisions during sub-millisecond operations
  */
 export function generateId(prefix) {
     const rand = typeof crypto !== 'undefined' && crypto.randomUUID
@@ -578,8 +578,8 @@ export function generateId(prefix) {
 }
 
 /**
- * Ảnh hưởng của 1 giao dịch lên số dư của 1 ví (đã tính theo chiều nợ của thẻ tín dụng).
- * Ví tài sản: tăng = có thêm tiền. Thẻ tín dụng: balance là dư nợ nên chi tiêu làm tăng nợ.
+ * Calculate effect of a transaction on wallet balance (accounting for credit liability direction).
+ * Asset wallets: positive = more funds. Credit cards: balance represents liability so expenses increase debt.
  */
 export function getTxWalletDelta(tx, wallet) {
     if (!tx || !wallet)
@@ -603,7 +603,7 @@ export function getTxWalletDelta(tx, wallet) {
 }
 
 /**
- * Áp dụng (sign = 1) hoặc hoàn tác (sign = -1) 1 giao dịch lên danh sách ví
+ * Apply (sign = 1) or revert (sign = -1) a transaction against wallet list
  */
 export function applyTxToWallets(wallets, tx, sign = 1) {
     return wallets.map((w) => {
@@ -613,22 +613,22 @@ export function applyTxToWallets(wallets, tx, sign = 1) {
 }
 
 /**
- * Tổng ảnh hưởng của toàn bộ lịch sử giao dịch lên 1 ví (không tính số dư ban đầu)
+ * Total net effect of transaction history on a wallet (excluding initial balance)
  */
 export function sumWalletTxEffect(wallet, transactions) {
     return transactions.reduce((sum, tx) => sum + getTxWalletDelta(tx, wallet), 0);
 }
 
 /**
- * Tính lại số dư mọi ví = số dư ban đầu + lịch sử giao dịch
+ * Recalculate wallet balances = initial balance + cumulative transaction effect
  */
 export function recomputeWalletBalances(wallets, transactions) {
     return wallets.map((w) => ({ ...w, balance: (Number(w.initialBalance) || 0) + sumWalletTxEffect(w, transactions) }));
 }
 
 /**
- * Merge 3 chiều theo id cho 1 mảng: base = bản server mà local dựa vào, local = bản trên máy, remote = bản server mới nhất.
- * Thay đổi cục bộ (thêm/sửa/xóa so với base) được ưu tiên; các thay đổi còn lại lấy từ remote.
+ * Three-way array merge by ID: base = server base snapshot, local = client snapshot, remote = latest server snapshot.
+ * Local changes (add/edit/delete vs base) take precedence; remaining changes adopted from remote.
  */
 function mergeArrayById(base = [], local = [], remote = []) {
     const key = (x) => x?.id;
@@ -647,13 +647,13 @@ function mergeArrayById(base = [], local = [], remote = []) {
         const localChanged = inBase ? (!l || JSON.stringify(l) !== baseMap.get(id)) : !!l;
         if (localChanged) {
             if (l)
-                result.push(l); // local thêm mới hoặc sửa
-            return; // local xóa -> bỏ
+                result.push(l); // local added or modified
+            return; // local deleted -> discard
         }
         if (r)
-            result.push(r); // giữ bản remote (kể cả remote sửa); remote xóa -> bỏ
+            result.push(r); // keep remote version (including edits); remote deleted -> discard
     };
-    // Giữ thứ tự của local trước, các phần tử mới từ remote nối thêm
+    // Preserve local ordering first, append novel remote elements
     local.forEach((x) => pick(key(x)));
     remote.forEach((x) => pick(key(x)));
     base.forEach((x) => pick(key(x)));
@@ -672,13 +672,13 @@ export function mergeSnapshots(base, local, remote) {
         const localChanged = JSON.stringify(local[field]) !== JSON.stringify(safeBase[field]);
         merged[field] = localChanged ? local[field] : remote[field];
     }
-    // Số dư là dữ liệu dẫn xuất -> tính lại từ lịch sử sau khi merge để không bị cộng/trừ 2 lần
+    // Balances are derived data -> recompute from transaction history post-merge to avoid double counting
     merged.wallets = recomputeWalletBalances(merged.wallets, merged.transactions);
     return merged;
 }
 
 /**
- * Thu nhỏ ảnh chứng từ trước khi lưu (tránh làm phình DB / vượt quota localStorage)
+ * Compress receipt image before saving (prevents database bloat / quota exhaustion)
  */
 export function compressImageFile(file, maxSize = 1024, quality = 0.7) {
     return new Promise((resolve, reject) => {
@@ -703,7 +703,7 @@ export function compressImageFile(file, maxSize = 1024, quality = 0.7) {
 // -------------------------------------------------------------
 // BILL & CYCLE HELPERS (Fixes Issue 6 & 12: Cycle Reset & Month/Year boundaries)
 // -------------------------------------------------------------
-// Số tháng của 1 chu kỳ hóa đơn
+// Number of months in a bill cycle
 function billPeriodMonths(frequency) {
     const freq = String(frequency || 'MONTHLY').toUpperCase();
     if (freq === 'QUARTERLY')
@@ -712,7 +712,7 @@ function billPeriodMonths(frequency) {
         return 12;
     return 1;
 }
-// Parse 'YYYY-MM-DD' theo giờ địa phương (new Date('YYYY-MM-DD') là UTC -> lệch ngày ở múi giờ âm)
+// Parse 'YYYY-MM-DD' in local time (new Date('YYYY-MM-DD') evaluates to UTC -> offset in negative timezones)
 function parseLocalDate(value) {
     if (value instanceof Date)
         return new Date(value.getTime());
@@ -721,7 +721,7 @@ function parseLocalDate(value) {
         return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
     return new Date(value);
 }
-// Mã kỳ thanh toán: tháng / quý / năm
+// Payment cycle key: month / quarter / year
 function billPeriodKey(date, frequency) {
     const months = billPeriodMonths(frequency);
     if (months === 12)
@@ -730,7 +730,7 @@ function billPeriodKey(date, frequency) {
         return `${date.getFullYear()}-Q${Math.floor(date.getMonth() / 3)}`;
     return `${date.getFullYear()}-${date.getMonth()}`;
 }
-// Ngày đến hạn trong tháng (year, month), kẹp theo số ngày của tháng (VD: ngày 31 -> 30/28)
+// Due date clamped to days in month (e.g., day 31 -> 30/28)
 function dueDateInMonth(year, month, dueDay) {
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     return new Date(year, month, Math.min(dueDay, daysInMonth));
@@ -750,7 +750,7 @@ export function getBillDueInfo(bill, referenceDate = new Date()) {
     const dueDay = Math.min(31, Math.max(1, Number(bill?.dueDay) || 1));
     const dayMs = 1000 * 60 * 60 * 24;
     if (isBillPaidForCycle(bill, ref)) {
-        // Kỳ tiếp theo = tháng đã thanh toán + độ dài chu kỳ (1 / 3 / 12 tháng)
+        // Next cycle = paid month + cycle interval (1 / 3 / 12 months)
         const paid = parseLocalDate(bill.lastPaidDate);
         const nextDueDate = dueDateInMonth(paid.getFullYear(), paid.getMonth() + billPeriodMonths(bill.frequency), dueDay);
         return {
