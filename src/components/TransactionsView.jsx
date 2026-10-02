@@ -322,11 +322,6 @@ export const TransactionsView = () => {
           <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">
             {activeSubTab === 'LIST' ? t('tx.title', 'Sổ Giao Dịch') : t('reports.title', 'Báo Cáo Tài Chính')}
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            {activeSubTab === 'LIST'
-              ? t('tx.subtitle', 'Theo dõi dòng tiền thu chi theo dòng thời gian (Timeline) với bộ lọc chuyên sâu')
-              : t('reports.subtitle', 'Phân tích cơ cấu chi tiêu, xu hướng dòng tiền và so sánh các kỳ')}
-          </p>
         </div>
 
         <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-2xl border border-slate-200 dark:border-slate-700/80">
@@ -375,7 +370,7 @@ export const TransactionsView = () => {
 
             <button onClick={() => exportToExcel(filteredTransactions, budgets, wallets, financialSummary, undefined, currentMonth, language)} className="flex items-center space-x-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors cursor-pointer" title="Excel">
               <FileSpreadsheet className="w-4 h-4"/>
-              <span>{t('tx.exportExcel', 'Xuất Excel (.xlsx)')}</span>
+              <span>{t('tx.exportExcel', 'Xuất Excel')}</span>
             </button>
 
             <button onClick={() => openStatementModal()} className="flex items-center space-x-1.5 px-3.5 py-2 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-300 dark:border-emerald-700/60 text-emerald-700 dark:text-emerald-300 rounded-xl text-xs font-bold shadow-sm transition-colors cursor-pointer" title={t('tx.importStatementTitle', 'Tải file sao kê ngân hàng Excel / CSV để cộng trừ tự động')}>
@@ -472,11 +467,6 @@ export const TransactionsView = () => {
             <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
               <div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">{t('tx.cashflowMonthly', 'Dòng tiền Thu - Chi')}</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {selectedMonth !== 'ALL' && dailyBarChartData.length > 0
-                ? `${t('tx.dailyBreakdown', 'Diễn biến thu - chi theo ngày')} (${formatMonthLabel(selectedMonth, language)})`
-                : t('tx.cashflowSub', 'So sánh thu nhập và chi tiêu 6 tháng gần nhất')}
-                </p>
               </div>
 
               {/* Bar Chart Mode Toggle */}
@@ -565,9 +555,6 @@ export const TransactionsView = () => {
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                   {pieType === 'INCOME' ? t('tx.incomeStructure', 'Cơ cấu thu nhập') : t('tx.expenseStructure', 'Cơ cấu chi tiêu')}
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {pieType === 'INCOME' ? t('tx.incomeDistribution', 'Phân bổ tỷ trọng nguồn thu') : t('tx.expenseDistribution', 'Phân bổ tỷ trọng chi tiêu')}
-                </p>
               </div>
 
               <div className="flex items-center gap-1.5">
@@ -1291,7 +1278,7 @@ const EditTransactionModal = ({ isOpen, onClose, transaction, }) => {
           {/* Tags */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-              {t('qa.tags', 'Nhãn (Tags)')}
+              {t('qa.tags', 'Nhãn')}
             </label>
             <div className="flex flex-wrap gap-1.5">
               {POPULAR_TAGS.map((tag) => (<button key={tag} type="button" onClick={() => handleTagToggle(tag)} className={`px-3 py-1 rounded-full text-xs font-medium transition-all cursor-pointer ${tags.includes(tag)

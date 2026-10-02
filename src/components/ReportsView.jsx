@@ -198,9 +198,6 @@ export const ReportsView = () => {
           <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">
             {t('rep.reportTitle', 'Báo Cáo & Phân Tích Chuyên Sâu')}
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            {t('rep.reportSubtitle', 'Biểu đồ tròn cơ cấu chi tiêu, so sánh Thu - Chi theo thời gian, phân tích xu hướng dòng tiền & xuất báo cáo')}
-          </p>
         </div>
 
         {/* Action buttons: Excel, CSV */}
@@ -212,7 +209,7 @@ export const ReportsView = () => {
 
           <button onClick={() => exportToExcel(filteredTxs, budgets, wallets, financialSummary, undefined, currentMonth, language)} className="flex items-center space-x-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer">
             <FileSpreadsheet className="w-4 h-4"/>
-            <span>{t('rep.exportExcel', 'Xuất Excel (.xlsx)')}</span>
+            <span>{t('rep.exportExcel', 'Xuất Excel')}</span>
           </button>
         </div>
       </div>
@@ -301,7 +298,6 @@ export const ReportsView = () => {
             <p className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
               +{formatCurrency(totalIncome)}
             </p>
-            <span className="text-[11px] text-slate-400">{filteredTxs.filter((t) => t.type === 'INCOME').length} {t('rep.incomeCount', 'khoản thu')}</span>
           </div>
 
           <div>
@@ -309,7 +305,6 @@ export const ReportsView = () => {
             <p className="text-xl font-black text-rose-600 dark:text-rose-400 mt-1">
               -{formatCurrency(totalExpense)}
             </p>
-            <span className="text-[11px] text-slate-400">{filteredTxs.filter((t) => t.type === 'EXPENSE').length} {t('rep.expenseCount', 'khoản chi')}</span>
           </div>
 
           <div>
@@ -318,7 +313,6 @@ export const ReportsView = () => {
               {netSavings >= 0 ? '+' : ''}
               {formatCurrency(netSavings)}
             </p>
-            <span className="text-[11px] text-slate-400">{t('rep.netCashflow', 'Dòng tiền ròng')}</span>
           </div>
 
           <div>
@@ -326,7 +320,6 @@ export const ReportsView = () => {
             <p className="text-xl font-black text-indigo-600 dark:text-indigo-400 mt-1">
               {savingsRate}%
             </p>
-            <span className="text-[11px] text-slate-400">{t('rep.ofTotalIncome', 'Trên tổng thu nhập')}</span>
           </div>
         </div>
       </div>

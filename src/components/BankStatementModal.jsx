@@ -396,9 +396,6 @@ export const BankStatementModal = () => {
                                     Excel / CSV
                                 </span>
                             </h2>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">
-                                {t('bs.modalSubtitle', 'Nhận diện dòng tiền vào/ra, cộng trừ minh bạch và kiểm tra chống trùng lặp.')}
-                            </p>
                         </div>
                     </div>
                     <button

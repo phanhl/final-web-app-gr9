@@ -598,7 +598,11 @@ export const Navigation = () => {
                     <div className="flex items-center justify-center gap-2 mt-1 flex-wrap">
                       <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                         <Shield className="w-3 h-3"/>
-                        {!userProfile.role || userProfile.role === 'Chủ tài khoản (Owner)' ? t('profile.ownerRole', 'Chủ tài khoản') : userProfile.role}
+                        {!userProfile.role || userProfile.role.includes('Chủ tài khoản') || userProfile.role.includes('Owner')
+                          ? t('profile.ownerRole', 'Chủ tài khoản')
+                          : userProfile.role.includes('Khách') || userProfile.role.includes('Guest')
+                            ? t('profile.guestRole', 'Khách')
+                            : userProfile.role}
                       </span>
                       <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
                         <Crown className="w-3 h-3"/>

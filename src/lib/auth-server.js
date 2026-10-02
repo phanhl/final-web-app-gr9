@@ -22,13 +22,17 @@ const USERS_DIR = path.join(DATA_DIR, 'users');
 const SECRET_FILE = path.join(DATA_DIR, '.session_secret');
 const LEGACY_DB_FILE = path.join(DATA_DIR, 'database.json');
 const SESSION_COOKIE_NAME = 'fintrack_session';
-const SESSION_MAX_AGE = 30 * 24 * 60 * 60; // 30 days
+const SESSION_MAX_AGE = 7 * 24 * 60 * 60; // 7 days (reduced from 30 days for security)
 
 let sessionSecretCache = null;
 
 async function getSessionSecret() {
     if (process.env.APP_SESSION_SECRET) {
-        return process.env.APP_SESSION_SECRET;
+        const envSecret = process.env.APP_SESSION_SECRET.trim();
+        if (envSecret.length < 32) {
+            throw new Error('APP_SESSION_SECRET must be at least 32 characters');
+        }
+        return envSecret;
     }
     if (sessionSecretCache) {
         return sessionSecretCache;
@@ -41,12 +45,12 @@ async function getSessionSecret() {
             return sessionSecretCache;
         }
         const newSecret = crypto.randomBytes(32).toString('hex');
-        await fs.writeFile(SECRET_FILE, newSecret, 'utf-8').catch(() => {});
+        await fs.writeFile(SECRET_FILE, newSecret, { encoding: 'utf-8', mode: 0o600 });
         sessionSecretCache = newSecret;
         return newSecret;
-    } catch {
-        sessionSecretCache = 'fintrack_pro_default_secure_secret_2026';
-        return sessionSecretCache;
+    } catch (err) {
+        console.error('Critical security error: Unable to read/create session secret:', err);
+        throw new Error('Unable to obtain a secure session secret');
     }
 }
 
@@ -156,7 +160,7 @@ export function getDefaultUserData(username = '') {
             name: username || 'Người dùng',
             email: '',
             phone: '',
-            role: 'Khách (Guest)',
+            role: 'Khách',
             membership: 'Thành viên mới',
             joinedDate: `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`,
             avatarColor: '#10b981',
@@ -199,7 +203,9 @@ export async function getUsers() {
         };
 
         initialUsers.push(adminUser);
-        await fs.writeFile(USERS_FILE, JSON.stringify(initialUsers, null, 2), 'utf-8').catch(() => {});
+        await fs.writeFile(USERS_FILE, JSON.stringify(initialUsers, null, 2), 'utf-8').catch(err => {
+            console.error('Failed to save initial users.json:', err);
+        });
 
         // Ensure admin data is initialized (copy from database.json if available)
         const adminDataFile = path.join(USERS_DIR, 'admin.json');
@@ -253,10 +259,17 @@ export async function getSessionUser() {
         const user = users.find(u => u.id === session.userId);
         if (!user) return null;
 
+        // Session Revocation: if tokenVersion was incremented (e.g. after logout or password change), invalidate token
+        const currentVersion = user.tokenVersion || 1;
+        if (session.tokenVersion && session.tokenVersion !== currentVersion) {
+            return null;
+        }
+
         return {
             id: user.id,
             username: user.username,
             role: user.role,
+            tokenVersion: currentVersion,
         };
     } catch {
         return null;

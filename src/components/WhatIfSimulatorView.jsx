@@ -462,9 +462,6 @@ export const WhatIfSimulatorView = () => {
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
             {t('sim.title', 'Mô Phỏng What-If')}
           </h1>
-          <p className="text-xs sm:text-sm text-blue-100 mt-2 leading-relaxed">
-            {t('sim.subtitle')}
-          </p>
         </div>
       </div>
 
@@ -547,9 +544,6 @@ export const WhatIfSimulatorView = () => {
                 <h3 className="text-base font-bold text-slate-800 dark:text-white">
                   <span>{t('sim.spendingOptTitle', '1. Mức Tiêu Dùng Chi Tiêu Cá Nhân Hiện Tại')} ({spendingCategories.length})</span>
                 </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  {t('whatif.step1Desc', 'Xem trước mức chi tiêu hàng tháng theo từng khoản của bạn. Bấm "Chọn cắt giảm" để đưa mục đó xuống bảng tối ưu.')}
-                </p>
               </div>
 
               <div className="flex items-center space-x-2 shrink-0">
@@ -759,9 +753,6 @@ export const WhatIfSimulatorView = () => {
                 <h3 className="text-base font-bold text-slate-800 dark:text-white">
                   <span>{t('whatif.selectedCutsHeading', '2. Các Khoản Đã Chọn Để Cắt Giảm')} ({selectedCuts.length})</span>
                 </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  {t('whatif.step2Desc', 'Kéo thanh trượt hoặc chọn nhanh tỷ lệ cắt giảm (0% - 50%) cho từng khoản bạn đã chọn ở trên')}
-                </p>
               </div>
 
               {selectedCuts.length > 0 && (<div className="px-3 py-1 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 rounded-xl text-rose-700 dark:text-rose-300 font-extrabold text-xs shrink-0 flex items-center space-x-1.5">
@@ -968,9 +959,6 @@ export const WhatIfSimulatorView = () => {
               <h3 className="text-base font-bold text-slate-800 dark:text-white">
                 <span>{t('whatif.section3Title', '3. Kênh Đầu Tư / Gửi Tiết Kiệm & Tính Toán Rủi Ro Thua Lỗ')}</span>
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
-                {t('whatif.section3Desc', 'Mô phỏng cả kịch bản có lãi lẫn thua lỗ đầu tư tài chính (thị trường sụt giảm, mất vốn)')}
-              </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1070,9 +1058,6 @@ export const WhatIfSimulatorView = () => {
                   <label htmlFor="toggleLoans" className="text-base font-bold text-slate-800 dark:text-white cursor-pointer">
                     <span>{t('whatif.section4Title', '4. Tính Thêm Các Khoản Vay Ngoài & Nghĩa Vụ Trả Nợ')}</span>
                   </label>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    {t('whatif.section4Desc', 'Hệ thống tự động trừ tiền gốc + lãi vay vào dòng tiền và giảm dần dư nợ theo từng tháng')}
-                  </p>
                 </div>
               </div>
 
@@ -1130,14 +1115,11 @@ export const WhatIfSimulatorView = () => {
             <h3 className="text-base font-bold text-slate-800 dark:text-white">
               <span>{t('whatif.monthlyTableTitle', 'Bảng Phân Tích Dòng Tiền & Tài Sản Chi Tiết Từng Tháng')}</span>
             </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              {t('whatif.monthlyTableDesc', 'Chi tiết thu nhập, chi tiêu đã giảm, trả nợ vay ngoài, lãi/lỗ đầu tư và tài sản tích lũy qua từng cột')}
-            </p>
           </div>
 
           <button onClick={handleExportTableExcel} className="flex items-center space-x-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm transition-colors shrink-0">
             <FileSpreadsheet className="w-4 h-4"/>
-            <span>{t('whatif.exportExcelBtn', 'Xuất Bảng Sang Excel (.xlsx)')}</span>
+            <span>{t('whatif.exportExcelBtn', 'Xuất Bảng Sang Excel')}</span>
           </button>
         </div>
 
@@ -1221,11 +1203,6 @@ export const WhatIfSimulatorView = () => {
                       ? t('whatif.editExpenseModal', 'Chỉnh sửa khoản chi What-If')
                       : t('whatif.addExpenseModal', 'Thêm khoản chi tiêu What-If')}
                   </h3>
-                  <p className="text-xs text-slate-400">
-                    {editingExpenseId
-                      ? t('whatif.editExpenseDesc', 'Cập nhật thông tin chi tiêu và mức cắt giảm kịch bản')
-                      : t('whatif.addExpenseDesc', 'Thêm khoản chi cá nhân mới vào bảng khảo sát và mô phỏng')}
-                  </p>
                 </div>
               </div>
               <button

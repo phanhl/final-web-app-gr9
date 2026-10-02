@@ -108,11 +108,6 @@ export function AuthModal({ onLoginSuccess, isHostPasswordSet, language = 'vi' }
                     <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
                         FinTrack <span className="text-blue-600 dark:text-blue-400">Pro</span>
                     </h2>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                        {isVi
-                            ? 'Hệ thống Quản lý Tài chính & Chi tiêu Đa người dùng'
-                            : 'Multi-user Personal Finance & Expense Manager'}
-                    </p>
                 </div>
 
                 {/* Tab Switcher: Login vs Register */}
@@ -139,7 +134,7 @@ export function AuthModal({ onLoginSuccess, isHostPasswordSet, language = 'vi' }
                         }`}
                     >
                         <UserPlus className="w-3.5 h-3.5" />
-                        {isVi ? 'Tạo Tài Khoản Khách' : 'Sign Up (Guest)'}
+                        {isVi ? 'Tạo Tài Khoản Khách' : 'Sign Up'}
                     </button>
                 </div>
 
@@ -149,7 +144,7 @@ export function AuthModal({ onLoginSuccess, isHostPasswordSet, language = 'vi' }
                         <Sparkles className="w-4 h-4 shrink-0 mt-0.5" />
                         <span>
                             {isVi
-                                ? 'Chủ sở hữu (Host): Đăng nhập với tài khoản "admin" và nhập mật khẩu bạn muốn để kích hoạt lần đầu.'
+                                ? 'Chủ sở hữu: Đăng nhập với tài khoản "admin" và nhập mật khẩu bạn muốn để kích hoạt lần đầu.'
                                 : 'Host: Login with username "admin" and any password to initialize your master account.'}
                         </span>
                     </div>

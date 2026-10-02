@@ -491,9 +491,6 @@ export const WalletsView = () => {
               <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">
                 {t('wallets.title', 'Quản Lý Tài Khoản & Ví')}
               </h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {t('wallets.subtitle', 'Bấm vào từng ví để xem chi tiết thu - chi và dòng tiền. Quản lý tiền mặt, ngân hàng, thẻ tín dụng và tiết kiệm')}
-              </p>
             </div>
 
             <div className="flex items-center space-x-2">
@@ -506,12 +503,11 @@ export const WalletsView = () => {
 
           {/* 2. NET WORTH & ASSETS KPI */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-5 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-white shadow-lg">
-              <span className="text-xs font-bold text-slate-400 uppercase">{t('wallets.netWorthUpper', 'TỔNG TÀI SẢN RÒNG')}</span>
-              <p className="text-2xl font-black mt-1 text-white">
+            <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+              <span className="text-xs font-semibold text-slate-400 uppercase">{t('wallets.netWorthUpper', 'TỔNG TÀI SẢN RÒNG')}</span>
+              <p className="text-2xl font-black text-slate-800 dark:text-white mt-1">
                 {formatCurrency(financialSummary.totalAssets)}
               </p>
-              <span className="text-[11px] text-slate-300">{t('wallets.netWorthSub', 'Toàn bộ tài sản trừ nợ thẻ')}</span>
             </div>
 
             <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -519,7 +515,6 @@ export const WalletsView = () => {
               <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
                 {formatCurrency(financialSummary.availableBalance)}
               </p>
-              <span className="text-[11px] text-slate-400">{t('wallets.availableSub', 'Tiền mặt + Tài khoản ngân hàng')}</span>
             </div>
 
             <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -527,7 +522,6 @@ export const WalletsView = () => {
               <p className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">
                 {formatCurrency(financialSummary.totalSavings)}
               </p>
-              <span className="text-[11px] text-slate-400">{t('wallets.savingsSub', 'Đang sinh lãi tại các ngân hàng')}</span>
             </div>
 
             <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -535,7 +529,6 @@ export const WalletsView = () => {
               <p className="text-2xl font-black text-rose-600 dark:text-rose-400 mt-1">
                 {formatCurrency(financialSummary.totalCreditDebt)}
               </p>
-              <span className="text-[11px] text-rose-500 font-semibold">{t('wallets.creditSub', 'Cần thanh toán đúng kỳ sao kê')}</span>
             </div>
           </div>
 

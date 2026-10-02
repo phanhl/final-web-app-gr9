@@ -8,6 +8,7 @@ import {
     SESSION_COOKIE_NAME,
     SESSION_MAX_AGE
 } from '@/lib/auth-server';
+import { logSecurityEvent } from '@/lib/security-logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,9 +41,10 @@ function recordLoginFailure(ip) {
 }
 
 export async function POST(req) {
+    const ip = getClientIp(req);
     try {
-        const ip = getClientIp(req);
         if (isLoginRateLimited(ip)) {
+            logSecurityEvent({ event: 'AUTH_LOGIN_RATE_LIMITED', ip, success: false });
             return NextResponse.json({
                 success: false,
                 error: 'Bạn đã thử đăng nhập sai quá 5 lần. Vì lý do bảo mật, vui lòng thử lại sau 15 phút.'
@@ -62,24 +64,27 @@ export async function POST(req) {
 
         if (!user) {
             recordLoginFailure(ip);
+            logSecurityEvent({ event: 'AUTH_LOGIN_FAILED', ip, success: false, details: { username, reason: 'USER_NOT_FOUND' } });
             return NextResponse.json({ success: false, error: 'Tài khoản không tồn tại. Nếu bạn là khách, vui lòng bấm "Tạo tài khoản"' }, { status: 401 });
         }
 
         // Host account first-time login without an established password
         if (user.role === 'host' && !user.hasPassword) {
-            if (password.length < 6) {
-                return NextResponse.json({ success: false, error: 'Mật khẩu khởi tạo cho Host phải có ít nhất 6 ký tự' }, { status: 400 });
+            if (password.length < 8) {
+                return NextResponse.json({ success: false, error: 'Mật khẩu khởi tạo cho Host phải có ít nhất 8 ký tự' }, { status: 400 });
             }
             const { salt, hash } = hashPassword(password);
             user.salt = salt;
             user.passwordHash = hash;
             user.hasPassword = true;
+            user.tokenVersion = user.tokenVersion || 1;
             await saveUsers(users);
         } else {
             // Standard password verification
             const valid = verifyPassword(password, user.salt, user.passwordHash);
             if (!valid) {
                 recordLoginFailure(ip);
+                logSecurityEvent({ event: 'AUTH_LOGIN_FAILED', userId: user.id, ip, success: false, details: { username, reason: 'INVALID_PASSWORD' } });
                 return NextResponse.json({ success: false, error: 'Mật khẩu không chính xác' }, { status: 401 });
             }
         }
@@ -91,10 +96,13 @@ export async function POST(req) {
             userId: user.id,
             username: user.username,
             role: user.role,
+            tokenVersion: user.tokenVersion || 1,
             exp: Date.now() + SESSION_MAX_AGE * 1000,
         };
 
         const token = await createSessionToken(sessionPayload);
+        logSecurityEvent({ event: 'AUTH_LOGIN_SUCCESS', userId: user.id, ip, success: true, details: { username, role: user.role } });
+
         const res = NextResponse.json({
             success: true,
             user: {

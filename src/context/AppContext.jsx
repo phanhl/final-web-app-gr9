@@ -79,7 +79,7 @@ export const AppProvider = ({ children }) => {
         name: 'Admin',
         email: 'admin@fintrack.vn',
         phone: '0912 345 678',
-        role: 'Chủ tài khoản (Owner)',
+        role: 'Chủ tài khoản',
         membership: 'VIP Lifetime Member',
         joinedDate: '16/09/2026',
         avatarColor: '#10b981',

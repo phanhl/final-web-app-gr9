@@ -227,9 +227,6 @@ export const SettingsView = () => {
         <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">
           {t('settings.title', 'Cài Đặt Hệ Thống')}
         </h1>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
-          {t('settings.subtitle', 'Tùy chỉnh ngôn ngữ hiển thị, giao diện sáng/tối và thông tin tài khoản')}
-        </p>
       </div>
 
       {/* 2. DISPLAY LANGUAGE */}
@@ -238,7 +235,7 @@ export const SettingsView = () => {
           <div className="flex items-center space-x-2">
             <Globe className="w-5 h-5 text-emerald-500"/>
             <h3 className="text-base font-bold text-slate-800 dark:text-white">
-              {t('settings.languageTitle', 'Ngôn Ngữ Hiển Thị (Display Language)')}
+              {t('settings.languageTitle', 'Ngôn Ngữ Hiển Thị')}
             </h3>
           </div>
           <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold self-start sm:self-auto flex items-center gap-1.5">
@@ -246,10 +243,6 @@ export const SettingsView = () => {
             <span>{LANGUAGES.find((l) => l.code === language)?.nativeName}</span>
           </span>
         </div>
-
-        <p className="text-xs text-slate-500 dark:text-slate-400">
-          {t('settings.languageDesc', 'Chọn ngôn ngữ hiển thị giao diện phù hợp với bạn hoặc chuyển đổi nhanh bằng nút góc màn hình.')}
-        </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
           {LANGUAGES.map((item) => {
@@ -269,13 +262,6 @@ export const SettingsView = () => {
                   <p className="font-bold text-sm text-slate-900 dark:text-white">
                     {item.nativeName}
                   </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                    {item.code === 'vi'
-                    ? t('settings.viDesc', 'Giao diện tiếng Việt chuẩn hóa')
-                    : item.code === 'en'
-                        ? 'English user interface'
-                        : 'Interface utilisateur en français'}
-                  </p>
                 </div>
               </button>);
         })}
@@ -288,17 +274,13 @@ export const SettingsView = () => {
           <div className="flex items-center space-x-2">
             <Palette className="w-5 h-5 text-indigo-500"/>
             <h3 className="text-base font-bold text-slate-800 dark:text-white">
-              {t('settings.themeSection', 'Tùy Chỉnh Giao Diện & Chủ Đề (Appearance & Theme)')}
+              {t('settings.themeSection', 'Tùy Chỉnh Giao Diện & Chủ Đề')}
             </h3>
           </div>
           <span className="text-xs px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium self-start sm:self-auto">
-            {t('settings.currentTheme', 'Đang dùng:')} {theme === 'light' ? t('settings.themeLight', 'Chế độ Sáng') : theme === 'dark' ? t('settings.themeDark', 'Chế độ Tối') : t('settings.themeAuto', 'Tự động (Hệ thống)')}
+            {t('settings.currentTheme', 'Đang dùng:')} {theme === 'light' ? t('settings.themeLight', 'Chế độ Sáng') : theme === 'dark' ? t('settings.themeDark', 'Chế độ Tối') : t('settings.themeAuto', 'Tự động')}
           </span>
         </div>
-
-        <p className="text-xs text-slate-500 dark:text-slate-400">
-          {t('settings.themeDesc', 'Chọn chủ đề hiển thị theo sở thích của bạn hoặc chuyển đổi nhanh bằng nút Mặt trời/Mặt trăng trên thanh menu trên cùng. Thiết lập được tự động ghi nhớ.')}
-        </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
           {/* Light theme card */}
@@ -314,10 +296,7 @@ export const SettingsView = () => {
                 </span>)}
             </div>
             <div>
-              <p className="font-bold text-sm text-slate-900 dark:text-white">{t('settings.lightName', 'Giao diện Sáng (Light)')}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                {t('settings.lightDesc', 'Tươi sáng, thanh lịch, độ tương phản cao cho ban ngày.')}
-              </p>
+              <p className="font-bold text-sm text-slate-900 dark:text-white">{t('settings.lightName', 'Giao diện Sáng')}</p>
             </div>
           </button>
 
@@ -334,10 +313,7 @@ export const SettingsView = () => {
                 </span>)}
             </div>
             <div>
-              <p className="font-bold text-sm text-slate-900 dark:text-white">{t('settings.darkName', 'Giao diện Tối (Dark)')}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                {t('settings.darkDesc', 'Tông xám than dịu mắt, chống mỏi mắt khi sử dụng ban đêm.')}
-              </p>
+              <p className="font-bold text-sm text-slate-900 dark:text-white">{t('settings.darkName', 'Giao diện Tối')}</p>
             </div>
           </button>
 
@@ -354,22 +330,19 @@ export const SettingsView = () => {
                 </span>)}
             </div>
             <div>
-              <p className="font-bold text-sm text-slate-900 dark:text-white">{t('settings.autoName', 'Theo Thiết Bị (Auto)')}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                {t('settings.autoDesc', 'Tự động đồng bộ theo chế độ hiển thị hệ thống của máy.')}
-              </p>
+              <p className="font-bold text-sm text-slate-900 dark:text-white">{t('settings.autoName', 'Theo Thiết Bị')}</p>
             </div>
           </button>
         </div>
       </div>
 
-      {/* 4. SECURITY & API GUARD (FIX ISSUES 1, 2 & 11) */}
+      {/* 4. SECURITY & API GUARD */}
       <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center space-x-2">
             <KeyRound className="w-5 h-5 text-rose-500"/>
             <h3 className="text-base font-bold text-slate-800 dark:text-white">
-              {language === 'en' ? 'Security & API Guard (App PIN & Ngrok Protection)' : 'Bảo Mật & Khóa Ứng Dụng (Mã PIN & API Guard)'}
+              {language === 'en' ? 'Security & App Lock' : 'Bảo Mật & Khóa Ứng Dụng'}
             </h3>
           </div>
           <span className={`text-xs px-2.5 py-1 rounded-full font-bold flex items-center gap-1.5 self-start sm:self-auto ${
@@ -380,7 +353,7 @@ export const SettingsView = () => {
             {security?.pinEnabled ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
             <span>{security?.pinEnabled 
               ? (language === 'en' ? 'PIN Protection Active' : 'Đang Bật Khóa PIN') 
-              : (language === 'en' ? 'Unprotected (Local Mode)' : 'Chưa Khóa PIN (Chế độ nội bộ)')}
+              : (language === 'en' ? 'Unprotected' : 'Chưa Khóa PIN')}
             </span>
           </span>
         </div>
@@ -395,19 +368,10 @@ export const SettingsView = () => {
               <h4 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
                 {security?.pinEnabled ? <ShieldCheck className="w-5 h-5 text-emerald-500" /> : <ShieldAlert className="w-5 h-5 text-amber-500" />}
                 <span>{security?.pinEnabled 
-                  ? (language === 'en' ? 'Storage API & Interface are Protected' : 'Dữ Liệu & API /api/storage Đang Được Khóa Bảo Mật')
+                  ? (language === 'en' ? 'Storage API & Interface are Protected' : 'Dữ Liệu & API Đang Được Khóa Bảo Mật')
                   : (language === 'en' ? 'Public Ngrok Access Warning' : 'Cảnh Báo Khi Mở Đường Dẫn Ngrok')}
                 </span>
               </h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xl">
-                {security?.pinEnabled
-                  ? (language === 'en'
-                      ? 'Anyone accessing via Ngrok or a new device must supply the correct PIN code to read or write database records.'
-                      : 'Mọi thiết bị hoặc người truy cập qua đường dẫn Ngrok bắt buộc phải nhập đúng mã PIN trước khi đọc hoặc ghi vào cơ sở dữ liệu.')
-                  : (language === 'en'
-                      ? 'Anyone with your Ngrok public link can read and write to your database. Enable PIN protection to prevent unauthorized access!'
-                      : 'Nếu bạn đang chia sẻ link Ngrok ra ngoài, bất kỳ ai có link đều có thể đọc/ghi database. Hãy bật mã PIN để khóa bảo vệ dữ liệu!')}
-              </p>
             </div>
             <button
               type="button"
@@ -504,7 +468,7 @@ export const SettingsView = () => {
         <div className="flex items-center space-x-2 pb-3 border-b border-slate-100 dark:border-slate-800">
           <Database className="w-5 h-5 text-blue-500"/>
           <h3 className="text-base font-bold text-slate-800 dark:text-white">
-            {language === 'en' ? 'Data Persistence & Backup Architecture' : 'Lưu Trữ Bền Vững & Sao Lưu Dữ Liệu (Data Persistence)'}
+            {language === 'en' ? 'Data Persistence & Backup Architecture' : 'Lưu Trữ Bền Vững & Sao Lưu Dữ Liệu'}
           </h3>
         </div>
 
@@ -517,19 +481,19 @@ export const SettingsView = () => {
             <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
               {language === 'en'
                 ? 'Data is stored permanently on disk at `data/database.json` with atomic file writes to prevent corruption. Your records persist across restarts.'
-                : 'Dữ liệu được lưu trữ vĩnh viễn trên ổ cứng tại thư mục `data/database.json` với cơ chế ghi nguyên tử (atomic write) chống lỗi file. Dữ liệu được bảo toàn trọn vẹn qua các lần khởi động.'}
+                : 'Dữ liệu được lưu trữ vĩnh viễn trên ổ cứng tại thư mục `data/database.json` với cơ chế ghi nguyên tử chống lỗi file. Dữ liệu được bảo toàn trọn vẹn qua các lần khởi động.'}
             </p>
           </div>
 
           <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-2">
             <div className="flex items-center space-x-2 text-amber-600 dark:text-amber-400 font-bold text-xs">
               <AlertCircle className="w-4 h-4" />
-              <span>{language === 'en' ? 'Serverless Hosting (e.g. Vercel)' : 'Triển Khai Serverless (Vercel)'}</span>
+              <span>{language === 'en' ? 'Serverless Hosting (Vercel)' : 'Triển Khai Serverless (Vercel)'}</span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
               {language === 'en'
                 ? 'Serverless containers have ephemeral filesystems (/tmp). FinTrack maintains an offline client cache on LocalStorage and lets you export/import full JSON backups below.'
-                : 'Môi trường Serverless của Vercel có hệ thống tệp tạm thời (/tmp). FinTrack duy trì bộ nhớ đệm an toàn trên trình duyệt (LocalStorage) và hỗ trợ Xuất/Nhập tệp JSON sao lưu dự phòng bên dưới.'}
+                : 'Môi trường Serverless của Vercel có hệ thống tệp tạm thời (/tmp). FinTrack duy trì bộ nhớ đệm an toàn trên trình duyệt và hỗ trợ Xuất/Nhập tệp JSON sao lưu dự phòng bên dưới.'}
             </p>
           </div>
         </div>
@@ -542,12 +506,12 @@ export const SettingsView = () => {
             className="flex items-center space-x-2 px-4 py-2.5 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 text-blue-700 dark:text-blue-300 rounded-xl text-xs font-bold border border-blue-200 dark:border-blue-800 transition-all cursor-pointer"
           >
             <Download className="w-4 h-4" />
-            <span>{language === 'en' ? 'Export Backup Data (JSON)' : 'Xuất Tệp Dữ Liệu Dự Phòng (JSON)'}</span>
+            <span>{language === 'en' ? 'Export Backup Data' : 'Xuất Tệp Dữ Liệu Dự Phòng'}</span>
           </button>
 
           <label className="flex items-center space-x-2 px-4 py-2.5 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 rounded-xl text-xs font-bold border border-emerald-200 dark:border-emerald-800 transition-all cursor-pointer">
             <Upload className="w-4 h-4" />
-            <span>{language === 'en' ? 'Restore Data from JSON' : 'Khôi Phục Dữ Liệu Từ Tệp JSON'}</span>
+            <span>{language === 'en' ? 'Restore Data' : 'Khôi Phục Dữ Liệu Dự Phòng'}</span>
             <input
               type="file"
               accept=".json,application/json"
@@ -568,11 +532,6 @@ export const SettingsView = () => {
                 {language === 'en' ? 'Secure Backups' : 'Sao Lưu An Toàn'}
               </h3>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              {language === 'en'
-                ? 'Encrypted AES-256-GCM backups stored securely on the application server.'
-                : 'Bản sao lưu được mã hóa AES-256-GCM và lưu riêng biệt trên máy chủ của ứng dụng.'}
-            </p>
           </div>
 
           <button

@@ -16,6 +16,7 @@ import {
     getDefaultUserData,
     USERS_DIR
 } from '@/lib/auth-server';
+import { logSecurityEvent } from '@/lib/security-logger';
 
 let inMemoryData = null;
 // Promise chain to serialize write operations so concurrent POST requests do not interleave into the same file
@@ -129,7 +130,9 @@ async function readDatabase(target) {
         const fingerprint = `${stat?.mtimeMs}:${stat?.size}`;
         if (lastCorruptBackup.fingerprint !== fingerprint) {
             const backupPath = `${filePath}.corrupt-${Date.now()}`;
-            await fs.copyFile(filePath, backupPath).catch(() => { });
+            await fs.copyFile(filePath, backupPath).catch(err => {
+                console.error('Failed to backup corrupt database file:', err);
+            });
             lastCorruptBackup = { fingerprint, path: backupPath };
         }
         const backup = lastCorruptBackup.path;
@@ -350,31 +353,61 @@ function recordFailure(ip) {
  * Returns null if authorized, or error NextResponse.
  */
 function checkAuth(req, currentData, user) {
-    const envPin = process.env.APP_PIN;
+    const ip = getClientIp(req);
+
+    // Broken Access Control Fix (OWASP A01): Storage access requires an authenticated session.
+    // Anonymous access is strictly rejected with 401 Unauthorized.
+    if (!user) {
+        logSecurityEvent({
+            event: 'UNAUTHORIZED_STORAGE_ACCESS',
+            ip,
+            success: false,
+            details: { reason: 'ANONYMOUS_ACCESS_BLOCKED' }
+        });
+        return NextResponse.json({
+            success: false,
+            code: 'UNAUTHORIZED',
+            error: 'Yêu cầu đăng nhập tài khoản để truy cập dữ liệu FinTrack'
+        }, { status: 401, headers: NO_CACHE_HEADERS });
+    }
+
     const sec = normalizeSecurity(currentData?.security);
 
-    // If user is authenticated via session (Guest or Host):
-    if (user) {
-        if (!sec.pinEnabled) {
-            return null;
-        }
-    } else {
-        if (!envPin && !sec.pinEnabled)
-            return null;
+    // If user is authenticated via session and PIN lock is not enabled
+    if (!sec.pinEnabled) {
+        return null;
     }
 
-    const ip = getClientIp(req);
     if (isRateLimited(ip)) {
+        logSecurityEvent({
+            event: 'PIN_RATE_LIMITED',
+            userId: user.id,
+            ip,
+            success: false
+        });
         return NextResponse.json({ success: false, requiresPin: true, code: 'RATE_LIMITED', error: 'Nhập sai PIN quá nhiều lần, vui lòng thử lại sau 15 phút' }, { status: 429, headers: NO_CACHE_HEADERS });
     }
+
     const provided = req.headers.get('x-app-pin');
     if (provided) {
-        const ok = (!user && envPin) ? safeEqualString(provided, envPin) : verifyPinHash(provided, sec.pinSalt, sec.pinHash);
+        const ok = verifyPinHash(provided, sec.pinSalt, sec.pinHash);
         if (ok) {
             failedAttempts.delete(ip);
+            logSecurityEvent({
+                event: 'PIN_AUTH_SUCCESS',
+                userId: user.id,
+                ip,
+                success: true
+            });
             return null;
         }
         recordFailure(ip);
+        logSecurityEvent({
+            event: 'PIN_AUTH_FAILED',
+            userId: user.id,
+            ip,
+            success: false
+        });
     }
     return NextResponse.json({ success: false, requiresPin: true, code: 'PIN_REQUIRED', error: 'Yêu cầu mã PIN bảo mật chính xác để truy cập dữ liệu FinTrack' }, { status: 401, headers: NO_CACHE_HEADERS });
 }
@@ -461,7 +494,9 @@ async function pruneSecureBackups(target) {
     const stale = backups.slice(MAX_SECURE_BACKUPS);
     const dir = getSecureBackupDir(target);
     for (const b of stale) {
-        await fs.unlink(path.join(dir, b.id)).catch(() => {});
+        await fs.unlink(path.join(dir, b.id)).catch(err => {
+            console.error('Failed to clean up expired backup:', b.id, err);
+        });
     }
 }
 
@@ -514,6 +549,13 @@ async function handleCreateSecureBackup(req, target) {
     };
 
     const backup = await createSecureBackupFile(target, snapshot);
+    logSecurityEvent({
+        event: 'SECURE_BACKUP_CREATED',
+        userId: target.user?.id,
+        ip: getClientIp(req),
+        success: true,
+        details: { backupId: backup.id }
+    });
     return NextResponse.json({ success: true, backup }, { headers: NO_CACHE_HEADERS });
 }
 
@@ -542,7 +584,10 @@ async function handleRestoreSecureBackup(req, target, backupId) {
             ...pickDataFields(current),
             wallets: recomputeWalletBalances(current.wallets || [], current.transactions || []),
         };
-        safetyBackup = await createSecureBackupFile(target, safetySnapshot).catch(() => null);
+        safetyBackup = await createSecureBackupFile(target, safetySnapshot).catch(err => {
+            console.error('Failed to create safety backup during restore:', err);
+            return null;
+        });
     }
 
     const restoredWallets = recomputeWalletBalances(backupData.wallets, backupData.transactions);
@@ -554,6 +599,13 @@ async function handleRestoreSecureBackup(req, target, backupId) {
     };
 
     await persist(target.filePath, restoredData);
+    logSecurityEvent({
+        event: 'SECURE_BACKUP_RESTORED',
+        userId: target.user?.id,
+        ip: getClientIp(req),
+        success: true,
+        details: { backupId }
+    });
     return NextResponse.json({
         success: true,
         message: 'Secure backup restored successfully',
@@ -572,6 +624,13 @@ async function handleDeleteSecureBackup(req, target, backupId) {
     } catch (error) {
         return NextResponse.json({ success: false, error: error.message }, { status: 404, headers: NO_CACHE_HEADERS });
     }
+    logSecurityEvent({
+        event: 'SECURE_BACKUP_DELETED',
+        userId: target.user?.id,
+        ip: getClientIp(req),
+        success: true,
+        details: { backupId }
+    });
     return NextResponse.json({ success: true }, { headers: NO_CACHE_HEADERS });
 }
 
@@ -600,6 +659,13 @@ async function handleUpdateSecurity(req, payload, target) {
     // Preserve updatedAt: security updates do not constitute data changes and avoid sync conflicts
     const dataToSave = { ...(current || (target.user ? getDefaultUserData(target.user.username) : getDefaultData())), security: next };
     await persist(target.filePath, dataToSave);
+    logSecurityEvent({
+        event: 'SECURITY_CONFIG_CHANGED',
+        userId: target.user?.id,
+        ip: getClientIp(req),
+        success: true,
+        details: { pinEnabled: next.pinEnabled }
+    });
     return NextResponse.json({ success: true, security: publicSecurity(next) }, { headers: NO_CACHE_HEADERS });
 }
 export async function POST(req) {
@@ -680,7 +746,9 @@ export async function POST(req) {
         }, { headers: NO_CACHE_HEADERS });
     };
     const result = writeQueue.then(run, run);
-    writeQueue = result.catch(() => { });
+    writeQueue = result.catch(err => {
+        console.error('WriteQueue serialized operation error:', err);
+    });
     try {
         return await result;
     }

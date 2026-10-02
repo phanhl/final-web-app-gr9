@@ -12,10 +12,16 @@ import {
     SESSION_MAX_AGE,
     USERS_DIR
 } from '@/lib/auth-server';
+import { logSecurityEvent } from '@/lib/security-logger';
 
 export const dynamic = 'force-dynamic';
 
+function getClientIp(req) {
+    return (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || req.headers.get('x-real-ip') || 'local';
+}
+
 export async function POST(req) {
+    const ip = getClientIp(req);
     try {
         const body = await req.json().catch(() => null);
         if (!body || !body.username || !body.password) {
@@ -34,12 +40,14 @@ export async function POST(req) {
             }, { status: 400 });
         }
 
-        if (password.length < 6) {
-            return NextResponse.json({ success: false, error: 'Mật khẩu phải có ít nhất 6 ký tự' }, { status: 400 });
+        // Security requirement: Minimum password length 8 characters
+        if (password.length < 8) {
+            return NextResponse.json({ success: false, error: 'Mật khẩu phải có ít nhất 8 ký tự' }, { status: 400 });
         }
 
         const users = await getUsers();
         if (users.some(u => u.username.toLowerCase() === username)) {
+            logSecurityEvent({ event: 'AUTH_REGISTER_CONFLICT', ip, success: false, details: { username } });
             return NextResponse.json({ success: false, error: 'Tên đăng nhập này đã được sử dụng. Vui lòng chọn tên khác' }, { status: 409 });
         }
 
@@ -50,6 +58,7 @@ export async function POST(req) {
             id: userId,
             username,
             role: 'guest',
+            tokenVersion: 1,
             hasPassword: true,
             salt,
             passwordHash: hash,
@@ -66,15 +75,18 @@ export async function POST(req) {
         const initialUserData = getDefaultUserData(displayName);
         await fs.writeFile(userFilePath, JSON.stringify(initialUserData, null, 2), 'utf-8');
 
-        // Create session cookie
+        // Create session cookie with tokenVersion for revocation support
         const sessionPayload = {
             userId: newUser.id,
             username: newUser.username,
             role: newUser.role,
+            tokenVersion: newUser.tokenVersion,
             exp: Date.now() + SESSION_MAX_AGE * 1000,
         };
 
         const token = await createSessionToken(sessionPayload);
+        logSecurityEvent({ event: 'AUTH_REGISTER_SUCCESS', userId: newUser.id, ip, success: true, details: { username } });
+
         const res = NextResponse.json({
             success: true,
             user: {

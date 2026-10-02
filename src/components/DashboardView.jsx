@@ -29,9 +29,6 @@ export const DashboardView = () => {
           <h1 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             {t('dash.title', 'Tổng quan tài chính')}
           </h1>
-          <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mt-0.5">
-            {t('dash.subtitle', 'Theo dõi dòng tiền & ngân sách thông minh')}
-          </p>
         </div>
 
         <button onClick={() => setShowBalance((s) => !s)} className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-sky-200/80 dark:border-sky-800 text-slate-500 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white shadow-sm transition-colors cursor-pointer" aria-label={showBalance ? t('dash.hideBalance', 'Ẩn số dư') : t('dash.showBalance', 'Hiện số dư')} title={showBalance ? t('dash.hideBalance', 'Ẩn số dư') : t('dash.showBalance', 'Hiện số dư')}>

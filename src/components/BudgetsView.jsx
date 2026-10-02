@@ -157,9 +157,6 @@ export const BudgetsView = () => {
           <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">
             {t('budget.title', 'Ngân Sách & Hũ Tiết Kiệm')}
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            {t('budget.subtitle', 'Cài đặt hạn mức chi tiêu, cảnh báo 80%/100%, tạo budget từ thu nhập cá nhân & theo dõi hũ tích lũy')}
-          </p>
         </div>
 
         <div className="flex items-center space-x-2">
@@ -218,7 +215,6 @@ export const BudgetsView = () => {
               <p className="text-2xl font-black text-slate-800 dark:text-white mt-1">
                 {formatCurrency(totalBudgetLimit)}
               </p>
-              <span className="text-[11px] text-slate-400">{t('budget.forMonth', 'Áp dụng cho tháng')} {formatMonthLabel(currentMonth, language).replace(/^Tháng /, '')}</span>
             </div>
 
             <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -226,9 +222,6 @@ export const BudgetsView = () => {
               <p className="text-2xl font-black text-rose-600 dark:text-rose-400 mt-1">
                 {formatCurrency(totalBudgetSpent)}
               </p>
-              <span className="text-[11px] text-slate-400">
-                {t('budget.usedBudget', 'Đã dùng')} {totalBudgetLimit > 0 ? Math.round((totalBudgetSpent / totalBudgetLimit) * 100) : 0}% {t('budget.totalBudget', 'tổng ngân sách')}
-              </span>
             </div>
 
             <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -236,9 +229,6 @@ export const BudgetsView = () => {
               <p className={`text-2xl font-black mt-1 ${totalBudgetRemaining >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                 {formatCurrency(totalBudgetRemaining)}
               </p>
-              <span className="text-[11px] text-slate-400">
-                {totalBudgetRemaining >= 0 ? t('budget.canSpend', 'Có thể chi tiêu tiếp tục') : t('budget.overLimit', 'Đã chi vượt hạn mức')}
-              </span>
             </div>
           </div>
 
@@ -485,7 +475,6 @@ export const BudgetsView = () => {
                     <span className="font-bold text-slate-800 dark:text-white">{planner.needsPercent}%</span>
                   </div>
                   <input type="range" min="30" max="70" value={planner.needsPercent} onChange={(e) => updatePlanner({ ...planner, needsPercent: Number(e.target.value) })} className="w-full accent-blue-600"/>
-                  <span className="text-[11px] text-slate-400">{t('budget.needsSub', 'Ăn uống, thuê nhà, xăng xe, hóa đơn')}</span>
                 </div>
 
                 <div>
@@ -494,7 +483,6 @@ export const BudgetsView = () => {
                     <span className="font-bold text-slate-800 dark:text-white">{planner.wantsPercent}%</span>
                   </div>
                   <input type="range" min="10" max="50" value={planner.wantsPercent} onChange={(e) => updatePlanner({ ...planner, wantsPercent: Number(e.target.value) })} className="w-full accent-purple-600"/>
-                  <span className="text-[11px] text-slate-400">{t('budget.wantsSub', 'Mua sắm, cafe, giải trí, du lịch')}</span>
                 </div>
 
                 <div>
@@ -503,7 +491,6 @@ export const BudgetsView = () => {
                     <span className="font-bold text-slate-800 dark:text-white">{planner.savingsPercent}%</span>
                   </div>
                   <input type="range" min="5" max="40" value={planner.savingsPercent} onChange={(e) => updatePlanner({ ...planner, savingsPercent: Number(e.target.value) })} className="w-full accent-emerald-600"/>
-                  <span className="text-[11px] text-slate-400">{t('budget.savingsSub', 'Hũ tiết kiệm, đầu tư dài hạn')}</span>
                 </div>
 
                 {/* 4. Emergency / Contingency Fund */}
@@ -514,8 +501,7 @@ export const BudgetsView = () => {
                     </span>
                     <span className="font-bold text-slate-800 dark:text-white">{emergencyPercent}%</span>
                   </div>
-                  <input type="range" min="0" max="30" value={emergencyPercent} onChange={(e) => updatePlanner({ ...planner, emergencyPercent: Number(e.target.value) })} className="w-full accent-amber-500"/>
-                  <span className="text-[11px] text-slate-400">{t('budget.emergencySub', 'Quỹ khẩn cấp, y tế, sửa xe, rủi ro phát sinh')}</span>
+                  <input type="range" min="0" max="30" value={emergencyPercent} onChange={(e) => updatePlanner({ ...planner, emergencyPercent: Number(e.target.value) })} className="w-full accent-orange-600"/>
                 </div>
 
                 {/* Save Button & Status feedback */}

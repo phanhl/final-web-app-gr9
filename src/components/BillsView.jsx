@@ -164,9 +164,6 @@ export const BillsView = () => {
           <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">
             {t('bills.mainTitle', 'Chi Phí Định Kỳ & Lịch Hóa Đơn')}
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            {t('bills.mainSubtitle', 'Quản lý và theo dõi ngày đến hạn các hóa đơn cố định (tiền nhà, điện nước, internet, dịch vụ đăng ký)')}
-          </p>
         </div>
 
         <button onClick={() => {
@@ -195,7 +192,6 @@ export const BillsView = () => {
           <p className="text-2xl font-black text-slate-800 dark:text-white mt-1">
             {formatCurrency(totalBillsAmount)}
           </p>
-          <span className="text-[11px] text-slate-400">{bills.length} {t('bill.fixedExpenses', 'khoản chi cố định định kỳ')}</span>
         </div>
 
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -203,9 +199,6 @@ export const BillsView = () => {
           <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
             {formatCurrency(totalPaid)}
           </p>
-          <span className="text-[11px] text-emerald-600 font-semibold">
-            {paidBills.length} / {bills.length} {t('bill.completedCount', 'hóa đơn đã hoàn tất')}
-          </span>
         </div>
 
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -213,9 +206,6 @@ export const BillsView = () => {
           <p className={`text-2xl font-black mt-1 ${totalUnpaid > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-800 dark:text-white'}`}>
             {formatCurrency(totalUnpaid)}
           </p>
-          <span className="text-[11px] text-slate-400">
-            {unpaidBills.length > 0 ? t('bill.remainingCount', 'Còn {count} hóa đơn cần trả').replace('{count}', String(unpaidBills.length)) : t('bill.allCompleted', 'Đã thanh toán đầy đủ')}
-          </span>
         </div>
       </div>
 
