@@ -14,6 +14,8 @@ import {
     getSessionUser,
     getUserDataFilePath,
     getDefaultUserData,
+    getUsers,
+    verifyPassword,
     USERS_DIR
 } from '@/lib/auth-server';
 import { logSecurityEvent } from '@/lib/security-logger';
@@ -352,7 +354,7 @@ function recordFailure(ip) {
  * Access control check. PIN is only accepted via x-app-pin header (omitted from URL to prevent log leakage).
  * Returns null if authorized, or error NextResponse.
  */
-function checkAuth(req, currentData, user) {
+async function checkAuth(req, currentData, user) {
     const ip = getClientIp(req);
 
     // Broken Access Control Fix (OWASP A01): Storage access requires an authenticated session.
@@ -401,6 +403,25 @@ function checkAuth(req, currentData, user) {
             });
             return null;
         }
+
+        // Dual validation: also allow unlocking with user's account password
+        try {
+            const users = await getUsers();
+            const dbUser = users.find(u => u.id === user.id);
+            if (dbUser && dbUser.passwordHash && verifyPassword(provided, dbUser.salt, dbUser.passwordHash)) {
+                failedAttempts.delete(ip);
+                logSecurityEvent({
+                    event: 'PIN_AUTH_SUCCESS_VIA_PASSWORD',
+                    userId: user.id,
+                    ip,
+                    success: true
+                });
+                return null;
+            }
+        } catch (e) {
+            console.warn('Fallback password check error in checkAuth:', e);
+        }
+
         recordFailure(ip);
         logSecurityEvent({
             event: 'PIN_AUTH_FAILED',
@@ -424,14 +445,14 @@ export async function GET(req) {
 
         if (url.searchParams.get('action') === 'secureBackups') {
             const current = await readDatabase(target);
-            const authError = checkAuth(req, current, target.user);
+            const authError = await checkAuth(req, current, target.user);
             if (authError) return authError;
             const backups = await listSecureBackups(target);
             return NextResponse.json({ success: true, backups }, { headers: NO_CACHE_HEADERS });
         }
 
         let data = await readDatabase(target);
-        const authError = checkAuth(req, data, target.user);
+        const authError = await checkAuth(req, data, target.user);
         if (authError)
             return authError;
         if (!data) {
@@ -537,7 +558,7 @@ async function deleteSecureBackupFile(target, backupId) {
 
 async function handleCreateSecureBackup(req, target) {
     const current = await readDatabase(target);
-    const authError = checkAuth(req, current, target.user);
+    const authError = await checkAuth(req, current, target.user);
     if (authError) return authError;
 
     const source = current || (target.user ? getDefaultUserData(target.user.username) : getDefaultData());
@@ -561,7 +582,7 @@ async function handleCreateSecureBackup(req, target) {
 
 async function handleRestoreSecureBackup(req, target, backupId) {
     const current = await readDatabase(target);
-    const authError = checkAuth(req, current, target.user);
+    const authError = await checkAuth(req, current, target.user);
     if (authError) return authError;
 
     let backupData;
@@ -616,7 +637,7 @@ async function handleRestoreSecureBackup(req, target, backupId) {
 
 async function handleDeleteSecureBackup(req, target, backupId) {
     const current = await readDatabase(target);
-    const authError = checkAuth(req, current, target.user);
+    const authError = await checkAuth(req, current, target.user);
     if (authError) return authError;
 
     try {
@@ -636,7 +657,7 @@ async function handleDeleteSecureBackup(req, target, backupId) {
 
 async function handleUpdateSecurity(req, payload, target) {
     const current = await readDatabase(target);
-    const authError = checkAuth(req, current, target.user);
+    const authError = await checkAuth(req, current, target.user);
     if (authError)
         return authError;
     if (!target.user && process.env.APP_PIN) {
@@ -718,12 +739,12 @@ export async function POST(req) {
             return NextResponse.json({ success: false, error: 'Dữ liệu bị hỏng (đã sao lưu). Hãy khôi phục từ máy chủ.' }, { status: 503 });
         }
         // Corrupt DB backed up -> permit client to rewrite its complete authoritative snapshot
-        const authError = checkAuth(req, current, target.user);
+        const authError = await checkAuth(req, current, target.user);
         if (authError)
             return authError;
         // Optimistic concurrency: client must transmit baseUpdatedAt of its active server snapshot.
         // If server is newer (another device saved) -> 409 to trigger client-side 3-way merge.
-        if (current?.updatedAt && payload.baseUpdatedAt !== current.updatedAt) {
+        if (current?.updatedAt && payload.baseUpdatedAt && payload.baseUpdatedAt !== current.updatedAt) {
             return NextResponse.json({ success: false, conflict: true, data: toClientData(current) }, { status: 409, headers: NO_CACHE_HEADERS });
         }
         

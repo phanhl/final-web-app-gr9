@@ -55,10 +55,23 @@ export function AuthModal({ onLoginSuccess, isHostPasswordSet, language = 'vi' }
 
         setLoading(true);
         try {
+            let initialData = null;
+            if (mode === 'register') {
+                try {
+                    const saved = localStorage.getItem('quan_ly_chi_tieu_data_v2');
+                    if (saved) {
+                        const parsed = JSON.parse(saved);
+                        if (parsed && Array.isArray(parsed.wallets) && parsed.wallets.length > 0) {
+                            initialData = parsed;
+                        }
+                    }
+                } catch (e) {}
+            }
+
             const endpoint = mode === 'login' ? '/api/auth/login' : '/api/auth/register';
             const body = mode === 'login'
                 ? { username: cleanUser, password }
-                : { username: cleanUser, password, displayName: displayName.trim() || cleanUser };
+                : { username: cleanUser, password, displayName: displayName.trim() || cleanUser, initialData };
 
             const res = await fetch(endpoint, {
                 method: 'POST',
@@ -75,16 +88,14 @@ export function AuthModal({ onLoginSuccess, isHostPasswordSet, language = 'vi' }
 
             setSuccessMessage(data.message || (isVi ? 'Thành công!' : 'Success!'));
             try {
-                for (let i = localStorage.length - 1; i >= 0; i--) {
-                    const key = localStorage.key(i);
-                    if (key && (key.startsWith('quan_ly_chi_tieu_data_v2') || key.startsWith('fintrack_user_profile'))) {
-                        localStorage.removeItem(key);
-                    }
-                }
+                // Clear only un-scoped legacy cache
+                localStorage.removeItem('quan_ly_chi_tieu_data_v2');
+                localStorage.removeItem('fintrack_user_profile');
             } catch (e) {}
+
             setTimeout(() => {
                 if (onLoginSuccess) {
-                    onLoginSuccess(data.user);
+                    onLoginSuccess(data.user, password);
                 }
             }, 300);
         } catch (err) {

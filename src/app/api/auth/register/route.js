@@ -72,7 +72,21 @@ export async function POST(req) {
         // Initialize isolated user data store for guest
         await fs.mkdir(USERS_DIR, { recursive: true });
         const userFilePath = getUserDataFilePath(userId);
-        const initialUserData = getDefaultUserData(displayName);
+        let initialUserData = getDefaultUserData(displayName);
+        if (body.initialData && typeof body.initialData === 'object' && Array.isArray(body.initialData.wallets) && body.initialData.wallets.length > 0) {
+            initialUserData = {
+                ...initialUserData,
+                wallets: body.initialData.wallets,
+                transactions: Array.isArray(body.initialData.transactions) ? body.initialData.transactions : [],
+                categories: Array.isArray(body.initialData.categories) && body.initialData.categories.length > 0 ? body.initialData.categories : initialUserData.categories,
+                budgets: Array.isArray(body.initialData.budgets) ? body.initialData.budgets : [],
+                bills: Array.isArray(body.initialData.bills) ? body.initialData.bills : [],
+                goals: Array.isArray(body.initialData.goals) ? body.initialData.goals : [],
+                planner: body.initialData.planner || initialUserData.planner,
+                simulatorConfig: body.initialData.simulatorConfig || initialUserData.simulatorConfig,
+                updatedAt: new Date().toISOString(),
+            };
+        }
         await fs.writeFile(userFilePath, JSON.stringify(initialUserData, null, 2), 'utf-8');
 
         // Create session cookie with tokenVersion for revocation support

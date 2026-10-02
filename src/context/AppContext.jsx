@@ -450,6 +450,13 @@ export const AppProvider = ({ children }) => {
                 const result = await res.json();
                 if (result.success && result.data) {
                     setAppPin(enteredPin);
+                    try {
+                        const uid = currentUserRef.current?.id;
+                        if (uid) {
+                            sessionStorage.setItem(`fintrack_pin_${uid}`, enteredPin);
+                            localStorage.setItem(`fintrack_pin_${uid}`, enteredPin);
+                        }
+                    } catch (e) {}
                     setPinUnlockError('');
                     applyInitialData(result.data, readLocalCache());
                     setIsPinLocked(false);
@@ -458,10 +465,10 @@ export const AppProvider = ({ children }) => {
                     return { success: true };
                 }
             }
-            let message = language === 'en' ? 'Incorrect PIN code!' : 'Mã PIN bảo mật không chính xác!';
+            let message = language === 'en' ? 'Incorrect PIN code or password!' : 'Mã PIN hoặc mật khẩu không chính xác!';
             if (res.status === 429) {
                 const body = await res.json().catch(() => ({}));
-                message = t('err.RATE_LIMITED', body.error || 'Nhập sai PIN quá nhiều lần, vui lòng thử lại sau 15 phút');
+                message = t('err.RATE_LIMITED', body.error || 'Nhập sai quá nhiều lần, vui lòng thử lại sau 15 phút');
             }
             setPinUnlockError(message);
             return { success: false, error: message };
@@ -515,6 +522,14 @@ export const AppProvider = ({ children }) => {
                 if (authData.authenticated && authData.user) {
                     currentUserRef.current = authData.user;
                     setCurrentUser(authData.user);
+
+                    // Auto-load remembered PIN or credential for this user
+                    try {
+                        const savedPin = sessionStorage.getItem(`fintrack_pin_${authData.user.id}`) || localStorage.getItem(`fintrack_pin_${authData.user.id}`);
+                        if (savedPin) {
+                            appPinRef.current = savedPin;
+                        }
+                    } catch (e) {}
 
                     let serverData = null;
                     let locked = false;
@@ -577,49 +592,64 @@ export const AppProvider = ({ children }) => {
         };
     }, [applyInitialData, getApiHeaders]);
 
-    const handleLoginSuccess = async (user) => {
+    const handleLoginSuccess = async (user, password) => {
         currentUserRef.current = user;
         setCurrentUser(user);
         setAuthLoading(true);
 
-        // Clear stale localStorage cache for clean new account state
-        try {
-            localStorage.removeItem('quan_ly_chi_tieu_data_v2');
-            localStorage.removeItem('fintrack_user_profile');
-            localStorage.removeItem(`quan_ly_chi_tieu_data_v2_${user.id}`);
-        } catch (e) {}
-
-        // Reset state to empty before hydrating user-isolated personal store
-        setWallets([]);
-        setTransactions([]);
-        setBudgets([]);
-        setBills([]);
-        setGoals([]);
-        setPlanner({
-            monthlyIncome: 0,
-            needsPercent: 50,
-            wantsPercent: 30,
-            savingsPercent: 20,
-            emergencyPercent: 0,
-            notes: '',
-        });
+        if (password) {
+            appPinRef.current = password;
+            try {
+                sessionStorage.setItem(`fintrack_pin_${user.id}`, password);
+            } catch (e) {}
+        } else {
+            try {
+                const savedPin = sessionStorage.getItem(`fintrack_pin_${user.id}`) || localStorage.getItem(`fintrack_pin_${user.id}`);
+                if (savedPin) {
+                    appPinRef.current = savedPin;
+                }
+            } catch (e) {}
+        }
 
         try {
             const res = await fetch('/api/storage', {
                 cache: 'no-store',
                 headers: getApiHeaders(),
             });
+
+            if (res.status === 401) {
+                const errData = await res.json().catch(() => ({}));
+                if (errData.requiresPin) {
+                    setIsPinLocked(true);
+                    setServerSyncStatus('offline');
+                    setAuthLoading(false);
+                    return;
+                }
+            }
+
             if (res.ok) {
                 const result = await res.json();
                 if (result.success && result.data) {
                     applyServerData(result.data, true);
                     setServerSyncStatus('synced');
+                    setIsPinLocked(false);
+                    setMounted(true);
+                }
+            } else {
+                const local = readLocalCache(user.id);
+                if (local) {
+                    applyInitialData(null, local);
                     setMounted(true);
                 }
             }
         }
         catch (err) {
             console.error('Failed to load data after login:', err);
+            const local = readLocalCache(user.id);
+            if (local) {
+                applyInitialData(null, local);
+                setMounted(true);
+            }
         }
         finally {
             setAuthLoading(false);
@@ -627,17 +657,23 @@ export const AppProvider = ({ children }) => {
     };
 
     const logoutUser = async () => {
+        const uid = currentUserRef.current?.id || currentUser?.id;
         try {
             await fetch('/api/auth/logout', { method: 'POST' });
         } catch {}
         try {
+            if (uid) {
+                sessionStorage.removeItem(`fintrack_pin_${uid}`);
+                localStorage.removeItem(`fintrack_pin_${uid}`);
+            }
             for (let i = localStorage.length - 1; i >= 0; i--) {
                 const key = localStorage.key(i);
-                if (key && (key.startsWith('quan_ly_chi_tieu_data_v2') || key.startsWith('fintrack_user_profile'))) {
+                if (key && (key === 'quan_ly_chi_tieu_data_v2' || key.startsWith('fintrack_user_profile'))) {
                     localStorage.removeItem(key);
                 }
             }
         } catch {}
+        appPinRef.current = '';
         currentUserRef.current = null;
         setCurrentUser(null);
         setMounted(false);
@@ -1819,8 +1855,8 @@ export const AppProvider = ({ children }) => {
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                 {language === 'en'
-                ? 'FinTrack is protected against unauthorized access. Please enter your PIN code to unlock.'
-                : 'FinTrack đang được bảo vệ chống truy cập trái phép qua mạng. Vui lòng nhập mã PIN bảo mật để mở khóa dữ liệu.'}
+                ? 'FinTrack is protected. Enter your PIN code or your account password to unlock.'
+                : 'FinTrack đang được bảo vệ. Vui lòng nhập mã PIN hoặc mật khẩu tài khoản của bạn để mở khóa dữ liệu.'}
               </p>
             </div>
             <form onSubmit={async (e) => {
@@ -1829,7 +1865,7 @@ export const AppProvider = ({ children }) => {
                 if (pinVal)
                     await verifyAndUnlockApp(pinVal);
             }} className="space-y-4">
-              <input name="pinInput" type="password" inputMode="numeric" autoComplete="current-password" maxLength={8} autoFocus placeholder="••••" className="w-full text-center text-3xl tracking-widest font-black py-3 px-4 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-2xl dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+              <input name="pinInput" type="password" inputMode="text" autoComplete="current-password" maxLength={64} autoFocus placeholder="••••" className="w-full text-center text-3xl tracking-widest font-black py-3 px-4 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-2xl dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"/>
               {pinUnlockError && (<p className="text-xs font-bold text-rose-500">
                   {pinUnlockError}
                 </p>)}

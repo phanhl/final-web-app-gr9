@@ -40,6 +40,7 @@ const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['lucide-react'],
   outputFileTracingRoot: path.resolve(__dirname),
+  allowedDevOrigins: ['*.ngrok-free.dev', '*.ngrok.io', '*.trycloudflare.com', 'localhost:*', '127.0.0.1:*'],
   async headers() {
     return [
       {
