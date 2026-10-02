@@ -2,7 +2,7 @@
 
 A comprehensive personal finance management web application: multi-wallet income and expense tracking, smart budgets, recurring bills, savings goals, automated bank statement import, and **What-If financial simulation**.
 
-The system features **Multi-User Isolation** with strict security architecture: Host and Guest access via separate URLs, independent `User ID` provisioning, and secure server-side data storage that is **completely excluded from Git commits**. Features a bilingual interface (**Vietnamese / English**) and **Light / Dark mode**.
+The system features **Multi-User Isolation** with strict security architecture: one Host (`admin`) account plus self-registered Guest accounts, each with its own `User ID` and server-side data file that is **completely excluded from Git commits**. Features a bilingual interface (**Vietnamese / English**), **Light / Dark mode**, optional **Sign in with Google**, and works on phones, tablets and desktops (installable to the home screen).
 
 ---
 
@@ -11,24 +11,25 @@ The system features **Multi-User Isolation** with strict security architecture: 
 ### Multi-User Accounts & Access Control
 - **Mandatory Authentication:** Modern Glassmorphism welcome screen and Login / Register modal, preventing unauthorized access.
 - **Host Account:** Dedicated `admin` account holding complete real financial records (wallets, bank accounts, transaction history). The password comes from `APP_PASSWORD`, or is chosen at the first login together with a **one-time setup code** printed in the server terminal (`data/.host_setup_code`), so nobody who merely opens the public link can claim it.
-- **Guest Accounts:** Guests visit online links and click **"Create Guest Account"** to register. The system generates an isolated `User ID` (`usr_...`) pre-populated with a clean sample dataset. Guests cannot view or modify Host data, and vice versa.
+- **Guest Accounts:** Guests open the app link and click **"Create Guest Account"** (or **"Sign up with Google"**). Each gets an isolated `User ID` (`usr_...`) that starts empty: a Cash wallet, a Bank account (both 0 ₫) and the default categories. Guests cannot view or modify Host data, and vice versa.
 - **Session Management:** Role badges (Host / Guest) integrated into the top navigation bar with a secure **Sign Out** button.
-- **Account Settings:** Change password (signs out other devices) and, for guests, permanently delete the account with all its data. Forgotten passwords are reset on the server: `npm run reset-password -- <username>`.
+- **Account Settings:** Change password (signs out other devices), link / unlink a Google account and, for guests, permanently delete the account with all its data. Forgotten passwords are reset on the server: `npm run reset-password -- <username>`.
+- **App PIN Lock:** Optional 4–8 digit PIN that must be entered on each browser (after every sign-in, and again after 12 h) before any financial data is shown. The account password is accepted on the PIN screen as a recovery path.
 
 ### Wallets & Asset Management
-- **4 Specialized Wallet Types:** Cash, Bank Accounts, Credit Cards (credit limit, statement cycle, isolated debt balance), and Savings Accounts (tenor, interest rate).
+- **4 Specialized Wallet Types:** Cash, Bank Accounts, Credit Cards (credit limit, isolated debt balance), and Savings Accounts (interest rate).
 - Automatic calculation of **Available Balance** and **Net Worth**; credit card debt is strictly isolated to prevent financial distortion.
-- **Internal Transfers** between wallets (with optional transaction fees) and **Credit Card Debt Settlement**.
-- **Balance Reconciliation:** One-click *"Recalculate Balance"* verifies initial balance against entire transaction history.
+- **Credit Card Debt Settlement:** pay the card from a cash / bank wallet (recorded as an internal transfer, not as spending).
+- **Balance Reconciliation:** One-click *"Recalculate Balance"* rebuilds every balance from its opening balance plus the full transaction history.
 
 ### Transaction Tracking & Quick Entry
-- Manage expenses, incomes, and transfers; categorize by tags, notes, and attach **receipt images** (automatically compressed before saving).
-- **Quick Add Modal:** Instantly accessible from any screen, featuring fast amount increment buttons (+50k, +100k, +500k, etc.).
-- Smart validation: Overdraft alerts, credit limit enforcement, and prevention of future-dated transactions.
+- Record expenses and incomes; categorize by tags and notes, attach **receipt images** (automatically compressed before saving), edit or delete with automatic balance rollback. The list is ordered by transaction date and searchable in both languages.
+- **Quick Add Modal:** Instantly accessible from any screen, featuring fast amount buttons (+50k, +100k, +200k, +500k, +1M, +2M, +5M).
+- Smart validation: no overdraft, credit limit enforcement, no future-dated transactions; the chosen date is spelled out in the app's own format.
 
 ### Automated Bank Statement Parser
-- Upload **Excel (.xlsx, .xls)** or **CSV** files. Automatically recognizes statement layouts of over 15 Vietnamese banks (Techcombank, Vietcombank, MB Bank, ACB, VPBank, BIDV, VietinBank, TPBank, VIB, Agribank, Sacombank, Timo, Cake, MoMo, etc.).
-- Duplicate transaction detection and intelligent expense category suggestions based on transfer descriptions.
+- Upload **Excel (.xlsx, .xls)** or **CSV** files. Automatically recognizes the statement layouts of 14 Vietnamese banks (Techcombank, Vietcombank, MB Bank, VPBank, ACB, BIDV, VietinBank, TPBank, VIB, Agribank, Sacombank, Timo, HDBank, Cake by VPBank); other files can be mapped to a wallet manually.
+- Duplicate transaction detection, intelligent category suggestions based on transfer descriptions, and rejection of rows with impossible dates.
 
 ### Budgets & Savings Goals
 - Set spending caps per category, with automated warning thresholds: **approaching 80%** (amber) and **exceeded 100%** (red).
@@ -38,7 +39,8 @@ The system features **Multi-User Isolation** with strict security architecture: 
 ### Recurring Bills & Subscriptions
 - Track electricity, water, internet, and rent on **Monthly / Quarterly / Yearly** cycles.
 - Accurate calendar due-date calculation, countdown timers, and visual alerts for upcoming or overdue bills.
-- **"Pay Now"** button instantly creates the corresponding expense transaction and deducts funds from the designated wallet.
+- **"Pay Now"** button instantly creates the corresponding expense transaction and deducts funds from the chosen wallet (defaults to one that can cover the bill); undoing the payment refunds the wallet.
+- Reminder bell in the header for upcoming / overdue bills and budgets over their limit.
 
 ### What-If Financial Simulation
 - Experiment with future financial projections: expense reduction sliders (0–50%), monthly savings deposits, investment market scenarios, and external loan amortization.
@@ -46,7 +48,7 @@ The system features **Multi-User Isolation** with strict security architecture: 
 
 ### Reports & Data Export
 - Visual analytics for expense distribution, monthly cash flow trends, and net income trajectory.
-- Export to **Multi-sheet Excel (.xlsx)** (transactions, wallets, budgets, executive summary) and language-localized **UTF-8 CSV**.
+- Export to **Multi-sheet Excel (.xlsx)** (transactions, wallets, budgets, executive summary) and language-localized **UTF-8 CSV** (cells that start with `= + - @` are escaped so spreadsheets never run them as formulas).
 
 ---
 
@@ -57,15 +59,16 @@ FinTrack Pro is built on a defense-in-depth model:
 | Security Layer | Technical Implementation |
 |---|---|
 | **Password Hashing** | One-way hashing using **`scrypt`** combined with a cryptographically secure 16-byte random `salt`. Raw passwords are never stored. Verified via `crypto.timingSafeEqual` to thwart timing attacks. |
-| **Brute-Force Mitigation** | Failed logins / PIN entries are limited **per IP (5 / 15 min)** and **per account (10 / 15 min)**, so rotating spoofed `X-Forwarded-For` values does not help. The client IP is taken from `cf-connecting-ip` or the right-most proxy hop. Requests made directly on the host machine are exempt from the per-account lockout, so outsiders cannot lock the owner out. Guest sign-up is limited per IP and per hour (`ALLOW_REGISTRATION`, `MAX_REGISTRATIONS_PER_HOUR`). |
+| **Brute-Force Mitigation** | Login / PIN attempts are limited **per IP (5 / 15 min)** and **per account (10 / 15 min)**; each attempt is counted atomically before it is checked, so parallel bursts and rotating spoofed `X-Forwarded-For` values do not help. The client IP is taken from `cf-connecting-ip` or the right-most proxy hop. Requests made directly on the host machine are exempt from the per-account lockout, so outsiders cannot lock the owner out. Sign-up (password or Google) is limited to 5 / IP / hour and `MAX_REGISTRATIONS_PER_HOUR` server-wide, can be turned off with `ALLOW_REGISTRATION=false`, and its request body is capped at 1 MB. Hashing uses async `scrypt` so it never blocks other requests. |
 | **Host Setup** | First-time `admin` password requires `APP_PASSWORD` or the one-time setup code from the server console. |
 | **Session Protection** | Session cookie `fintrack_session` is signed with **HMAC-SHA256** (`APP_SESSION_SECRET` or `data/.session_secret`), `HttpOnly`, `SameSite=lax`, 7-day expiry, revoked on logout / password change (`tokenVersion`). |
-| **PIN Lock** | PIN (or account password) unlocks a short-lived `HttpOnly` cookie (`fintrack_unlock`, 12 h, bound to the PIN hash). The PIN and password are **never stored in localStorage / sessionStorage**; leftovers from older versions are wiped on load. |
+| **PIN Lock** | Entering the PIN (or the account password) issues a short-lived `HttpOnly` cookie (`fintrack_unlock`, 12 h, bound to the PIN hash and session version). Signing in with a password or Google does **not** unlock the PIN. The PIN and password are **never stored in localStorage / sessionStorage**; leftovers from older versions are wiped on load. |
+| **Google Sign-In** | OAuth 2.0 authorization code flow with PKCE, `state` and `nonce`; the ID token is verified against Google's JWKS (issuer, audience, expiry, nonce). One Google account maps to one FinTrack account. |
 | **CSRF & Headers** | State-changing API calls from other sites (`Sec-Fetch-Site: cross-site / same-site`) are rejected. Strict CSP without `unsafe-eval` in production, `frame-ancestors 'none'`, HSTS, `nosniff`. |
 | **Encrypted Backups** | AES-256-GCM with `APP_BACKUP_KEY` or `data/.backup_key`; the server refuses to run backups rather than fall back to a built-in key. |
 | **Data Isolation** | The server extracts `userId` strictly from the verified session signature (Zero Trust Client). Path Traversal sanitizer (`replace(/[^a-zA-Z0-9_-]/g, '')`) prevents unauthorized file access. |
 | **Filesystem Permissions** | `data/` and `data/users/` are created / tightened to **`0700`** and every data file is written as **`0600`** (accessible exclusively by the host OS user). A corrupt `users.json` is never overwritten. |
-| **Git Privacy** | `.gitignore` strictly excludes `data/*.json`, `data/users/`, `data/users.json`, and `data/.session_secret`. When pushing code to GitHub, **all financial records and user accounts remain local on your machine and are never leaked**. |
+| **Git Privacy** | `.gitignore` excludes `data/*.json` (except the template), `data/users/`, `data/secure-backups/`, `data/.session_secret`, `data/.backup_key`, `data/.host_setup_code` and `.env`. When pushing code to GitHub, **all financial records, accounts and keys remain local on your machine and are never leaked**. |
 
 ---
 
@@ -79,7 +82,7 @@ FinTrack Pro is built on a defense-in-depth model:
 | **Spreadsheet Processing** | **SheetJS (xlsx)** |
 | **Authentication & Crypto** | Node.js Built-in `crypto` (scrypt, HMAC-SHA256, timingSafeEqual) |
 | **State Management** | React Context (`src/context/AppContext.jsx`) |
-| **Storage Engine** | Document-based JSON Server Disk (Atomic writes `atomicWriteJSON` to prevent corruption) |
+| **Storage Engine** | Document-based JSON files on the server disk (atomic writes via `writeJsonAtomic` to prevent corruption) |
 
 ### Source Tree
 ```
@@ -121,14 +124,16 @@ scripts/reset-password.mjs         # Reset a forgotten password from the server 
 tests/                             # node:test unit tests
 data/
 ├── database.template.json         # Clean schema template (tracked in Git)
-├── database.json                  # Host financial data (protected, in .gitignore)
+├── database.json                  # Legacy host data, only read once to migrate into users/admin.json (in .gitignore)
 ├── users.json                     # User registry with scrypt password hashes (in .gitignore)
 ├── .session_secret                # HMAC signing key (in .gitignore)
 ├── .backup_key                    # Backup encryption key (in .gitignore)
 ├── .host_setup_code               # One-time host setup code, deleted after use (in .gitignore)
+├── secure-backups/                # Host's encrypted backups (in .gitignore)
 └── users/                         # User-isolated storage directory (in .gitignore)
     ├── admin.json                 # Host profile & financial database
-    └── usr_<id>.json              # Guest isolated data stores
+    ├── usr_<id>.json              # Guest isolated data stores
+    └── usr_<id>/secure-backups/   # Each guest's encrypted backups
 ```
 
 ---
@@ -136,7 +141,7 @@ data/
 ## 4. Installation & Getting Started
 
 ### Prerequisites
-* **Node.js 18.18+** (LTS Node 20 or Node 22 recommended).
+* **Node.js 18.18+** to build and run; **Node.js 22.15+** to run the unit tests (`npm test`). Node 22 LTS is recommended and is what CI uses.
 * Operating System: Linux / macOS / Windows (WSL2).
 
 ### Clone & Install
@@ -154,7 +159,7 @@ The project includes an automated startup script that launches the production bu
 ./start.sh
 ```
 
-Upon successful startup, the terminal presents two dedicated URLs:
+Upon successful startup, the terminal presents two URLs (the script prints this in Vietnamese without accents; translated here). Both open the same app: the split is only a convention for who uses which link.
 ```text
 ==================================================================
 FinTrack Pro has launched successfully with Multi-User Isolation!
@@ -203,7 +208,7 @@ Security: authorization code flow with PKCE, `state` and `nonce` kept in a short
 ### Quality Checks
 ```bash
 npm run lint    # ESLint (next/core-web-vitals)
-npm test        # node:test unit tests (validation, encrypted backups, rate limiting)
+npm test        # node:test unit tests: balances & merging, bills, statement parser, validation, encrypted backups, rate limiting
 npm run build
 ```
 The same checks run on GitHub Actions for every push / pull request (`.github/workflows/ci.yml`).
@@ -217,4 +222,6 @@ Data lives in JSON files under `data/`, so the app needs a **persistent disk**: 
 
 - **Atomic Writes:** During writes, data is flushed to a temporary `.tmp` file prior to renaming (`fs.rename`), guarding against database corruption in the event of abrupt server termination or power loss.
 - **Realtime Multi-Device Sync:** The application monitors snapshot versioning. In the event of simultaneous edits across devices, the server triggers conflict resolution (`HTTP 409`) and initiates three-way merging (`mergeSnapshots`), safeguarding all balances and transactions.
-- **Manual Backups:** Download complete JSON snapshots at any time via Account Profile $\rightarrow$ **"Backup Data"**.
+- **Offline Edits:** Changes made while the server is unreachable stay on the device (marked *Offline*) and are pushed and merged automatically when the connection returns; signing out with unsynced changes asks for confirmation first.
+- **JSON Backups:** Download a complete JSON snapshot from *Settings* (data & backup section) or the profile menu, and restore it from the same places. Older backup formats are accepted (balances are rebuilt from history, numbers stored as text are converted).
+- **Encrypted Server Backups:** *Settings → Secure Backups* keeps up to 20 AES-256-GCM encrypted snapshots per account on the server; restoring one first saves a safety backup of the current data.
