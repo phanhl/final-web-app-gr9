@@ -15,13 +15,13 @@
 
 :root {
   /* Background & Surface */
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #dbdfe3;
+  --foreground: #2b3b66;
   --surface: #ffffff;
   --surface-elevated: #ffffff;
 
   /* Brand & Semantic */
-  --primary: #10b981;
+  --primary: #23d4a7;
   --primary-dark: #059669;
   --primary-light: #d1fae5;
   --secondary: #0ea5e9;
@@ -77,10 +77,10 @@
   --surface-elevated: #1e293b;
 
   /* Text */
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-tertiary: #64748b;
-  --text-inverse: #0f172a;
+  --text-primary: #167de4;
+  --text-secondary: #0d3b7d;
+  --text-tertiary: #0f3462;
+  --text-inverse: #0e4ee1;
 
   /* Border & Divider */
   --border: #1e293b;
@@ -109,15 +109,19 @@ body {
   .bg-app {
     background-color: var(--background);
   }
+
   .bg-surface {
     background-color: var(--surface);
   }
+
   .text-primary {
     color: var(--text-primary);
   }
+
   .text-secondary {
     color: var(--text-secondary);
   }
+
   .text-tertiary {
     color: var(--text-tertiary);
   }
@@ -127,6 +131,7 @@ body {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -147,6 +152,7 @@ div.rounded-full[class*="px-"] {
 
 /* iOS Safari zooms into inputs smaller than 16px; pinch-zoom is allowed again, so keep form fields at 16px there */
 @supports (-webkit-touch-callout: none) {
+
   input,
   select,
   textarea {
